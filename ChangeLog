@@ -1,0 +1,8 @@
+GINI Toolkit ChangeLog
+
+Gini-1.01
+- Fixed error when running gbuilder through Konsole
+- Updated filesystem (see filesystem ChangeLog)
+
+Gini-1.00
+- Initial release

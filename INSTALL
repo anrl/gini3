@@ -1,0 +1,69 @@
+GINI Toolkit Version 1.0
+
+Basic Installation
+==================
+
+To install GINI, you need the following libraries and applications:
+
+    Libreadline 5.0 or up (plus development files)
+    Libslack
+    Pyro 3.7 or up
+    Python 2.5 or up (plus development files)
+    Python-tk 2.5 or up
+    Python-xml 0.8 or up
+    Screen 4.0 or up
+    UML-utilities
+
+Install each of these libraries, either through a package manager or
+from source.  Libslack and Pyro are unavailable on most, if not all, package 
+managers, and must be installed from source.  They are available
+at http://libslack.org/ and http://pyro.sourceforge.net/, respectively.
+
+Once the libraries are installed, you must set the GINI_HOME environment 
+variable to the location of your installation.  It is best to create
+a separate directory, called "gini", where the GINI files will be installed.
+
+Create a "gini" directory in your home directory:
+
+    mkdir $HOME/gini
+
+Edit the .profile or .bashrc file in your home directory and add the following:
+
+    export GINI_HOME=$HOME/gini
+    export PATH=$PATH:$GINI_HOME/bin
+
+This sets the GINI_HOME environment variable to your desired path, and
+adds the bin directory within GINI_HOME to your PATH variable.
+
+To enable the new profile settings, run the following:
+
+    source $HOME/.profile
+
+Now we are ready to configure and install GINI.  Assuming you have downloaded
+the GINI source code, you can uncompress it using tar:
+
+    tar xvf gini-VERSION.tar.gz
+
+Where VERSION is the version number of your downloaded source code.
+Before installing, you must run the following command to configure 
+pyXML:
+
+    `echo 'oldxml' > /usr/lib/python2.5/site-packages/oldxml.pth`
+
+Within the gini-VERSION directory, run the following:
+
+    ./configure --prefix=$GINI_HOME
+    make
+    make install
+
+Notes
+=====
+
+GINI has been installed and tested on the following distributions:
+
+    Ubuntu 7.10
+    Ubuntu 8.04 (using kernel provided at www.cs.mcgill.ca/~anrl/gini/downloads)
+
+If you have any success, or problems, on any other distribution and/or 
+release, please e-mail the mailing list at <gini at cs dot mcgill dot ca>
+
