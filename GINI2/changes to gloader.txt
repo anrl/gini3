@@ -1,0 +1,9 @@
+modify to gini_nw:getVMs and getVMBs to add $GINI_HOME to root_fs_beta2
+modify .dtd to put switch first
+changed gwcenter to run through gwcenter.sh for use of tee
+
+replace old gloader with new gloader:
+
+set independent to False
+remove independent checks outside of createVWR
+replace os.system with subprocess calls
