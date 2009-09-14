@@ -1,8 +1,0 @@
-Windows:
--putty/plink/putty-keygen (add to path)
--pyreadline
--wireshark (add to path)
--cygwin's tail
-
-Linux:
--wireshark (add to path)

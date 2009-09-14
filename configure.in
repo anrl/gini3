@@ -1,9 +1,0 @@
-AC_INIT(INSTALL)
-AM_INIT_AUTOMAKE(gini,1.06)
-AC_PROG_CC
-CFLAGS="-g -DHAVE_PTHREAD_RWLOCK=1"
-AC_CHECK_LIB(slack,prog_name,,AC_MSG_ERROR(grouter requires slack))
-AC_CHECK_LIB(pthread,pthread_create,,AC_MSG_ERROR(grouter requires pthread))
-AC_CHECK_LIB(readline,main,,AC_MSG_ERROR(grouter requires readline-dev))
-AC_OUTPUT(Makefile src/grouter/Makefile src/wgini/Makefile src/uswitch/Makefile src/gloader/Makefile src/gbuilder/Makefile kernel/Makefile fs/Makefile)
-
