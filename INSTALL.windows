@@ -14,7 +14,7 @@ To install gBuilder, you need the following libraries and applications:
     Scons 1.2 or up (http://www.scons.org)
     PyQt 4.4 or up (http://www.riverbankcomputing.co.uk/software/pyqt/download)
     - PyQt 4.5 STRONGLY recommended
-    Pyreadline (http://ipython.scipy.org/moin/PyReadline/Intro)
+    Pyreadline (https://launchpad.net/pyreadline/+download)
   * Optional:
     Matplotlib (http://matplotlib.sourceforge.net)
     Wireshark (http://www.wireshark.org)
