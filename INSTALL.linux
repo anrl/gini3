@@ -30,7 +30,7 @@ Create a "gini" directory in your home directory:
 
     mkdir $HOME/gini
 
-Edit the .profile or .bashrc file in your home directory and add the following:
+Edit the .bashrc file in your home directory and add the following:
 
     export GINI_HOME=$HOME/gini
     export PATH=$PATH:$GINI_HOME/bin
@@ -38,14 +38,14 @@ Edit the .profile or .bashrc file in your home directory and add the following:
 This sets the GINI_HOME environment variable to your desired path, and
 adds the bin directory within GINI_HOME to your PATH variable.
 
-To enable the new profile settings, run the following:
+To enable the new settings, run the following:
 
-    source $HOME/.profile
+    source $HOME/.bashrc
 
 Now we are ready to configure and install GINI.  To grab the latest stable
 GINI source code, run the following:
 
-    svn co https://svn.origo.ethz.ch/gini gini-src
+    svn co https://svn.origo.ethz.ch/gini/stable gini-src
 
 If you are using Python 2.5, before installing, you must run the following 
 command to configure pyXML:
