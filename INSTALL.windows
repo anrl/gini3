@@ -9,9 +9,12 @@ To install gBuilder, you need the following libraries and applications:
   * Required:
     TortoiseSVN (http://tortoisesvn.tigris.org)
     PuTTY (http://chiark.greenend.org.uk/~sgtatham/putty/download.html)
+    - Must be added to %PATH% variable
     Python 2.5 or up (http://www.python.org)
     - Python 2.6 STRONGLY recommended
+    - Must be added to %PATH% variable
     Scons 1.2 or up (http://www.scons.org)
+    - Must be added to %PATH% variable (location: C:\Python2X\Scripts)
     PyQt 4.4 or up (http://www.riverbankcomputing.co.uk/software/pyqt/download)
     - PyQt 4.5 STRONGLY recommended
     Pyreadline (https://launchpad.net/pyreadline/+download)
@@ -24,8 +27,9 @@ Once the libraries are installed, you must set the GINI_HOME environment
 variable to the location of your installation.  It is best to create
 a separate directory, called "gini", where the GINI files will be installed.
 
-Edit the Windows path variables to include GINI_HOME, and point that to the
-location you want to install to.
+Add a user variable called GINI_HOME, and point that to the location you want
+to install to.  Also, edit the system variable 'Path' to include 
+[location of GINI_HOME]\bin.
 
 Now we are ready to configure and install GINI.  You can use TortoiseSVN
 to grab the latest frontend code.  In the SVN Checkout dialog box, set
