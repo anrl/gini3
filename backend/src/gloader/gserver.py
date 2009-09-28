@@ -4,7 +4,7 @@ from PyQt4 import QtNetwork, QtCore
 from TaskManager import *
 import os, sys, readline, time, subprocess, signal
 
-version = "1.0"
+version = "1.0.1"
 GL_PROG = "gloader"
 basedatadir = os.environ["GINI_HOME"] + "/data"
 datadir = basedatadir

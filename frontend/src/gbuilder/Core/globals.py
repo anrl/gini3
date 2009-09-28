@@ -2,7 +2,7 @@
 import os
 
 PROG_NAME = "gBuilder"
-PROG_VERSION  = "2.0.0"
+PROG_VERSION  = "2.0.1"
 
 environ = {"os":"Windows",
            "path":os.environ["GINI_HOME"]+"/",
