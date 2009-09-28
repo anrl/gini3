@@ -6,8 +6,13 @@
 # Scons compile script for creating GINI installation
 #
 import os
+import SconsBuilder
 
 EnsurePythonVersion(2,5)
+
+# add our command line options
+SconsBuilder.addCommandLineOptions()
+
 
 try:
     Import('gini_home')

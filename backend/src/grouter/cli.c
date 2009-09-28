@@ -880,7 +880,7 @@ void setCmd()
 			else
 				verbose(1, "[setCmd]:: ERROR!! level should be in [0..6] \n");
 		} else
-			printf("\nVerbose level: %d \n", prog_verbosity_level());
+			printf("\nVerbose level: %ld \n", prog_verbosity_level());
 	} else if (!strcmp(next_tok, "raw-times"))
 	{
 		if ((next_tok = strtok(NULL, " \n")) != NULL)
@@ -996,7 +996,7 @@ void getCmd()
 	else if (!strcmp(next_tok, "sched-cycle"))
 		printf("\nSchedule cycle length: %d (microseconds) \n", rconfig.schedcycle);
 	else if (!strcmp(next_tok, "verbose"))
-		printf("\nVerbose level: %d \n", prog_verbosity_level());
+		printf("\nVerbose level: %ld \n", prog_verbosity_level());
 	else if (!strcmp(next_tok, "raw-times"))
 		printf("\nRaw time mode: %d  \n", getTimeMode());
 	else if (!strcmp(next_tok, "update-delay"))

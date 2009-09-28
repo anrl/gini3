@@ -7,10 +7,10 @@ if sys.version_info < (2, 6):
 else:
     import subprocess
 from PyQt4 import QtCore, QtGui
-from Configuration import options, environ, mainWidgets, defaultOptions
+from Core.globals import options, environ, mainWidgets, defaultOptions
 from Properties import *
 from Core.Item import *
-from StatsWindow import *
+# from StatsWindow import *
 
 class DropItem(QtGui.QGraphicsItem):
     

@@ -334,7 +334,7 @@ int vpl_recvfrom(vpl_data_t *vpl, void *buf, int len)
                 return(-errno);
         }
         else if(n == 0) return(-ENOTCONN);
-	copy2Queue(consoleq, buf, len);
+		copy2Queue(consoleq, buf, n);
         return(n);
 }
 

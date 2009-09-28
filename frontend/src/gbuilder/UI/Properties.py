@@ -1,7 +1,7 @@
 """The properties window for display item properties"""
 
 from PyQt4 import QtCore, QtGui
-from UI.Configuration import mainWidgets
+from Core.globals import mainWidgets
 from Dockable import *
 
 class PropertyCheckBox(QtGui.QCheckBox):
@@ -54,9 +54,7 @@ class PropertiesWindow(Dockable):
         pr.setEditable(False)
     
         val = QtGui.QStandardItem()
-        if prop == "Hub mode":
-            checkable = True
-        else:
+        if not checkable:
             val.setData(QtCore.QVariant(value), QtCore.Qt.EditRole)
             
         if mainWidgets["main"].isRunning():
@@ -125,7 +123,14 @@ class PropertiesWindow(Dockable):
             return
         self.removeRows()
         for prop, value in self.currentItem.getProperties().iteritems():
-            self.addProperty(prop, value)
+            editable = True
+            checkable = False
+            if prop == "Hub mode":
+                checkable = True
+            elif self.currentItem.type == "Switch":
+                if prop == "subnet" or prop == "mask":
+                    continue#editable = False
+            self.addProperty(prop, value, editable, checkable)
 
     def clear(self):
         """
@@ -189,8 +194,8 @@ class InterfacesWindow(PropertiesWindow):
         elif prop == "target":
             value = value.getName()
             editable = False
-        elif prop in ["subnet", "mask"]:
-            editable = False
+        elif not self.currentItem.type == "Wireless_access_point" and prop in ["subnet", "mask"]:
+            return#editable = False
 
         PropertiesWindow.addProperty(self, prop, value, editable)
         

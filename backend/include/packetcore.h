@@ -12,6 +12,7 @@
 #include <slack/std.h>
 #include <slack/map.h>
 #include <slack/list.h>
+#include <pthread.h>
 
 #include "message.h"
 #include "grouter.h"
@@ -55,7 +56,7 @@ void modifyQueueWeight(pktcore_t *pcore, char *qname, double weight);
 void modifyQueueDiscipline(pktcore_t *pcore, char *qname, char *qdisc);
 int delPktCoreQueue(pktcore_t *pcore, char *qname);
 
-int PktCoreSchedulerInit(pktcore_t *pcore);
+pthread_t PktCoreSchedulerInit(pktcore_t *pcore);
 int PktCoreWorkerInit(pktcore_t *pcore);
 void *packetProcessor(void *pc);
 

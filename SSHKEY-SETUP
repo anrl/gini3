@@ -3,6 +3,7 @@ Please follow the instructions of the case that best suits you.
 1) The front-end and back-end are running on the same machine:
     -change directory to $HOME/.ssh
     -enter "ssh-keygen -t dsa" into the command line
+    -press ENTER for all options
     -enter "cat id_dsa.pub >> authorized_keys" into the command line
     
 2) The front-end and back-end are running on two different Linux machines:

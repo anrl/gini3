@@ -26,11 +26,15 @@ Once the libraries are installed, you must set the GINI_HOME environment
 variable to the location of your installation.  It is best to create
 a separate directory, called "gini", where the GINI files will be installed.
 
+The below instructions only work for the BASH shell.  To enter bash from 
+another shell type "bash".
+
 Create a "gini" directory in your home directory:
 
     mkdir $HOME/gini
 
-Edit the .bashrc file in your home directory and add the following:
+Edit the .bashrc file (or create it if it's unavailable) in your home 
+directory and add the following:
 
     export GINI_HOME=$HOME/gini
     export PATH=$PATH:$GINI_HOME/bin

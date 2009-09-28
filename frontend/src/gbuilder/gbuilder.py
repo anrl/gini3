@@ -14,14 +14,6 @@ except ImportError, err:
     print "ImportError: ", err
     raw_input("PyQt4 must be installed.  Press Enter to quit.")
     sys.exit(1)
-# Check if pyreadline is installed
-try:
-    import readline
-    del readline
-except ImportError, err:
-    print "ImportError: ", err
-    raw_input("pyreadline must be installed.  Press Enter to quit.")
-    sys.exit(1)
    
 # Check if we have GINI_HOME set
 if not os.environ.has_key("GINI_HOME"):

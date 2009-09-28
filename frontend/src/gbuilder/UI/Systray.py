@@ -2,7 +2,7 @@
 
 import sys, os
 from PyQt4 import QtCore, QtGui
-from Configuration import options, environ, mainWidgets, defaultOptions
+from Core.globals import options, environ, mainWidgets, defaultOptions
 from Tutorial import Tutorial
 
 class Systray(QtGui.QMainWindow):

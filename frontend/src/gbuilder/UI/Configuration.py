@@ -2,45 +2,7 @@
 
 import sys, os, random
 from PyQt4 import QtCore, QtGui
-
-environ = {"os":"Windows",
-           "ssh":"putty",
-           "path":os.environ["GINI_HOME"]+"/",
-           "remotepath":"./",
-           "images":os.environ["GINI_HOME"]+"/share/gbuilder/images/",
-           "config":os.environ["GINI_HOME"]+"/etc/",
-           "sav":os.environ["GINI_HOME"]+"/sav/",
-           "tmp":os.environ["GINI_HOME"]+"/tmp/",
-           "doc":os.environ["GINI_HOME"]+"/doc/"}
-
-options = {"names":True,
-           "systray":False,
-           "elasticMode":False, "keepElasticMode":False,
-           "smoothing":True, "glowingLights":True, "style":"Plastique",
-           "grid":True, "gridColor":"(240,240,240)",
-           "background":environ["images"] + "background.jpg",
-           "windowTheme":environ["images"] + "background2.jpg",
-           "baseTheme":environ["images"] + "background3.jpg",
-           "autorouting":True, "autogen":True, "autocompile":True,
-           "graphing":True, "username":"",
-           "server":"localhost", "session":"GINI", "autoconnect":True,
-           "localPort":"10001", "remotePort":"10000",
-           "restore":True}
-
-mainWidgets = {"app":None,
-               "main":None,
-               "canvas":None,
-               "tab":None,
-               "popup":None,
-               "log":None,
-               "tm":None,
-               "properties":None,
-               "interfaces":None,
-               "routes":None,
-               "drop":None,
-               "client":None}
-
-defaultOptions = {"palette":None}
+from Core.globals import *
 
 class LineEdit(QtGui.QLineEdit):
     def __init__(self, text=QtCore.QString()):
@@ -78,13 +40,13 @@ class ServerPage(QtGui.QWidget):
                 
         serverLabel = QtGui.QLabel(self.tr("Server:"))
         self.serverCombo = QtGui.QComboBox()
+        self.serversFilename = environ["config"]+"servers"
 
         try:
-            serversFilename = environ["config"]+"servers"
-            if not os.access(serversFilename, os.F_OK):
-                open(serversFilename, "w").close()
+            if not os.access(self.serversFilename, os.F_OK):
+                open(self.serversFilename, "w").close()
             
-            infile = open(serversFilename, "r")
+            infile = open(self.serversFilename, "r")
             servers = infile.readlines()
             infile.close()
 
@@ -94,15 +56,17 @@ class ServerPage(QtGui.QWidget):
         except:
             mainWidgets["log"].append("Failed to read from server list!")
 
-        self.serverCombo.addItem(self.tr("localhost"))
+#       self.serverCombo.addItem(self.tr("localhost"))
         self.serverLine = LineEdit()
-        self.serverButton = QtGui.QPushButton("Add")
+        self.addServerButton = QtGui.QPushButton("Add")
+        self.delServerButton = QtGui.QPushButton("Delete")
         
         serverLayout = QtGui.QGridLayout()
         serverLayout.addWidget(serverLabel, 0, 0)
         serverLayout.addWidget(self.serverCombo, 0, 1)
         serverLayout.addWidget(self.serverLine, 1, 1)
-        serverLayout.addWidget(self.serverButton, 1, 2)
+        serverLayout.addWidget(self.delServerButton, 0, 2)
+        serverLayout.addWidget(self.addServerButton, 1, 2)
         
         sessionLabel = QtGui.QLabel(self.tr("Session Name (if using Putty):"))
         self.sessionLine = LineEdit()
@@ -143,7 +107,9 @@ class ServerPage(QtGui.QWidget):
         mainLayout.addStretch(1)
 
         self.setLayout(mainLayout)
-        self.connect(self.serverButton, QtCore.SIGNAL("clicked()"), self.addServer)
+        self.connect(self.delServerButton, QtCore.SIGNAL("clicked()"),
+                     self.delServer)
+        self.connect(self.addServerButton, QtCore.SIGNAL("clicked()"), self.addServer)
         self.connect(self.localPortButton, QtCore.SIGNAL("clicked()"), self.randomizeLocalPort)
         self.connect(self.remotePortButton, QtCore.SIGNAL("clicked()"), self.randomizeRemotePort)
 
@@ -153,19 +119,46 @@ class ServerPage(QtGui.QWidget):
         """
         Add a server to the list and write it to file.
         """
-        text = self.serverLine.text()
+        text = self.serverLine.text().trimmed()
         if text:
-            self.serverCombo.addItem(self.tr(text))
-            index = self.serverCombo.findText(self.tr(text))
+            index = self.serverCombo.findText(text)
+            if index == -1:
+                # text not already in server list
+                self.serverCombo.addItem(self.tr(text))
+                index = self.serverCombo.findText(self.tr(text))
+                try:
+                    outfile = open(environ["config"] + "servers", "a")
+                    outfile.write(str(text)+"\n")
+                    outfile.close()
+                except:
+                    mainWidgets["log"].append("Failed to write to server list!")
             self.serverCombo.setCurrentIndex(index)
             self.serverLine.clear()
 
+    def delServer(self):
+        """
+        Delete a server from the list.
+        """
+        try:
+            file = open(self.serversFilename, "w+")
+        except Exception, err:
+            mainWidgets["log"].append("Failed to open server list: " + str(err))
+        else:
             try:
-                outfile = open(environ["config"] + "servers", "a")
-                outfile.write(str(text)+"\n")
-                outfile.close()
-            except:
-                mainWidgets["log"].append("Failed to write to server list!")
+                lines = file.readlines()
+                file.seek(0)
+                curLine = self.serverCombo.currentText()
+                for line in lines:
+                    line = line.strip()
+                    if line == curLine:
+                        continue
+                    file.write(line)
+            except Exception, err:
+                mainWidgets["log"].append(
+                        "Failed to delete server: " + str(err))
+            else:
+                self.serverCombo.removeItem(self.serverCombo.currentIndex())
+            file.close()
 
     def randomizeLocalPort(self):
         """

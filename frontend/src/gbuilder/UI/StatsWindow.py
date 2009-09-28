@@ -1,7 +1,7 @@
 """The stats window to display wireless stats"""
 
 from PyQt4 import QtCore, QtGui
-from Configuration import mainWidgets
+from Core.globals import mainWidgets
 from Dockable import *
     
 class StatsWindow(Dockable):

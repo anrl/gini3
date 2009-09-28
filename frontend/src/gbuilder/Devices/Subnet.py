@@ -13,7 +13,7 @@ class Subnet(Device):
         self.num_interface=0
         self.setProperty("subnet", "")
         self.setProperty("mask", "")
-        self.setProperty("bits", "")
+#        self.setProperty("bits", "")
 
     def addEdge(self, edge):
         Device.addEdge(self, edge)

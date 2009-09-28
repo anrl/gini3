@@ -8,6 +8,7 @@ from Canvas import *
 from Node import *
 from Edge import *
 from Configuration import *
+from Core.globals import *
 from ExportWindow import *
 from SendDirectoryWindow import *
 from Properties import *
@@ -28,6 +29,7 @@ class MainWindow(Systray):
         defaultOptions["palette"] = app.palette()
         Systray.__init__(self)
 
+        self.expansions = 0
         self.client = None
         self.server = None
         self.running = False
@@ -55,7 +57,7 @@ class MainWindow(Systray):
     
         self.newScene()
         
-        self.list.hide()
+        self.debugWindow.hide()
         self.tm.hide()
         self.routes.hide()
 
@@ -179,6 +181,7 @@ class MainWindow(Systray):
         scene = Scene(self.canvas)
         scene.setItemIndexMethod(QtGui.QGraphicsScene.NoIndex)
         self.canvas.setScene(scene)
+        self.expansions = 0
         
         for nodeType in nodeTypes.keys():
             itemTypes = nodeTypes[nodeType]
@@ -222,10 +225,19 @@ class MainWindow(Systray):
         if not self.closeTopology():
             return
 
+        self.expandScene()
+
+    def expandScene(self):
+        """
+        Expand the scene based on number of expansions.
+        """
+        x = 175 + self.expansions * 30
+        y = 160 + self.expansions * 20
         scene = self.canvas.scene()
-        item = QtGui.QGraphicsLineItem(-175,-160,175,160)
+        item = QtGui.QGraphicsLineItem(-x, -y, x, y)
         scene.addItem(item)
         scene.removeItem(item)
+        self.expansions += 1
 
     def newProject(self):
         """
@@ -384,7 +396,7 @@ class MainWindow(Systray):
         
         base = "ssh -t " + options["username"] + "@" + options["server"]
         tunnel = " -L " + options["localPort"] + ":localhost:" + options["remotePort"]
-        server = "bash -c -i 'gserver " + options["remotePort"] + "'"
+        server = "bash -c -i 'gserver " + options["remotePort"] + "' || sleep 5"
         command = ""
         
         if environ["os"] == "Windows":
@@ -857,6 +869,10 @@ class MainWindow(Systray):
         self.resetLayoutAct.setStatusTip(self.tr("Reset dock windows to the saved layout"))
         self.connect(self.resetLayoutAct, QtCore.SIGNAL("triggered()"), self.resetLayout)
 
+        self.expandSceneAct = QtGui.QAction(QtGui.QIcon(environ["images"] + "expand.png"), self.tr("Expand Scene"), self)
+        self.expandSceneAct.setStatusTip(self.tr("Expand the scene for more space"))
+        self.connect(self.expandSceneAct, QtCore.SIGNAL("triggered()"), self.expandScene)
+        
         self.quitAct = QtGui.QAction(QtGui.QIcon(environ["images"] + "exit.png"), self.tr("&Quit"), self)
         self.quitAct.setShortcut(self.tr("Ctrl+Q"))
         self.quitAct.setStatusTip(self.tr("Quit the application"))
@@ -919,6 +935,7 @@ class MainWindow(Systray):
         self.editMenu.addAction(self.copyAct)
         self.editMenu.addAction(self.arrangeAct)
         self.editMenu.addAction(self.resetLayoutAct)
+        self.editMenu.addAction(self.expandSceneAct)
 
         self.runMenu = self.menuBar().addMenu(self.tr("&Run"))
         self.runMenu.setPalette(defaultOptions["palette"])
@@ -962,8 +979,8 @@ class MainWindow(Systray):
         
         self.editToolBar = self.addToolBar(self.tr("Edit"))
         self.editToolBar.addAction(self.copyAct)
-        self.editToolBar.addAction(self.arrangeAct)
         self.editToolBar.addAction(self.resetLayoutAct)
+        self.editToolBar.addAction(self.expandSceneAct)
 
         self.runToolBar = self.addToolBar(self.tr("Run"))
         self.runToolBar.addAction(self.compileAct)
@@ -1056,8 +1073,8 @@ class MainWindow(Systray):
         self.tm.setWindowTitle("Task Manager")
         mainWidgets["tm"] = self.tm
         
-        self.list = QtGui.QDockWidget(self.tr("Item List"))
-        self.list.setWidget(ItemWindow(self))
+        self.debugWindow = QtGui.QDockWidget(self.tr("Debug Window"))
+        self.debugWindow.setWidget(DebugWindow(self))
         
         self.docks = {"Components":self.dropbar, "Log":self.log, "Properties":self.properties, "Interfaces":self.interfaces, "Routes":self.routes, "Task Manager":self.tm}
         
@@ -1067,11 +1084,10 @@ class MainWindow(Systray):
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.interfaces)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.routes)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.tm)
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.list)
 
         self.tm.setFloating(True)
         self.routes.setFloating(True)
-        self.list.setFloating(True)
+        self.debugWindow.setFloating(True)
 
     def createPopupWindows(self):
         """
@@ -1110,20 +1126,22 @@ class MainWindow(Systray):
         elif key == QtCore.Qt.Key_H:
             for dock in self.docks.values():
                 dock.setFloating(not dock.isFloating())
+        elif key == QtCore.Qt.Key_F10:
+            self.debugWindow.show()
 
         
-class ItemWindow(QtGui.QWidget):
+class DebugWindow(QtGui.QWidget):
     def __init__(self, parent):
         QtGui.QWidget.__init__(self)
 
         self.parent = parent
         self.layout = QtGui.QVBoxLayout()
-        self.list = QtGui.QListWidget()
-        self.button = QtGui.QPushButton("Update List")
+        #self.list = QtGui.QListWidget()
+        self.button = QtGui.QPushButton("Execute")
         self.lineedit = QtGui.QLineEdit()
-        self.layout.addWidget(self.list)
-        self.layout.addWidget(self.button)
+        #self.layout.addWidget(self.list)
         self.layout.addWidget(self.lineedit)
+        self.layout.addWidget(self.button)
         self.setLayout(self.layout)
 
         self.windows = {}
@@ -1131,23 +1149,24 @@ class ItemWindow(QtGui.QWidget):
             if key != "app" and key != "client" and val != None:
                 self.windows[key] = val
 
-        self.connect(self.button, QtCore.SIGNAL("clicked()"), self.update)
+        self.connect(self.button, QtCore.SIGNAL("clicked()"), self.execute)
 
     def fill(self):
         scene = mainWidgets["canvas"].scene()
         for i in range(125):
             scene.addItem(UML())
         
-    def update(self):
-        scene = mainWidgets["canvas"].scene()
-        self.list.clear()
-        for item in scene.items():
-            try:
-                self.list.addItem(item.getName() + "(%d,%d)" % (item.pos().x(), item.pos().y()))
-            except:
-                pass
-        for name, window in self.windows.iteritems():
-            self.list.addItem(name + ":" + str(window.geometry()))
+    def execute(self):
+        canvas = mainWidgets["canvas"]
+        scene = canvas.scene()
+        #self.list.clear()
+        #for item in scene.items():
+        #    try:
+        #        self.list.addItem(item.getName() + "(%d,%d)" % (item.pos().x(), item.pos().y()))
+        #    except:
+        #        pass
+        #for name, window in self.windows.iteritems():
+        #    self.list.addItem(name + ":" + str(window.geometry()))
 
         text = str(self.lineedit.text())
         if text:
@@ -1155,7 +1174,8 @@ class ItemWindow(QtGui.QWidget):
             for line in lines:
                 print eval(line)
 
-        mainWidgets["canvas"].next()
+        if isinstance(canvas, Tutorial):
+            canvas.next()
         
 
     

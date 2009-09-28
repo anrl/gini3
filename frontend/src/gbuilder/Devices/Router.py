@@ -1,7 +1,7 @@
 from Core.Connection import *
 from Core.Interfaceable import *
+from Core.globals import environ
 from PyQt4.QtCore import QPoint
-from UI.Configuration import environ
 import Core.util
 
 class Router(Interfaceable):
@@ -59,8 +59,12 @@ class Router(Interfaceable):
             
             command = ["tail", "-n", "+1", "-f", "%s" % outfile]
             command2 = [progName, "-k", "-i", "-"]
-    
-            self.tail = subprocess.Popen(command, stdout=subprocess.PIPE)
+
+            try:
+                self.tail = subprocess.Popen(command, stdout=subprocess.PIPE)
+            except:
+                mainWidgets["log"].append("Error: tail not found in path!\nPlease add GINI_HOME/bin to PATH.")
+                
             self.wshark = subprocess.Popen(command2, stdin=self.tail.stdout)
         else:
             mainWidgets["log"].append(

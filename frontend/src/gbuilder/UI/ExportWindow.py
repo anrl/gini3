@@ -1,7 +1,7 @@
 """The export window to save as image"""
 
 from PyQt4 import QtCore, QtGui
-from Configuration import options, mainWidgets
+from Core.globals import options, mainWidgets
 
 class ExportWindow(QtGui.QDialog):
     def __init__(self, parent = None):

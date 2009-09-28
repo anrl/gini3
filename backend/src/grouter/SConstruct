@@ -8,6 +8,7 @@ Import('gini_home')
 gini_include = gini_src + '/include'
 
 env = Environment(CPPPATH=gini_include)
+env.Append(CFLAGS='-g')
 env.Append(CFLAGS='-DHAVE_PTHREAD_RWLOCK=1')
 env.Append(CFLAGS='-DHAVE_GETOPT_LONG')
 

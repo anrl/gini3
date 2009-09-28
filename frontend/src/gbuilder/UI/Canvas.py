@@ -2,46 +2,13 @@
 
 from PyQt4 import QtCore, QtGui
 from Node import *
-from Configuration import options, mainWidgets
+from Core.globals import options, mainWidgets
 from Core.Connection import *
 from Core.Wireless_Connection import *
 
 deviceTypes = {"Bridge":Bridge, "Firewall":Firewall, "Hub":Hub, "Mobile":Mobile,
                "Router":Router, "Subnet":Subnet, "Switch":Switch,
                "UML":UML, "UML_FreeDOS":UML_FreeDOS, "UML_Android":UML_Android, "Wireless_access_point":Wireless_access_point}
-
-class Droppable:
-    def dragEnterEvent(self, event):
-        """
-        Enable receiving of drop items.
-        """
-        event.setAccepted(True)
-
-    def dropEvent(self, event):
-        """
-        Handle a drop.
-        """
-        mime = event.mimeData()
-        node = deviceTypes[str(mime.text())]
-        try:
-            node = node()
-        except:
-            return
-
-        scene = self.scene()
-        scene.addItem(node)
-
-        scenePos = self.mapToScene(event.pos())
-        node.setPos(scenePos.x(), scenePos.y())
-
-        self.setFocus()
-        scene.update()
-
-    def dragMoveEvent(self, event):
-        pass
-
-    def dragLeaveEvent(self, event):
-        pass
 
 class View(QtGui.QGraphicsView):
     def __init__(self, parent = None):
@@ -220,17 +187,17 @@ class View(QtGui.QGraphicsView):
                     if dest.type in connection_rule[source.type]:
                         if dest.type == "UML":
                             if len(dest.edges()) == 1:
-                                return False
+                                return "UML cannot have more than one connection!"
                         elif dest.type == "Subnet":
                             if len(dest.edges()) == 2:
-                                return False    
+                                return "Subnet cannot have more than two connections!"    
                             if source.type == "Switch":
                                 for edge in dest.edges():
                                     if edge.getOtherDevice(dest).type == "Switch":
-                                        return False
+                                        return "Subnet cannot have more than one Switch!"
                                 for edge in source.edges():
                                     if edge.getOtherDevice(source).type == "Subnet":
-                                        return False
+                                        return "Switch cannot have more than one Subnet!"
                         return True
                     return False
     
@@ -246,15 +213,20 @@ class View(QtGui.QGraphicsView):
                         return
 
                 # Check if connection rules are satisfied
-                valid = isValid(self.sourceNode, item) and isValid(item, self.sourceNode)
+                valid = isValid(self.sourceNode, item)
+                if valid is True:
+                    valid = isValid(item, self.sourceNode)
 
                 # Create the edge
-                if valid:
+                if valid is True:
                     self.createConnection(self.sourceNode, item)
                 else:
                     popup = mainWidgets["popup"]
                     popup.setWindowTitle("Invalid Connection")
-                    popup.setText("Cannot connect " + self.sourceNode.type + " and " + item.type + "!")
+                    if valid is False:
+                        popup.setText("Cannot connect " + self.sourceNode.type + " and " + item.type + "!")
+                    else:
+                        popup.setText(valid)
                     popup.show()
 
             if self.sourceNode:
@@ -267,8 +239,38 @@ class View(QtGui.QGraphicsView):
             
         QtGui.QGraphicsView.mouseReleaseEvent(self, event)
         
-class Canvas(Droppable, View):
-    """"""
+class Canvas(View):
+    def dragEnterEvent(self, event):
+        """
+        Enable receiving of drop items.
+        """
+        event.setAccepted(True)
+
+    def dropEvent(self, event):
+        """
+        Handle a drop.
+        """
+        mime = event.mimeData()
+        node = deviceTypes[str(mime.text())]
+        try:
+            node = node()
+        except:
+            return
+
+        scene = self.scene()
+        scene.addItem(node)
+
+        scenePos = self.mapToScene(event.pos())
+        node.setPos(scenePos.x(), scenePos.y())
+
+        self.setFocus()
+        scene.update()
+
+    def dragMoveEvent(self, event):
+        pass
+
+    def dragLeaveEvent(self, event):
+        pass
 
 class Scene(QtGui.QGraphicsScene):
     def __init__(self, parent = None):

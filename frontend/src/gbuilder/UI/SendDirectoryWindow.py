@@ -1,7 +1,7 @@
 """The window to specify which directory to send a file to"""
 
 from PyQt4 import QtCore, QtGui
-from Configuration import options, mainWidgets
+from Core.globals import options, mainWidgets
 
 class SendDirectoryWindow(QtGui.QDialog):
     def __init__(self, parent = None):

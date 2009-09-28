@@ -3,7 +3,7 @@
 import math
 from PyQt4 import QtCore, QtGui
 from Core.Item import *
-from Configuration import options, mainWidgets, defaultOptions
+from Core.globals import options, mainWidgets, defaultOptions
 
 class Edge(QtGui.QGraphicsLineItem, Item):
     def __init__(self, startItem, endItem, parent=None, scene=None):

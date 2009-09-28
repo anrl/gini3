@@ -8,7 +8,7 @@ from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as Naviga
 from matplotlib.figure import Figure
 
 from PyQt4 import QtCore, QtGui
-from Configuration import mainWidgets
+from Core.globals import mainWidgets
 from Dockable import *
 
 class RouterQueue:

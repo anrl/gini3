@@ -101,7 +101,7 @@ int main(int ac, char *av[])
 }
 
 
-void wait4thread(int threadid)
+void wait4thread(pthread_t threadid)
 {
 	int *jstatus;
 	if (threadid > 0)

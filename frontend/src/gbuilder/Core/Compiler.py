@@ -2,7 +2,7 @@
 
 from Core.Item import nodeTypes
 from Core.Device import Device
-from UI.Configuration import options, environ, mainWidgets
+from Core.globals import options, environ, mainWidgets
 from PyQt4 import QtCore
 import os, re
 
@@ -105,10 +105,12 @@ class Compiler:
         Generate a compile error.
         """
         self.errors += 1
-        message = "Error: " + device.getName() + "'s " + prop + " value "
+        message = "Error: " + device.getName() + "'s " + prop
+        if not errorType == "missing":
+            message += " value"
         if interface:
-            message += "of interface " + str(device.getInterfaces().index(interface) + 1) + " "        
-        message += "is " + errorType + "."
+            message += " of interface " + str(device.getInterfaces().index(interface) + 1)        
+        message += " is " + errorType + "."
         self.log.append(message)
 
     def generateConnectionWarning(self, device, numCons):
@@ -248,7 +250,12 @@ class Compiler:
             self.writeProperty("target", interface[QtCore.QString("target")].getName())
 
         for prop, eq in mapping.iteritems():
-            value = interface[QtCore.QString(prop)]
+            try:
+                value = interface[QtCore.QString(prop)]
+            except:
+                self.generateError(device, prop, "missing", interface)
+                return
+            
             if not value:
                 self.generateError(device, prop, "empty", interface)
             elif not self.validate(prop, value, interface):
@@ -269,6 +276,18 @@ class Compiler:
             edges = switch.edges()
             if len(edges) < 2:
                 self.generateConnectionWarning(switch, 2)
+
+            subnetConnected = False
+            for edge in edges:
+                node = edge.getOtherDevice(switch)
+                if node.type == "Subnet":
+                    subnetConnected = True
+                    break
+                    
+            if not subnetConnected:
+                self.generateError(switch, "subnet", "missing")
+                return
+                
             if switch.getProperty("Hub mode") == "True":
                 self.output.write("\t<hub/>\n")
             self.output.write("</vs>\n\n")
@@ -281,7 +300,10 @@ class Compiler:
         for uml in self.compile_list["UML"]:
             for interface in uml.getInterfaces():
                 if options["autogen"]:
-                    subnet = str(uml.getInterfaceProperty("subnet")).rsplit(".", 1)[0]
+                    try:
+                        subnet = str(uml.getInterfaceProperty("subnet")).rsplit(".", 1)[0]
+                    except:
+                        continue
                     uml.setInterfaceProperty("ipv4", "%s.%d" % (subnet, uml.getID()+1))
                     uml.setInterfaceProperty("mac", "fe:fd:02:00:00:%02x" % uml.getID())    
         
@@ -348,14 +370,21 @@ class Compiler:
         """
         Pass the mask between connected devices.
         """
-        subnet = node.getProperty("subnet")
-        mask = node.getProperty("mask")
+        try:
+            subnet = node.getProperty("subnet")
+        except:
+            self.generateError(node, "subnet", "missing")
+            return
+        
+        try:
+            mask = node.getProperty("mask")
+        except:
+            self.generateError(node, "mask", "missing")
+            return
 
         for con in node.edges():
             otherDevice = con.getOtherDevice(node)
-            if otherDevice.type == "Router" or \
-               otherDevice.type == "UML"  or \
-               otherDevice.type == "Mobile":
+            if otherDevice.type in ["Router", "UML", "Mobile"]:
                 target = node
                 if node.type == "Subnet":
                     target = node.getTarget(otherDevice)
@@ -452,9 +481,9 @@ class Compiler:
 
         otherDevice = con.getOtherDevice(device)
         
-        if otherDevice.type == "Router" or otherDevice.type == "Wireless_access_point":
+        if otherDevice.type in ["Router", "Wireless_access_point"]:
             myself.addAdjacentRouter(otherDevice, interface)
-        elif otherDevice.type == "UML" or otherDevice.type == "Mobile":
+        elif otherDevice.type in ["UML", "Mobile"]:
             pass
         else:
             for c in otherDevice.edges():
@@ -543,7 +572,7 @@ class Compiler:
             return True
         else:
             self.warnings += 1
-            message = "Warning: You are using a subnet mask other than the standard mask of 255.255.255.0.  Using mask " + mask + " is not supported by the 'Auto-generate IP/MAC addresses' option and may not work properly." 
+            message = "Warning: Using a mask other than 255.255.255.0 is not recommended." 
             self.log.append(message)
             
         if not self.valid_ip(mask):
@@ -570,6 +599,8 @@ class Compiler:
         mask = str(mask)
 
         if not self.valid_ip(ip):
+            return False
+        if not self.valid_mask(mask):
             return False
         
         p=re.compile('\d+')

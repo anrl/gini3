@@ -2,7 +2,7 @@
 
 from PyQt4 import QtCore, QtGui
 from Node import *
-from Configuration import options
+from Core.globals import options
 from Dockable import *
 
 class DropArea(QtGui.QGraphicsView):

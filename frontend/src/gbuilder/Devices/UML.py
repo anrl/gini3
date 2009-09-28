@@ -1,6 +1,6 @@
 from Core.Connection import *
 from Core.Interfaceable import *
-from UI.Configuration import environ
+from Core.globals import environ
 from PyQt4.QtCore import QPoint
 
 class UML(Interfaceable):

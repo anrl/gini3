@@ -4,7 +4,7 @@ from PyQt4 import QtCore, QtGui
 from Canvas import *
 from Node import *
 from Core.Interfaceable import Interfaceable
-from Configuration import mainWidgets
+from Core.globals import mainWidgets
 import math
 
 class Arrow(QtGui.QGraphicsItem):

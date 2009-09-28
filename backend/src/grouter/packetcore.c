@@ -288,9 +288,10 @@ int delPktCoreQueue(pktcore_t *pcore, char *qname)
 // as the scheduler. Only the dequeue is hooked up. The enqueue part is
 // in the classifier. The dequeue will put the scheduler in wait when it
 // runs out of jobs in the queue. The enqueue will wake up a sleeping scheduler.
-int PktCoreSchedulerInit(pktcore_t *pcore)
+pthread_t PktCoreSchedulerInit(pktcore_t *pcore)
 {
-	int threadstat, threadid;
+	int threadstat;
+	pthread_t threadid;
 
 	threadstat = pthread_create((pthread_t *)&threadid, NULL, (void *)roundRobinScheduler, (void *)pcore);
 	if (threadstat != 0)

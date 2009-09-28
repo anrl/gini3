@@ -22,7 +22,7 @@
  */
 #include <limits.h>
 #include <sys/time.h>
-
+#include <pthread.h>
 
 /*
  * global definitions.... this is stuff that could not be
@@ -84,10 +84,10 @@ typedef struct _router_config
 	int cli_flag;
 	char *config_file;
 	char *config_dir;
-	int ghandler;
-	int clihandler;
-	int scheduler;
-	int worker;
+	pthread_t ghandler;
+	pthread_t clihandler;
+	pthread_t scheduler;
+	pthread_t worker;
 	int schedcycle;
 	char schedpolicy[MAX_NAME_LEN];
 } router_config;
@@ -112,5 +112,5 @@ ushort checksum(uchar *buf, int iwords);
 
 // function prototypes for code in router.c
 void redefineSignalHandler(int sigid, void (*my_func)());
-void wait4thread(int threadid);
+void wait4thread(pthread_t threadid);
 #endif

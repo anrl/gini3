@@ -1,6 +1,6 @@
 from PyQt4 import QtNetwork, QtCore
-import os, sys, time, readline
-from UI.Configuration import environ, mainWidgets
+import os, sys, time
+from Core.globals import environ, mainWidgets
 
 class Client(QtCore.QThread):
     def __init__(self, parent = None):

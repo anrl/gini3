@@ -2,7 +2,7 @@
 
 from PyQt4 import QtGui
 from Dockable import *
-from Configuration import defaultOptions
+from Core.globals import defaultOptions
 
 class TextEdit(QtGui.QTextEdit):
     def __init__(self, parent=None):

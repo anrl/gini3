@@ -1,7 +1,7 @@
 """The task manager window to display and kill processes"""
 
 from PyQt4 import QtGui, QtCore
-from Configuration import mainWidgets
+from Core.globals import mainWidgets
 from Dockable import *
 
 class TaskManagerWindow(Dockable):

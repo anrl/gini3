@@ -1,7 +1,7 @@
 """Not being used"""
 
 import math
-from Configuration import mainWidgets, environ, defaultOptions
+from Core.globals import mainWidgets, environ, defaultOptions
 
 class Arrow(QtGui.QGraphicsItem):
     def __init__(self, angle):

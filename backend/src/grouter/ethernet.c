@@ -63,7 +63,7 @@ void *toEthernetDev(void *arg)
 			COPY_IP(apkt->src_ip_addr, gHtonl(tmpbuf, iface->ip_addr));
 		}
 		pkt_size = findPacketSize(&(inpkt->data));
-		verbose(2, "[toEthernetDev]:: vpl_sendto called for interface %d.. ", iface->interface_id);
+		verbose(2, "[toEthernetDev]:: vpl_sendto called for interface %d..%d bytes written ", iface->interface_id, pkt_size);
 		vpl_sendto(iface->vpl_data, &(inpkt->data), pkt_size);
 		free(inpkt);          // finally destroy the memory allocated to the packet..
 	} else
