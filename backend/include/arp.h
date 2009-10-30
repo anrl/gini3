@@ -28,13 +28,13 @@
 /*
  * ARP protocol definitions.. used for ARP processing.
  */
-#define ARP_REQUEST 			1       // From RFC 790 
+#define ARP_REQUEST 			1       // From RFC 790
 #define ARP_REPLY 			2       // ""
 
 
 /*
  * TODO: Expand this entry?? Should we not include other parameters such
- * as 
+ * as
  */
 typedef struct _arp_entry_t
 {
@@ -57,8 +57,8 @@ typedef struct _arp_buffer_entry_t
 typedef struct _arp_packet_t
 {
 	uint16_t hw_addr_type;                   // Format of hardware address
-	uint16_t arp_prot;                       // Format of protocol address 
-	uint8_t hw_addr_len;                     // Length of hardware address 
+	uint16_t arp_prot;                       // Format of protocol address
+	uint8_t hw_addr_len;                     // Length of hardware address
 	uint8_t arp_prot_len;                    // Length of protocol address
 	uint16_t arp_opcode;                     // ARP opcode (command)
 	uchar src_hw_addr[6];	                 // Sender hardware address
@@ -72,13 +72,15 @@ int ARPResolve(gpacket_t *in_pkt);
 void ARPProcess(gpacket_t *pkt);
 
 void ARPInitTable();
+void ARPReInitTable();
+
 int ARPFindEntry(uchar *ip_addr, uchar *mac_addr);
 void ARPAddEntry(uchar *ip_addr, uchar *mac_addr);
 void ARPPrintTable(void);
 void ARPDeleteEntry(char *ip_addr);
 void ARPSendRequest(gpacket_t *pkt);
 
-// ARP Buffer functions.. 
+// ARP Buffer functions..
 void ARPInitBuffer();
 void ARPAddBuffer(gpacket_t *in_pkt);
 int ARPGetBuffer(gpacket_t **out_pkt, uchar *nexthop);

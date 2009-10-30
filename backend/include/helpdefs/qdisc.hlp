@@ -1,33 +1,43 @@
 .TH "qdisc" 1 "30 July 2009" GINI "gRouter Commands"
 
 .SH NAME
-qdisc - setup a queuing discipline at the gRouter
+qdisc - setup buffer management at the gRouter
 
 .SH SNOPSIS
 
-.B queue add
-class_name
-qdisc_name [
-.B -size
-num_slots ] [
-.B -weight
-value ] [
-.B -delay 
-delay_microsec ]
+.B qdisc show
 
-.B queue
-show
+.B qdisc add taildrop
 
-.B queue del
-queue_number
+.B qdisc add dropfront
 
-.B queue mod queue_number [
-.B -weight
-value ] [
-.B -delay 
-delay_microsec ]
+.B qdisc add droponfull
+
+.B qdisc add red 
+[-min minval] [-max maxval] [-pmax pmaxval]
 
 .SH DESCRIPTION
+
+Using this command we can setup the 
+.I queueing discipline
+used by gRouter to manage queue space. When queues get full or near full, the gRouter
+needs to discard some packets. These disciplines define how the packets will be discarded by
+the gRouter. The 
+.I taildrop
+is a simple policy where the incoming packet is dropped if there is no free space.
+The 
+.I dropfront
+is another simple policy where the oldest packet is dropped from the queue to make room for the
+arriving packet. 
+The 
+.I droponfull
+picks a packet in random from the queue and discards it.
+The 
+.I red 
+implements the well know Random Early Drop algorithm for discarding the packet. Unlike the other
+policies, it does not wait until the onset of congestion. It takes early action to drop packets
+in the hope of the giving sufficient warning to cooperating hosts.
+
 
 Using this command we can add packet queues at the GINI router. By default, a GINI
 router has packet queue with FIFO scheduling policy that admits all traffic. This 

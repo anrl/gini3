@@ -19,6 +19,8 @@
 #include <slack/map.h>
 #include <slack/list.h>
 #include <pthread.h>
+#include <math.h>
+#include <stdlib.h>
 #include "protocols.h"
 #include "packetcore.h"
 #include "message.h"
@@ -46,7 +48,7 @@ pktcorecnamecache_t *createPktCoreCnameCache()
 
 void insertCnameCache(pktcorecnamecache_t *pcache, char *cname)
 {
-	pcache->cname[pcache->numofentries] = cname;
+	pcache->cname[pcache->numofentries] = strdup(cname);
 	pcache->numofentries++;
 }
 
@@ -99,6 +101,9 @@ pktcore_t *createPacketCore(char *rname, simplequeue_t *outQ, simplequeue_t *wor
 	pcore->outputQ = outQ;
 	pcore->workQ = workQ;
 	pcore->maxqsize = MAX_QUEUE_SIZE;
+	pcore->qdiscs = initQDiscTable();
+	addSimplePolicy(pcore->qdiscs, "taildrop");
+
 
 	if (!(pcore->queues = map_create(NULL)))
 	{
@@ -114,6 +119,7 @@ pktcore_t *createPacketCore(char *rname, simplequeue_t *outQ, simplequeue_t *wor
 int addPktCoreQueue(pktcore_t *pcore, char *qname, char *qdisc, double qweight, double delay_us, int nslots)
 {
 	simplequeue_t *pktq;
+	qentrytype_t *qentry;
 
 
 	if ((pktq = createSimpleQueue(qname, pcore->maxqsize, 0, 0)) == NULL)
@@ -129,6 +135,16 @@ int addPktCoreQueue(pktcore_t *pcore, char *qname, char *qdisc, double qweight, 
 	strcpy(pktq->qdisc, qdisc);
 	pktq->weight = qweight;
 	pktq->stime = pktq->ftime = 0.0;
+	if (!strcmp(qdisc, "red"))
+	{
+		qentry = getqdiscEntry(pcore->qdiscs, qdisc);
+		pktq->maxval = pktq->maxsize * qentry->maxval;
+		pktq->minval = pktq->maxsize * qentry->minval;
+		pktq->pmaxval = qentry->pmaxval;
+		pktq->avgqsize = 0;
+		pktq->count = -1;
+		pktq->idlestart = 0;
+	}
 
 	map_add(pcore->queues, qname, pktq);
 	insertCnameCache(pcore->pcache, qname);
@@ -375,6 +391,7 @@ char *tagPacket(pktcore_t *pcore, gpacket_t *in_pkt)
 
 	for (j = 0; j < pcore->pcache->numofentries; j++)
 	{
+
 		qname = pcore->pcache->cname[j];
 		if (!strcmp(qname, "default"))
 			continue;
@@ -392,6 +409,105 @@ char *tagPacket(pktcore_t *pcore, gpacket_t *in_pkt)
 		return cdef->cname;
 	else
 		return defaultstr;
+}
+
+
+void enqueuePacket(pktcore_t *pcore, gpacket_t *in_pkt, int pktsize)
+{
+	char *qkey;
+	simplequeue_t *thisq;
+
+	/*
+	 * invoke the packet classifier to get the packet tag at the very minimum,
+	 * we get the "default" tag!
+	 */
+	qkey = tagPacket(pcore, in_pkt);
+
+	verbose(2, "[enqueuePacket]:: simple packet queuer ..");
+	if (prog_verbosity_level() >= 3)
+		printGPacket(in_pkt, 6, "QUEUER");
+
+	pthread_mutex_lock(&(pcore->qlock));
+
+	thisq = map_get(pcore->queues, qkey);
+	if (thisq == NULL)
+	{
+		fatal("[enqueuePacket]:: Invalid %s key presented for queue retrieval", qkey);
+		pthread_mutex_unlock(&(pcore->qlock));
+		free(in_pkt);
+		return EXIT_FAILURE;             // packet dropped..
+	}
+
+	// with queue size full.. we should drop the packet for taildrop or red
+	// TODO: Need to change if we include other buffer management policies (e.g., dropfront)
+	if (thisq->cursize >= thisq->maxsize)
+	{
+		verbose(2, "[enqueuePacket]:: Packet dropped.. Queue for [%s] is full.. cursize %d..  ", qkey, thisq->cursize);
+		free(in_pkt);
+		pthread_mutex_unlock(&(pcore->qlock));
+		return EXIT_FAILURE;
+	}
+
+	if ( (!strcmp(thisq->qdisc, "red")) && (redDiscard(thisq, in_pkt)) )
+	{
+		verbose(2, "[enqueuePacket]:: RED Discarded Packet .. ");
+		free(in_pkt);
+		pthread_mutex_unlock(&(pcore->qlock));
+		return EXIT_FAILURE;
+	}
+
+	pcore->packetcnt++;
+	if (pcore->packetcnt == 1)
+		pthread_cond_signal(&(pcore->schwaiting)); // wake up scheduler if it was waiting..
+	pthread_mutex_unlock(&(pcore->qlock));
+	verbose(2, "[enqueuePacket]:: Adding packet.. ");
+	writeQueue(thisq, in_pkt, pktsize);
+	return EXIT_SUCCESS;
+}
+
+
+/*
+ * RED function: evaluate the Random early drop algorithm and return
+ * 1 (true) if the packet should be dropped. Return 0 otherwise.
+ */
+int redDiscard(simplequeue_t *thisq, gpacket_t *ipkt)
+{
+	double m;
+	double curraccesstime, pb, pa;
+	struct timeval tval;
+	int discarded = 0;
+
+	gettimeofday(&tval, NULL);
+	curraccesstime = tval.tv_usec * 0.000001;
+	curraccesstime += tval.tv_sec;
+
+	// calculate queue average..
+	if (thisq->cursize > 0)
+		thisq->avgqsize = thisq->avgqsize + 0.9 * (thisq->cursize - thisq->avgqsize);
+	else
+	{
+		m = (curraccesstime - thisq->prevaccesstime)/0.0001;
+		thisq->avgqsize = pow(0.1, m) * thisq->avgqsize;
+	}
+
+	if ((thisq->minval < thisq->avgqsize) && (thisq->avgqsize < thisq->maxval))
+	{
+		thisq->count++;
+		pb = thisq->pmaxval *  ( (thisq->avgqsize - thisq->minval) / (thisq->maxval - thisq->avgqsize) );
+		pa = pb/ ( 1 - thisq->count * pb );
+		if (drand48() > pa)
+		{
+			discarded = 1;
+			thisq->count = 0;
+		}
+	} else if (thisq->maxval < thisq->avgqsize)
+	{
+		discarded = 1;
+		thisq->count = 0;
+	} else
+		thisq->count = -1;
+
+	return discarded;
 }
 
 

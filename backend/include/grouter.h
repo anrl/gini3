@@ -31,6 +31,8 @@
 #define MAX_NAME_LEN                256
 #define MAX_DNAME_LEN		    	32
 #define MAX_TYPES_PER_MODULE        8
+#define MAX_QDISC_TYPES             16
+#define MAX_SPOLICIES               16
 #define MAX_TMPBUF_LEN              256
 #define MAX_FRAGMENTS               16
 
@@ -89,7 +91,6 @@ typedef struct _router_config
 	pthread_t scheduler;
 	pthread_t worker;
 	int schedcycle;
-	char schedpolicy[MAX_NAME_LEN];
 } router_config;
 
 

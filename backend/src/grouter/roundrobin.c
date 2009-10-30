@@ -12,7 +12,7 @@
  * the corresponding "queuer" as well.
  */
 
-extern router_config rconfig; 
+extern router_config rconfig;
 
 void *roundRobinScheduler(void *pc)
 {
@@ -22,7 +22,7 @@ void *roundRobinScheduler(void *pc)
 	char *nextqkey;
 	gpacket_t *in_pkt;
 	simplequeue_t *nextq;
-	
+
 
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 	while (1)
@@ -34,11 +34,11 @@ void *roundRobinScheduler(void *pc)
 
 		pthread_mutex_lock(&(pcore->qlock));
 		if (pcore->packetcnt == 0)
-			pthread_cond_wait(&(pcore->schwaiting), &(pcore->qlock));	
+			pthread_cond_wait(&(pcore->schwaiting), &(pcore->qlock));
 		pthread_mutex_unlock(&(pcore->qlock));
 
 		pthread_testcancel();
-		do 
+		do
 		{
 			nextqid = (1 + nextqid) % qcount;
 			nextqkey = list_item(keylst, nextqid);
@@ -51,7 +51,7 @@ void *roundRobinScheduler(void *pc)
 			{
 				pcore->lastqid = nextqid;
 				writeQueue(pcore->workQ, in_pkt, pktsize);
-			} 
+			}
 
 		} while (nextqid != pcore->lastqid && rstatus == EXIT_FAILURE);
 		list_release(keylst);
@@ -64,45 +64,6 @@ void *roundRobinScheduler(void *pc)
 		usleep(rconfig.schedcycle);
 	}
 }
-	
 
 
-int roundRobinQueuer(pktcore_t *pcore, gpacket_t *in_pkt, int pktsize, char *qkey)
-{
-	simplequeue_t *thisq, *nxtq;
-	double minftime, minstime, tweight;
-	List *keylst;
-	char *nxtkey, *savekey;
-
-	verbose(2, "[roundRobinQueuer]:: Round robin queuing scheme.. a very simple queuer invoked..");
-	if (prog_verbosity_level() >= 3)
-		printGPacket(in_pkt, 6, "QUEUER");
-
-	pthread_mutex_lock(&(pcore->qlock));
-
-	thisq = map_get(pcore->queues, qkey);
-	if (thisq == NULL)
-	{
-		fatal("[roundRobinQueuer]:: Invalid %s key presented for queue addition", qkey);
-		pthread_mutex_unlock(&(pcore->qlock));
-		free(in_pkt);
-		return EXIT_FAILURE;             // packet dropped..
-	}
-
-	if (thisq->cursize < thisq->maxsize)
-	{
-		pcore->packetcnt++;
-		if (pcore->packetcnt == 1) 		
-			pthread_cond_signal(&(pcore->schwaiting)); // wake up scheduler if it was waiting..
-		pthread_mutex_unlock(&(pcore->qlock));
-		verbose(2, "[roundRobinQueuer]:: Adding packet.. ");
-		writeQueue(thisq, in_pkt, pktsize);
-		return EXIT_SUCCESS;
-	} else {
-		verbose(2, "[roundRobinQueuer]:: Packet dropped.. Queue for [%s] is full.. cursize %d..  ", qkey, thisq->cursize);
-		free(in_pkt);
-		pthread_mutex_unlock(&(pcore->qlock));
-		return EXIT_FAILURE;
-	}
-}
 

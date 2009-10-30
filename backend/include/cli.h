@@ -67,7 +67,6 @@ void arpCmd();
 void pingCmd();
 void consoleCmd();
 void haltCmd();
-void exitCmd();
 void queueCmd();
 void qdiscCmd();
 void spolicyCmd();

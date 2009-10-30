@@ -10,6 +10,9 @@ arp \- manipulate the ARP cache at the GINI router
 .B arp show
 [ -ip ip_addr ]
 
+.B arp add -ip ip_addr -mac mac_addr
+
+
 
 .SH DESCRIPTION
 
@@ -27,6 +30,15 @@ Use the
 switch to remove all the entries from the ARP table or a particular
 entry matching an IP address.
 
+Use the 
+.B add
+switch to add entries to the ARP table. The newly added entry will have
+the given IP address and MAC address as its values.
+
+.SH TO DO
+
+This command should be extended to manipulate the ARP cache. When that modification
+is done the addition should be retargetted to the cache.
 
 .SH OPTIONS
 

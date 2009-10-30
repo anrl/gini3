@@ -40,7 +40,7 @@ import SCons.Script
 
 # SconsBuilder may work with earlier version,
 # but it was build and tested against SCons 1.0.0
-#SCons.Script.EnsureSConsVersion(1,0,0)
+SCons.Script.EnsureSConsVersion(1,0,0)
 # SconsBuilder may work with earlier version,
 # but it was build and tested against Python 2.4
 SCons.Script.EnsurePythonVersion(2,4)
@@ -132,20 +132,6 @@ def addCommandLineOptions():
     action='store_true',
     default=False,
     help='show commands executed'
-  )
-  SCons.Script.AddOption(
-    '--dist',
-    dest='dist',
-    action='store_true',
-    default=False,
-    help='make the GINI distribution file (tar gzipped)'
-  )
-  SCons.Script.AddOption(
-    '--install',
-    dest='install',
-    action='store_true',
-    default=False,
-    help='install the binary files in the proper location... '
   )
   SCons.Script.AddOption(
     '--documentation',

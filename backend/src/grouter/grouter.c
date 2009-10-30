@@ -17,7 +17,7 @@
 #include "filter.h"
 #include <pthread.h>
 
-router_config rconfig = {.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL, .config_dir=NULL, .ghandler=0, .clihandler= 0, .scheduler=0, .worker=0, .schedcycle=10000, .schedpolicy="rr"};
+router_config rconfig = {.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL, .config_dir=NULL, .ghandler=0, .clihandler= 0, .scheduler=0, .worker=0, .schedcycle=10000};
 pktcore_t *pcore;
 classlist_t *classifier;
 filtertab_t *filter;
@@ -79,7 +79,7 @@ int main(int ac, char *av[])
 
 	// add a default Queue.. the createClassifier has already added a rule with "default" tag
 	// char *qname, char *dqisc, double qweight, double delay_us, int nslots);
-	addPktCoreQueue(pcore, "default", "fifo", 1.0, 2.0, 0);
+	addPktCoreQueue(pcore, "default", "taildrop", 1.0, 2.0, 0);
 	rconfig.scheduler = PktCoreSchedulerInit(pcore);
 	rconfig.worker = PktCoreWorkerInit(pcore);
 
@@ -132,8 +132,8 @@ void setupProgram(int ac, char *av[])
 	prog_init();
 	prog_set_syntax("[options] router_name");
 	prog_set_options(options);
-	prog_set_version("2.0");
-	prog_set_date("20090730");
+	prog_set_version("2.1");
+	prog_set_date("20091024");
 	prog_set_author("Muthucumaru Maheswaran <maheswar@cs.mcgill.ca>");
 	prog_set_contact(prog_author());
 	prog_set_url("http://www.cs.mcgill.ca/~anrl/gini/");

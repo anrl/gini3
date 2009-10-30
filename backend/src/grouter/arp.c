@@ -195,6 +195,11 @@ void ARPInitTable()
 	return;
 }
 
+void ARPReInitTable()
+{
+	ARPInitTable();
+}
+
 
 /*
  * Find an ARP entry matching the supplied IP address in the ARP table

@@ -24,6 +24,7 @@ grouter_src = Split ("""grouter.c
                         packetcore.c
                         icmp.c
                         utils.c
+                        qdisc.c
                         simplequeue.c
                         classifier.c
                         console.c

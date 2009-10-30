@@ -16,6 +16,8 @@ At this time, the scheduling policies cannot be created using the command
 input. One among the available scheduling policies can be activated by this
 command. At least one scheduling policy will be active at any time.
 
+Now the gRouter support 'fifo' (first in first out) and 'rr' (round robin) as the 
+scheduling policies.
 
 
 .SH AUTHORS

@@ -75,7 +75,6 @@ void* fromTapDev(void *arg)
 	interface_t *iface = (interface_t *) arg;
 	interface_array_t *iarr = (interface_array_t *)iface->iarray;
 	uchar bcast_mac[] = MAC_BCAST_ADDR;
-	char *pkttag;
 	gpacket_t *in_pkt;
 	int pktsize;
 
@@ -118,18 +117,8 @@ void* fromTapDev(void *arg)
 			continue;   // skip the rest of the loop
 		}
 
-		// invoke the packet core classifier to get the packet tag
-		// at the very minimum, we get the "default" tag!
-		verbose(2, "[fromTapDev]:: Calling the classifier..");
-		pkttag = tagPacket(pcore, in_pkt);
-		verbose(2, "[fromTapDev]:: Packet tagged as %s ", pkttag);
-		if (!strcmp(rconfig.schedpolicy, "rr"))
-			roundRobinQueuer(pcore, in_pkt, sizeof(gpacket_t), pkttag);
-		else if (!strcmp(rconfig.schedpolicy, "wfq"))
-			weightedFairQueuer(pcore, in_pkt, sizeof(gpacket_t), pkttag);
-		else
-			fatal("[fromTapDev]:: Unknown queuer specification! %s \n", rconfig.schedpolicy);
-
+		verbose(2, "[fromTapDev]:: Packet is sent for enqueuing..");
+		enqueuePacket(pcore, in_pkt, sizeof(gpacket_t));
 	}
 }
 

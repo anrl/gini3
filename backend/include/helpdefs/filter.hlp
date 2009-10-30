@@ -28,7 +28,7 @@ filter \- setup a packet filter at the gRouter
 
 The packet filter at the GINI router can be used to deploy firewalls. Using the filter
 commands we can add deny or allow rules for certain traffic streams. The filter command also
-allows a way to manipulate the ruleset already set at the router. The rules are interpreted
+allows a way to manipulate the rule set already set at the router. The rules are interpreted
 in a 
 .B top-down 
 manner. That is rules listed at the top are matched
@@ -55,7 +55,14 @@ to enable filtering. The state of the filter can be checked by typing
 .SH EXAMPLES
 
 Use the following command to add a filter rule. This rule filters (denies) the traffic according to
-the 'http' traffic specification.
+the 'http' traffic specification. The 
+.I 'http'
+traffic specification was defined using the  
+.B class
+command before issuing the following command. See 
+.B class
+help page for details on using the class command.
+
 .br
 filter add deny http
 

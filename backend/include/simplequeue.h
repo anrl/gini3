@@ -42,6 +42,10 @@ typedef struct _simplequeue_t
 	// following parameters are useful for scheduling algorithms
 	double weight;
 	double stime, ftime;
+	// following parameters are useful for RED
+	double minval, maxval, pmaxval;
+	double avgqsize, idlestart;
+	int count;
 } simplequeue_t;
 
 

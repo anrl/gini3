@@ -85,7 +85,7 @@ int CLIInit(router_config *rarg)
 	registerCLI("ping", pingCmd, SHELP_PING, USAGE_PING, LHELP_PING); // Check
 	registerCLI("console", consoleCmd, SHELP_CONSOLE, USAGE_CONSOLE, LHELP_CONSOLE); // Check
 	registerCLI("halt", haltCmd, SHELP_HALT, USAGE_HALT, LHELP_HALT); // Check
-	registerCLI("exit", exitCmd, SHELP_EXIT, USAGE_EXIT, LHELP_EXIT); // Check
+	registerCLI("exit", haltCmd, SHELP_EXIT, USAGE_EXIT, LHELP_EXIT); // Check
 	registerCLI("queue", queueCmd, SHELP_QUEUE, USAGE_QUEUE, LHELP_QUEUE); // Check
 	registerCLI("qdisc", qdiscCmd, SHELP_QDISC, USAGE_QDISC, LHELP_QDISC); // Check
 	registerCLI("spolicy", spolicyCmd, SHELP_SPOLICY, USAGE_SPOLICY, LHELP_SPOLICY); // Check
@@ -139,7 +139,6 @@ void dummyFunction(int sign)
 
 
 
-
 void parseACLICmd(char *str)
 {
 	char *token;
@@ -151,8 +150,10 @@ void parseACLICmd(char *str)
 	if ((clie = map_get(cli_map, token)) != NULL)
 		clie->handler((void *)clie);
 	else
+	{
+		printf("WARNING: %s not a gRouter command (deferring to Linux)\n", token);
 		system(orig_str);
-
+	}
 }
 
 
@@ -163,10 +164,8 @@ void CLIPrintHelpPreamble()
 }
 
 
-void CLIPrintHelp()
-{
+void CLIPrintHelp() {
 	cli_entry_t *clie;
-
 
 	CLIPrintHelpPreamble();
 	if (!(cli_mapper = mapper_create(cli_map)))
@@ -174,15 +173,15 @@ void CLIPrintHelp()
 		map_destroy(&cli_map);
 		return;
 	}
-        while (mapper_has_next(cli_mapper) == 1)
-        {
+	while (mapper_has_next(cli_mapper) == 1)
+	{
 
 		const Mapping *cli_mapping = mapper_next_mapping(cli_mapper);
 
-		clie = (cli_entry_t *)mapping_value(cli_mapping);
+		clie = (cli_entry_t *) mapping_value(cli_mapping);
 		printf("%s:: \t%s\n\t%s\n", clie->keystr, clie->usagestr,
-		       clie->short_helpstr);
-        }
+				clie->short_helpstr);
+	}
 
 }
 
@@ -300,7 +299,7 @@ void CLIProcessCmds(FILE *fp, int online)
 void CLIDestroy()
 {
 	mapper_destroy(&cli_mapper);
-        map_destroy(&cli_map);
+	map_destroy(&cli_map);
 }
 
 
@@ -562,28 +561,38 @@ void arpCmd()
 	}
 
 	if (!strcmp(next_tok, "show"))
-	{
-		if ((next_tok = strtok(NULL, " \n")) != NULL)
-		{
-			if (!strcmp("-ip", next_tok))
-			{
-				next_tok = strtok(NULL, " \n");
-				strcpy(ip_addr, next_tok);
-			}
-		}
 		ARPPrintTable();
-	} else if (!strcmp(next_tok, "del"))
+	else if (!strcmp(next_tok, "del"))
 	{
 		if ((next_tok = strtok(NULL, " \n")) != NULL)
 		{
 			if (!strcmp("-ip", next_tok))
 			{
 				next_tok = strtok(NULL, " \n");
-				strcpy(ip_addr, next_tok);
+				Dot2IP(next_tok, ip_addr);
+				ARPDeleteEntry(ip_addr);
 			}
-		}
-		ARPDeleteEntry(ip_addr);
-	}
+		} else
+			ARPReInitTable();
+	} else if (!strcmp(next_tok, "add"))
+    {
+		if ((next_tok = strtok(NULL, " \n")) != NULL)
+		{
+			if (!strcmp("-ip", next_tok))
+			{
+				next_tok = strtok(NULL, " \n");
+				Dot2IP(next_tok, ip_addr);
+			}
+			} else if ((next_tok = strtok(NULL, " \n")) != NULL)
+            {
+				if (!strcmp("-mac", next_tok))
+				{
+					next_tok = strtok(NULL, " \n");
+					Colon2MAC(next_tok, mac_addr);
+					ARPAddEntry(ip_addr, mac_addr);
+				}
+            }
+    }
 }
 
 
@@ -599,9 +608,12 @@ ip_spec_t *parseIPSpec(char *instr)
 	ips = (ip_spec_t *) malloc(sizeof(ip_spec_t));
 	bzero(ips, sizeof(ip_spec_t));
 
-	ipaddr = strtok_r(instr, "/", &saveptr);
-	preflen = strtok_r(NULL, "/", &saveptr);
-	ips->preflen = atoi(preflen);
+	ipaddr = strtok_r(instr, " /", &saveptr);
+	preflen = strtok_r(NULL, " /", &saveptr);
+	if (preflen == NULL)
+		ips->preflen = 32;
+	else
+		ips->preflen = atoi(preflen);
 	for (str2 = ipaddr; i--; str2 = NULL)
 	{
 		ipnum = strtok_r(str2, ".", &saveptr2);
@@ -662,8 +674,7 @@ void classCmd()
 				if (!strcmp(next_tok, "-src")) sside = 1;
 				if (!strcmp(next_tok, "-dst")) sside = 0;
 
-				GET_THIS_PARAMETER("(", "classCmd:: missing (..");
-				while ((next_tok = strtok(NULL, " )\n")) != NULL)
+				while ((next_tok = strtok(NULL, "( )\n")) != NULL)
 				{
 					if (!strcmp(next_tok, "-net"))
 					{
@@ -1004,13 +1015,6 @@ void getCmd()
 }
 
 
-// TODO: complete this function
-void exitCmd()
-{
-
-
-}
-
 
 /*
  * queue add class_name qdisc_name [-size num_slots] [-weight value] [-delay delay_microsec]
@@ -1022,9 +1026,9 @@ void exitCmd()
 void queueCmd()
 {
 	char *next_tok;
-	char cname[MAX_DNAME_LEN], qdisc[MAX_DNAME_LEN], qname[MAX_DNAME_LEN];
+	char cname[MAX_DNAME_LEN], qdisc[MAX_DNAME_LEN];
 	// the following parameters are set to default values which are sometimes overwritten
-	int num_slots = -1;
+	int num_slots = 0;   // means, set to default
 	double weight = 1.0, delay = 2.0;
 
 
@@ -1036,11 +1040,16 @@ void queueCmd()
 			strcpy(cname, next_tok);
 			if (getClassDef(classifier, cname) == NULL)
 			{
-				verbose(2, "[queue]:: class name %s not defined ..", cname);
+				verbose(1, "[queue]:: class name %s not defined ..", cname);
 				return;
 			}
 			next_tok = strtok(NULL, " \n");
 			strcpy(qdisc, next_tok);
+			if (lookupQDisc(pcore->qdiscs, qdisc) < 0)
+			{
+				verbose(1, "[queue]:: qdisc %s not defined .. ", qdisc);
+				return;
+			}
 
 			while ((next_tok = strtok(NULL, " \n")) != NULL)
 			{
@@ -1073,7 +1082,7 @@ void queueCmd()
 		{
 			if ((next_tok = strtok(NULL, " \n")) != NULL)
 			{
-				strcpy(qname, next_tok);
+				strcpy(cname, next_tok);
 				if ((next_tok = strtok(NULL, " \n")) != NULL)
 				{
 					if (!strcmp(next_tok, "-weight"))
@@ -1097,16 +1106,60 @@ void queueCmd()
 
 
 
-// TODO: complete this function
+/*
+ * qdisc show
+ * qdisc add taildrop
+ * qdisc add droponfull
+ * qdisc add dropfront
+ * qdisc add red -min minval -max maxval -pmax pmaxval
+ */
 void qdiscCmd()
 {
+	char *next_tok = strtok(NULL, " \n");
+	double pmax = 0.9;
+	double minval = 0.0, maxval = 1.0;
 
-
+	if (!strcmp(next_tok, "show"))
+		printQdiscs(pcore->qdiscs);
+	else if (!strcmp(next_tok, "add"))
+	{
+		next_tok = strtok(NULL, " \n");
+		if (!strcmp(next_tok, "red"))
+		{
+			while ((next_tok = strtok(NULL, " \n")) != NULL)
+			{
+				if (!strcmp(next_tok, "-min"))
+				{
+					next_tok = strtok(NULL, " \n");
+					minval = atof(next_tok);
+				}
+				if (!strcmp(next_tok, "-max"))
+				{
+					next_tok = strtok(NULL, " \n");
+					maxval = atof(next_tok);
+				}
+				if (!strcmp(next_tok, "-pmax"))
+				{
+					next_tok = strtok(NULL, " \n");
+					pmax = atof(next_tok);
+				}
+			}
+			addRED(pcore->qdiscs, minval, maxval, pmax);
+		}
+	}
 }
 
-// TODO: complete this function
+
+
+/*
+ * spolicy show
+ */
 void spolicyCmd()
 {
+	char *next_tok = strtok(NULL, " \n");
 
-
+	if (!strcmp(next_tok, "show"))
+		printf("Scheduling policy: rr (round robin)\n");
 }
+
+

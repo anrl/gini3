@@ -17,6 +17,7 @@
 #include "message.h"
 #include "grouter.h"
 #include "simplequeue.h"
+#include "qdisc.h"
 
 
 typedef struct _pktcorecnamecache_t
@@ -41,6 +42,7 @@ typedef struct _pktcore_t
 	int maxqsize;
 	double vclock;
 	pktcorecnamecache_t *pcache;
+	qdisctable_t *qdiscs;
 } pktcore_t;
 
 
