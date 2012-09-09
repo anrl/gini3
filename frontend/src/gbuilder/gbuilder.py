@@ -3,8 +3,8 @@
 import sys, os
 
 # Check python version number
-if sys.version_info[:2] != (2, 5) and sys.version_info[:2] != (2, 6):
-    raw_input("Error: Use Python version 2.5 or 2.6")
+if sys.version_info[:2] != (2, 6) and sys.version_info[:2] != (2, 7):
+    raw_input("Error: Use Python version 2.6 or 2.7")
     sys.exit(1)
 
 # Check if PyQt4 is installed
