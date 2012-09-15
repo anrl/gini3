@@ -10,6 +10,7 @@ gloader_files = Split("""gloader.py
                          starter.py
                          TaskManager.py
                          utilities.py
+			 xml
                          xml_processor.py""")
 
 gloader_conf = ['gloader.dtd']
