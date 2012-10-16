@@ -177,7 +177,7 @@ int filteredPacket(filtertab_t *ft, gpacket_t *in_pkt)
 		cdef = getClassDef(ft->clist, ft->ruletab[j]->cname);
 		if (cdef == NULL)
 			continue;
-		if (isRuleMatching(cdef, in_pkt))
+		if (isRuleMatching(cdef, in_pkt) && (ft->ruletab[j]->type == 0))
 		{
 			matched = 1;
 			break;
