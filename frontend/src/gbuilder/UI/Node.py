@@ -323,10 +323,11 @@ class Node(DropItem, Item):
         if True: #change == QtGui.QGraphicsItem.ItemPositionChange:
             for edge in self.edgeList:
                 edge.adjust()
-            mainWidgets["canvas"].itemMoved()
+            if change == QtGui.QGraphicsItem.ItemPositionChange:
+                mainWidgets["canvas"].itemMoved()
 
-            if self.device_type == "Mobile" and change == QtGui.QGraphicsItem.ItemPositionChange:
-                self.moveStats()
+                if self.device_type == "Mobile":
+                    self.moveStats()
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
 
@@ -338,8 +339,7 @@ class Node(DropItem, Item):
         if event.button() == QtCore.Qt.RightButton:
             mainWidgets["canvas"].connectNode(self)
         else:
-            pass
-            #QtGui.QGraphicsItem.mousePressEvent(self, event)
+            QtGui.QGraphicsItem.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
         """
