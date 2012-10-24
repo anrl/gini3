@@ -27,13 +27,11 @@ def demo(canvas):
     pass
 
 if __name__ == "__main__":
-    print "this oughta print"
     app = QtGui.QApplication(sys.argv)
 
     QtCore.qsrand(QtCore.QTime(0,0,0).secsTo(QtCore.QTime.currentTime()))
     mainWindow = UI.MainWindow.MainWindow(app)
     #demo(mainWindow.centralWidget())
-    print "Shit started"
     mainWindow.setWindowTitle(QtCore.QObject.tr(mainWindow, 
         "%s %s" % (Core.globals.PROG_NAME, Core.globals.PROG_VERSION)))
     mainWindow.setWindowIcon(QtGui.QIcon(os.environ["GINI_HOME"] + "/share/gbuilder/images/giniLogo.png"))

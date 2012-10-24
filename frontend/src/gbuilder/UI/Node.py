@@ -82,7 +82,6 @@ class Node(DropItem, Item):
         """
         self.edgeList = []
         DropItem.__init__(self, itemType)
-        print "this is my code"
         
         itemTypes = nodeTypes[self.device_type]
         index = self.findNextIndex(itemTypes[self.device_type])
@@ -321,12 +320,8 @@ class Node(DropItem, Item):
         """
         Handle movement of the node.
         """
-        print "I'm changing an item!?!?!?"
-        print "what are change and the itemposchange? ", change, "and", QtGui.QGraphicsItem.ItemPositionChange
         if True: #change == QtGui.QGraphicsItem.ItemPositionChange:
-            print "the edgelist issss ", self.edgeList
             for edge in self.edgeList:
-                print "adjusting edge"
                 edge.adjust()
             mainWidgets["canvas"].itemMoved()
 
@@ -344,9 +339,7 @@ class Node(DropItem, Item):
             mainWidgets["canvas"].connectNode(self)
         else:
             pass
-            print "ahhh recursion!!!~~~"
             #QtGui.QGraphicsItem.mousePressEvent(self, event)
-            print "what da hell?"
 
     def mouseMoveEvent(self, event):
         """

@@ -286,13 +286,6 @@ class Scene(QtGui.QGraphicsScene):
         self.paused = False
         self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.refresh)
 
-    def items(self):
-        print "BEFORE THE ITEMS"
-        toR = super(Scene, self).items()
-        print "items are", map(type, toR)
-        print "AFTER THE ITEMS"
-        return toR
-
     def getTimer(self):
         """
         Return the timer.

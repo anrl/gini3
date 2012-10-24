@@ -12,7 +12,6 @@ class Edge(QtGui.QGraphicsLineItem, Item):
         """
         QtGui.QGraphicsLineItem.__init__(self, parent, scene)
 
-        print "Creating an edge"
         self.source = startItem
         self.dest = endItem
         self.sourcePoint = QtCore.QPointF()
@@ -75,13 +74,9 @@ class Edge(QtGui.QGraphicsLineItem, Item):
         """
         Adjust length and angle of edge based on movement of nodes.
         """
-        print "Adjust: This is stupid"
         if not self.source or not self.dest:
-            print "premature death"
             return
-        print "I lived!"
 
-        print "new line", self.mapFromItem(self.source, 0, 0), ",", self.mapFromItem(self.dest, 0, 0)
         line = QtCore.QLineF(self.mapFromItem(self.source, 0, 0), self.mapFromItem(self.dest, 0, 0))
         self.setLine(line)
         

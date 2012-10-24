@@ -158,10 +158,8 @@ class MainWindow(Systray):
             self.log.append("You cannot close a topology when one is still running!")
             return False
 
-        print "scene is a", type(self.canvas.scene)
         scene = self.canvas.scene()
         if scene and scene.items():
-            print "Scene.items:", map(type, scene.items())
             reply = QtGui.QMessageBox.warning(self, self.tr(Core.globals.PROG_NAME), self.tr("Save before closing?"), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel)
             if reply == QtGui.QMessageBox.Yes:
                 if not self.saveTopology():
