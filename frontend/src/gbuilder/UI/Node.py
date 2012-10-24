@@ -325,7 +325,7 @@ class Node(DropItem, Item):
                 edge.adjust()
             mainWidgets["canvas"].itemMoved()
 
-            if self.device_type == "Mobile":
+            if self.device_type == "Mobile" and change == QtGui.QGraphicsItem.ItemPositionChange:
                 self.moveStats()
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
