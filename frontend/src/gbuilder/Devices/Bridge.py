@@ -4,7 +4,7 @@ from Core.Device import *
 ##
 # Class: the bridge device. Not fully implemented yet
 class Bridge(Device):
-    type="Bridge"
+    device_type="Bridge"
 
     def __init__(self):
         Device.__init__(self)

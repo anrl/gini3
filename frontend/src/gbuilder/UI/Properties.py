@@ -84,7 +84,7 @@ class PropertiesWindow(Dockable):
         prop = self.model.data(propertyIndex)
         if prop.toString() == "Name":
             name = str(value.toString())
-            if name.find(self.currentItem.type + "_") == 0:
+            if name.find(self.currentItem.device_type + "_") == 0:
                 try:
                     devType, index = name.rsplit("_", 1)
                     index = int(index)
@@ -127,7 +127,7 @@ class PropertiesWindow(Dockable):
             checkable = False
             if prop == "Hub mode":
                 checkable = True
-            elif self.currentItem.type == "Switch":
+            elif self.currentItem.device_type == "Switch":
                 if prop == "subnet" or prop == "mask":
                     continue#editable = False
             self.addProperty(prop, value, editable, checkable)
@@ -194,7 +194,7 @@ class InterfacesWindow(PropertiesWindow):
         elif prop == "target":
             value = value.getName()
             editable = False
-        elif not self.currentItem.type == "Wireless_access_point" and prop in ["subnet", "mask"]:
+        elif not self.currentItem.device_type == "Wireless_access_point" and prop in ["subnet", "mask"]:
             return#editable = False
 
         PropertiesWindow.addProperty(self, prop, value, editable)

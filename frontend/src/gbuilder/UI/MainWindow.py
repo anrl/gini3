@@ -158,8 +158,10 @@ class MainWindow(Systray):
             self.log.append("You cannot close a topology when one is still running!")
             return False
 
+        print "scene is a", type(self.canvas.scene)
         scene = self.canvas.scene()
         if scene and scene.items():
+            print "Scene.items:", map(type, scene.items())
             reply = QtGui.QMessageBox.warning(self, self.tr(Core.globals.PROG_NAME), self.tr("Save before closing?"), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel)
             if reply == QtGui.QMessageBox.Yes:
                 if not self.saveTopology():
@@ -496,7 +498,7 @@ class MainWindow(Systray):
         self.client.send("init " + self.project.split("/")[-1].strip(".gproj"))
         self.client.send("canvas %d,%d" % (scene.width(), scene.height()))
         for item in items:
-            if item.type == "Mobile" or item.type == "Wireless_access_point":
+            if item.device_type == "Mobile" or item.device_type == "Wireless_access_point":
                 x = item.pos().x()
                 y = item.pos().y()
                 self.client.send("mobile %s %d,%d" % (item.getName(), x, y))
@@ -531,7 +533,7 @@ class MainWindow(Systray):
         for item in scene.items():
             if not isinstance(item, Device):
                 continue
-            if item.type == "Router":
+            if item.device_type == "Router":
                 item.stop()
             if item.status:
                 activeDevices = True
@@ -600,7 +602,7 @@ class MainWindow(Systray):
             if itemType == "edge":
                 source = scene.findItem(args[0])
                 dest = scene.findItem(args[1])
-                if source.type == "Mobile" or dest.type == "Mobile":
+                if source.device_type == "Mobile" or dest.device_type == "Mobile":
                     item = Wireless_Connection(source, dest)
                 else:
                     item = Connection(source, dest)

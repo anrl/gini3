@@ -4,7 +4,7 @@ from PyQt4 import QtCore
 ##
 # Class: the wireless router class
 class Wireless_access_point(Router):
-    type="Wireless_access_point" 
+    device_type="Wireless_access_point" 
 
     ##
     # Constructor: Initial a router device

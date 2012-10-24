@@ -24,7 +24,7 @@ class Compiler:
             self.compile_list[nodeType] = []
         for device in device_list:
             if isinstance(device, Device):
-                self.compile_list[device.type].append(device)
+                self.compile_list[device.device_type].append(device)
 
     def compile(self):
         """
@@ -263,7 +263,7 @@ class Compiler:
             else:
                 self.writeProperty(eq, value)
                 
-        table = self.formatRoutes(interface[QtCore.QString("routing")], device.type)
+        table = self.formatRoutes(interface[QtCore.QString("routing")], device.device_type)
         self.output.write(table)    
             
     def compile_switch(self):
@@ -280,7 +280,7 @@ class Compiler:
             subnetConnected = False
             for edge in edges:
                 node = edge.getOtherDevice(switch)
-                if node.type == "Subnet":
+                if node.device_type == "Subnet":
                     subnetConnected = True
                     break
                     
@@ -384,9 +384,9 @@ class Compiler:
 
         for con in node.edges():
             otherDevice = con.getOtherDevice(node)
-            if otherDevice.type in ["Router", "UML", "Mobile"]:
+            if otherDevice.device_type in ["Router", "UML", "Mobile"]:
                 target = node
-                if node.type == "Subnet":
+                if node.device_type == "Subnet":
                     target = node.getTarget(otherDevice)
                 otherDevice.setInterfaceProperty("subnet", subnet, target)
                 otherDevice.setInterfaceProperty("mask", mask, target)
@@ -465,7 +465,7 @@ class Compiler:
         for interface in device.getInterfaces():
             for con in device.edges():
                 otherDevice = con.getOtherDevice(device)
-                if otherDevice.type == "Subnet":
+                if otherDevice.device_type == "Subnet":
                     otherDevice = otherDevice.getTarget(device)
                 if interface[QtCore.QString("target")] == otherDevice:
                     break
@@ -481,9 +481,9 @@ class Compiler:
 
         otherDevice = con.getOtherDevice(device)
         
-        if otherDevice.type in ["Router", "Wireless_access_point"]:
+        if otherDevice.device_type in ["Router", "Wireless_access_point"]:
             myself.addAdjacentRouter(otherDevice, interface)
-        elif otherDevice.type in ["UML", "Mobile"]:
+        elif otherDevice.device_type in ["UML", "Mobile"]:
             pass
         else:
             for c in otherDevice.edges():
@@ -496,9 +496,9 @@ class Compiler:
         """
         for con in device.edges():
             otherDevice = con.getOtherDevice(device)
-            if otherDevice.type == "Subnet":
+            if otherDevice.device_type == "Subnet":
                 device.addAdjacentSubnet(otherDevice.getProperty("subnet"))
-            elif otherDevice.type == "Wireless_access_point":
+            elif otherDevice.device_type == "Wireless_access_point":
                 device.addAdjacentSubnet(otherDevice.getProperty("subnet"))
             
     def formatRoutes(self, routes, devType):

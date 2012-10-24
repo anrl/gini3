@@ -35,7 +35,7 @@ class Interfaceable(Device):
         base = "ssh -t " + options["username"] + "@" + options["server"]
         
         screen = " screen -r "
-        if self.type == "Wireless_access_point":
+        if self.device_type == "Wireless_access_point":
             screen += "WAP_%d" % self.getID()
         else:
             name = self.getName()
@@ -268,13 +268,13 @@ class Interfaceable(Device):
             if interface:
                 target = interface[QtCore.QString("target")]
                 if interface[QtCore.QString("subnet")] == subnet \
-                    and self.type == "UML":
+                    and self.device_type == "UML":
                     self.addEntry(interface[QtCore.QString("mask")],
                                   "",
                                   " ",
                                   target)
                 else:
-                    if target.type == "Switch":
+                    if target.device_type == "Switch":
                         interfaceable = target.getTarget(self)
                         gateway = interfaceable.getInterface(target)[QtCore.QString("ipv4")]
                     else:
@@ -284,7 +284,7 @@ class Interfaceable(Device):
                                   subnet,
                                   target)
         else:
-            if self.type == "Router":
+            if self.device_type == "Router":
                 interface = self.getInterface(None, subnet)
                 self.addEntry(interface[QtCore.QString("mask")],
                               "0.0.0.0",

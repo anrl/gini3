@@ -3,7 +3,7 @@ from Core.Device import *
 ##
 # Class: the hub device. Not fully implemented yet
 class Hub(Device):
-    type="Hub"
+    device_type="Hub"
 
     def __init__(self):
         Device.__init__(self)

@@ -20,21 +20,21 @@ class DropItem(QtGui.QGraphicsItem):
         """
         QtGui.QGraphicsItem.__init__(self)
         if itemType:
-            self.type = itemType
+            self.device_type = itemType
         
-        self.image = QtGui.QImage(environ["images"] + self.type + ".gif")  
+        self.image = QtGui.QImage(environ["images"] + self.device_type + ".gif")  
         if self.image.isNull():
-            mainWidgets["log"].append("Unknown node type " + str(self.type))
+            mainWidgets["log"].append("Unknown node type " + str(self.device_type))
             return
         #matrix = QtGui.QMatrix(40.0/image.width(),0,0,40.0/image.height(),0,0)
         #self.image = image.transformed(matrix, QtCore.Qt.SmoothTransformation)
 
         self.setCursor(QtCore.Qt.OpenHandCursor)
         if itemType in unimplementedTypes:
-            self.setToolTip(self.type.center(13) + "\nImplement me.")
+            self.setToolTip(self.device_type.center(13) + "\nImplement me.")
             self.setEnabled(False)
         else:
-            self.setToolTip(self.type.center(21) + "\nDrag onto the canvas.")
+            self.setToolTip(self.device_type.center(21) + "\nDrag onto the canvas.")
     
     def paint(self, painter, option, widget):
         """
@@ -46,14 +46,15 @@ class DropItem(QtGui.QGraphicsItem):
             transparency.fill(QtGui.qRgba(0,0,0,50))
             painter.drawImage(QtCore.QPoint(-self.image.width()/2, -self.image.height()/2), transparency)
         painter.drawImage(QtCore.QPoint(-self.image.width()/2, -self.image.height()/2), self.image)
-        painter.drawText(QtCore.QRectF(-70, self.image.height()/2, 145, 60), self.type, QtGui.QTextOption(QtCore.Qt.AlignHCenter))
+        painter.drawText(QtCore.QRectF(-70, self.image.height()/2, 145, 60), self.device_type, QtGui.QTextOption(QtCore.Qt.AlignHCenter))
         
     def boundingRect(self):
         """
         Get the bounding rectangle of the item.
         """
         rect = self.image.rect()
-        return QtCore.QRectF(rect.left() - rect.width()/2, rect.top() - rect.height()/2, rect.width(), rect.height())
+        toR = QtCore.QRectF(rect.left() - rect.width()/2, rect.top() - rect.height()/2, rect.width(), rect.height())
+        return toR
         
     def mousePressEvent(self, event):
         """
@@ -65,7 +66,7 @@ class DropItem(QtGui.QGraphicsItem):
 
         drag = QtGui.QDrag(event.widget())
         mime = QtCore.QMimeData()
-        mime.setText(self.type)
+        mime.setText(self.device_type)
         drag.setMimeData(mime)
 
         drag.setPixmap(QtGui.QPixmap.fromImage(self.image))
@@ -79,17 +80,19 @@ class Node(DropItem, Item):
         """
         Create a draggable item for the main scene to represent devices.
         """
+        self.edgeList = []
         DropItem.__init__(self, itemType)
+        print "this is my code"
         
-        itemTypes = nodeTypes[self.type]
-        index = self.findNextIndex(itemTypes[self.type])
+        itemTypes = nodeTypes[self.device_type]
+        index = self.findNextIndex(itemTypes[self.device_type])
         if index == 0:
+            print "Node.__init__: I have raise an exception."
             raise Exception
-        name = self.type + "_%d" % index
+        name = self.device_type + "_%d" % index
         self.properties = {QtCore.QString("Name"):QtCore.QString(name)}
         self.interfaces = []
         
-        self.edgeList = []
         self.newPos = QtCore.QPointF()
         self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
@@ -107,10 +110,10 @@ class Node(DropItem, Item):
         self.menu.setPalette(defaultOptions["palette"])
         self.menu.addAction("Delete", self.delete)
 
-#       if self.type == "Mobile":
+#       if self.device_type == "Mobile":
 #           self.wstatsWindow = StatsWindow(self.getName(), mainWidgets["canvas"])
 #           self.setAcceptsHoverEvents(True)
-#       elif self.type == "Router":
+#       elif self.device_type == "Router":
 #           self.tail = None
 #           self.wshark = None
 #           self.rstatsWindow = None
@@ -128,25 +131,25 @@ class Node(DropItem, Item):
             newIndex = 1
             firstPass = False
         scene = mainWidgets["canvas"].scene()
-        while scene.findItem(self.type + "_%d" % newIndex) or newIndex == index:
+        while scene.findItem(self.device_type + "_%d" % newIndex) or newIndex == index:
             newIndex += 1
             if newIndex > 126:
                 if not firstPass:
                     return 0
                 newIndex = 1
                 firstPass = False
-        itemTypes = nodeTypes[self.type]
-        itemTypes[self.type] = newIndex
+        itemTypes = nodeTypes[self.device_type]
+        itemTypes[self.device_type] = newIndex
         return newIndex
             
     def setIndex(self, index):
         """
         Set the index of the node.
         """
-        itemTypes = nodeTypes[self.type]
-        if index > itemTypes[self.type]:
-            itemTypes[self.type] = index
-        name = self.type + "_%d" % index
+        itemTypes = nodeTypes[self.device_type]
+        if index > itemTypes[self.device_type]:
+            itemTypes[self.device_type] = index
+        name = self.device_type + "_%d" % index
         self.setProperty("Name", name)
         self.setToolTip(name)
         
@@ -156,7 +159,7 @@ class Node(DropItem, Item):
         """
         if self.status == status:
             return
-        if not self.status and self.type == "Wireless_access_point":                
+        if not self.status and self.device_type == "Wireless_access_point":                
             client = mainWidgets["client"]
             if client:
                 client.send("attachdetach %d" % self.getID())
@@ -318,12 +321,16 @@ class Node(DropItem, Item):
         """
         Handle movement of the node.
         """
-        if change == QtGui.QGraphicsItem.ItemPositionChange:
+        print "I'm changing an item!?!?!?"
+        print "what are change and the itemposchange? ", change, "and", QtGui.QGraphicsItem.ItemPositionChange
+        if True: #change == QtGui.QGraphicsItem.ItemPositionChange:
+            print "the edgelist issss ", self.edgeList
             for edge in self.edgeList:
+                print "adjusting edge"
                 edge.adjust()
             mainWidgets["canvas"].itemMoved()
 
-            if self.type == "Mobile":
+            if self.device_type == "Mobile":
                 self.moveStats()
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
@@ -336,7 +343,10 @@ class Node(DropItem, Item):
         if event.button() == QtCore.Qt.RightButton:
             mainWidgets["canvas"].connectNode(self)
         else:
-            QtGui.QGraphicsItem.mousePressEvent(self, event)
+            pass
+            print "ahhh recursion!!!~~~"
+            #QtGui.QGraphicsItem.mousePressEvent(self, event)
+            print "what da hell?"
 
     def mouseMoveEvent(self, event):
         """
@@ -344,7 +354,7 @@ class Node(DropItem, Item):
         """
         self.update()
         if mainWidgets["main"].isRunning() and \
-           self.type != "Mobile" and \
+           self.device_type != "Mobile" and \
            event.buttons() == QtCore.Qt.LeftButton:
             popup = mainWidgets["popup"]
             popup.setWindowTitle("Moving Disabled")
@@ -362,7 +372,7 @@ class Node(DropItem, Item):
         QtGui.QGraphicsItem.mouseReleaseEvent(self, event)
 
         if mainWidgets["main"].isRunning() and \
-           self.type == "Mobile" and \
+           self.device_type == "Mobile" and \
            event.button() == QtCore.Qt.LeftButton:
             edges = self.edges()
             if not edges:
@@ -378,6 +388,9 @@ class Node(DropItem, Item):
             if client:
                 client.send("screen -S WAP_%d -X eval 'stuff \"mov set node %d location %d %d 0\"\\015'" \
                                                         % (wap.getID(), self.getID(), x, y))
+
+        elif not mainWidgets["main"].isRunning():
+            self.itemChange(0, 0)
 
     def attach(self):
         """

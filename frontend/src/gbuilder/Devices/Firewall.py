@@ -3,7 +3,7 @@ from Router import *
 ##
 # Class: the firewall device. Not fully implemented yet
 class Firewall(Router):
-    type="Firewall"
+    device_type="Firewall"
 
     def __init__(self):
         Device.__init__(self)

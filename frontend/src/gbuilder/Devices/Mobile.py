@@ -3,7 +3,7 @@ from PyQt4.QtCore import QPoint
 from UI.StatsWindow import *
 
 class Mobile(UML):
-    type="Mobile"
+    device_type="Mobile"
  
     def __init__(self):
         UML.__init__(self)

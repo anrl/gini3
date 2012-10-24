@@ -183,7 +183,7 @@ class TutorialNode(Node):
             painter.drawImage(QtCore.QPoint(-self.image.width()/2, -self.image.height()/2), transparency)
 
         if options["names"]:
-            painter.drawText(QtCore.QRectF(-70, self.image.height()/2, 145, 60), self.type, QtGui.QTextOption(QtCore.Qt.AlignHCenter))
+            painter.drawText(QtCore.QRectF(-70, self.image.height()/2, 145, 60), self.device_type, QtGui.QTextOption(QtCore.Qt.AlignHCenter))
 
     def dragEnterEvent(self, event):
         """
@@ -197,7 +197,7 @@ class TutorialNode(Node):
         Handle a drop.
         """
         mime = event.mimeData()
-        if self.type != mime.text():
+        if self.device_type != mime.text():
             self.dragOver = False
             return
         
@@ -419,22 +419,22 @@ class Tutorial(View):
         """
         if self.index == 2:
             for item in self.scene().selectedItems():
-                if item.type == "Subnet":
+                if item.device_type == "Subnet":
                     self.next()
                     return
         elif self.index == 3:
             for item in self.scene().selectedItems():
-                if item.type != "Subnet":
+                if item.device_type != "Subnet":
                     self.previous()
                     return
         elif self.index == 4:
             for item in self.scene().selectedItems():
-                if item.type == "Router":
+                if item.device_type == "Router":
                     self.next()
                     return
         elif self.index == 5:
             for item in self.scene().selectedItems():
-                if item.type != "Router":
+                if item.device_type != "Router":
                     self.previous()
                     return
 
@@ -446,7 +446,7 @@ class Tutorial(View):
             return
 
         for item in self.scene().selectedItems():
-            if item.type == "Subnet":
+            if item.device_type == "Subnet":
                 subnet = "192.168.%d.0" % item.getID()
                 if item.getProperty("subnet") == subnet:
                     self.next()

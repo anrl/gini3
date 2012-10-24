@@ -152,7 +152,7 @@ class View(QtGui.QGraphicsView):
         """
         Create a connection between sourceNode and item.
         """
-        if sourceNode.type == "Mobile" or item.type == "Mobile":
+        if sourceNode.device_type == "Mobile" or item.device_type == "Mobile":
             con = Wireless_Connection(sourceNode, item)
         else:
             con = Connection(sourceNode, item)
@@ -184,19 +184,19 @@ class View(QtGui.QGraphicsView):
             def validateEdge():
 
                 def isValid(dest, source):
-                    if dest.type in connection_rule[source.type]:
-                        if dest.type == "UML":
+                    if dest.device_type in connection_rule[source.device_type]:
+                        if dest.device_type == "UML":
                             if len(dest.edges()) == 1:
                                 return "UML cannot have more than one connection!"
-                        elif dest.type == "Subnet":
+                        elif dest.device_type == "Subnet":
                             if len(dest.edges()) == 2:
                                 return "Subnet cannot have more than two connections!"    
-                            if source.type == "Switch":
+                            if source.device_type == "Switch":
                                 for edge in dest.edges():
-                                    if edge.getOtherDevice(dest).type == "Switch":
+                                    if edge.getOtherDevice(dest).device_type == "Switch":
                                         return "Subnet cannot have more than one Switch!"
                                 for edge in source.edges():
-                                    if edge.getOtherDevice(source).type == "Subnet":
+                                    if edge.getOtherDevice(source).device_type == "Subnet":
                                         return "Switch cannot have more than one Subnet!"
                         return True
                     return False
@@ -224,7 +224,7 @@ class View(QtGui.QGraphicsView):
                     popup = mainWidgets["popup"]
                     popup.setWindowTitle("Invalid Connection")
                     if valid is False:
-                        popup.setText("Cannot connect " + self.sourceNode.type + " and " + item.type + "!")
+                        popup.setText("Cannot connect " + self.sourceNode.device_type + " and " + item.device_type + "!")
                     else:
                         popup.setText(valid)
                     popup.show()
@@ -285,6 +285,13 @@ class Scene(QtGui.QGraphicsScene):
         self.refreshing = False
         self.paused = False
         self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.refresh)
+
+    def items(self):
+        print "BEFORE THE ITEMS"
+        toR = super(Scene, self).items()
+        print "items are", map(type, toR)
+        print "AFTER THE ITEMS"
+        return toR
 
     def getTimer(self):
         """

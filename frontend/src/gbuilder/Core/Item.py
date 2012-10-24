@@ -12,7 +12,7 @@ nodeTypes = {"UML":hostTypes, "UML_FreeDOS":hostTypes, "UML_Android":hostTypes, 
 commonTypes = ["UML", "Subnet", "Switch", "Router"]
 unimplementedTypes = ["UML_FreeDOS", "UML_Android", "Firewall"]
 
-class Item:
+class Item(object):
     def getName(self):
         """
         Return the name of the item.

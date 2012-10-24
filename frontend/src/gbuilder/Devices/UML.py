@@ -4,7 +4,7 @@ from Core.globals import environ
 from PyQt4.QtCore import QPoint
 
 class UML(Interfaceable):
-    type="UML"
+    device_type="UML"
     
     def __init__(self):
         Interfaceable.__init__(self)

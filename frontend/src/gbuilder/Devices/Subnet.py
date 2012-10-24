@@ -5,7 +5,7 @@ from Core.Interfaceable import Interfaceable
 ##
 # Class: the Subnet
 class Subnet(Device):
-    type="Subnet"    
+    device_type="Subnet"    
 
     def __init__(self):
         Device.__init__(self)

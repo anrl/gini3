@@ -5,7 +5,7 @@ from PyQt4.QtCore import QPoint
 import Core.util
 
 class Router(Interfaceable):
-    type = "Router"    
+    device_type = "Router"    
 
     def __init__(self):
         Interfaceable.__init__(self)

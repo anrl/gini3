@@ -1,7 +1,7 @@
 from Core.Device import *
 
 class Switch(Device):
-    type = "Switch"
+    device_type = "Switch"
     
     def __init__(self):
         Device.__init__(self)
@@ -16,18 +16,18 @@ class Switch(Device):
         Device.addEdge(self, edge)
 
         node = edge.getOtherDevice(self)
-        if node.type == "UML":
+        if node.device_type == "UML":
             node.addInterface(self)
 
     def removeEdge(self, edge):
         Device.removeEdge(self, edge)
 
         node = edge.getOtherDevice(self)
-        if node.type == "UML":
+        if node.device_type == "UML":
             node.removeInterface(self)
     
     def getTarget(self, node):
         for con in self.edges():
             other = con.getOtherDevice(self)
-            if other != node and other.type == "Subnet":
+            if other != node and other.device_type == "Subnet":
                 return other.getTarget(self)
