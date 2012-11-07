@@ -314,6 +314,11 @@ int IPProcessMyPacket(gpacket_t *in_pkt)
 		if (ip_pkt->ip_prot == UDP_PROTOCOL)
 			UDPProcess(in_pkt);
 		return EXIT_SUCCESS;
+
+		// Is packet IGMP?
+		if (ip_pkt->ip_prot == IGMP_PROTOCOL)
+			IGMPProcess(in_pkt);
+		return EXIT_SUCCESS;
 	}
 	return EXIT_FAILURE;
 }
