@@ -349,10 +349,11 @@ class Node(DropItem, Item):
         if mainWidgets["main"].isRunning() and \
            self.device_type != "Mobile" and \
            event.buttons() == QtCore.Qt.LeftButton:
-            popup = mainWidgets["popup"]
-            popup.setWindowTitle("Moving Disabled")
-            popup.setText("Cannot move devices other than Mobile in a running topology!")
-            popup.show()
+            if options["moveAlert"]:
+                popup = mainWidgets["popup"]
+                popup.setWindowTitle("Moving Disabled")
+                popup.setText("Cannot move devices other than Mobile in a running topology!")
+                popup.show()
             return
         
         QtGui.QGraphicsItem.mouseMoveEvent(self, event)

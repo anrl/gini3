@@ -294,6 +294,7 @@ class GeneralPage(QtGui.QWidget):
         uiLayout.addWidget(self.smoothingCheckBox)
         uiLayout.addWidget(self.systrayCheckBox)
         uiLayout.addWidget(self.restoreLayoutCheckBox)
+        uiLayout.addWidget(self.moveAlertCheckBox)
         uiLayout.addWidget(QtGui.QLabel(self.tr("Grid Color: ")))
         uiLayout.addLayout(gridLayout)
         uiLayout.addWidget(QtGui.QLabel(self.tr("Background: ")))
@@ -342,6 +343,7 @@ class GeneralPage(QtGui.QWidget):
         self.glowingCheckBox = QtGui.QCheckBox(self.tr("Use glowing lights"))
         self.systrayCheckBox = QtGui.QCheckBox(self.tr("Use system tray (hide on close)"))
         self.gridCheckBox = QtGui.QCheckBox(self.tr("Show grid"))
+        self.moveAlertCheckBox = QtGui.QCheckBox(self.tr("Alert on Move (when started)"))
         self.restoreLayoutCheckBox = QtGui.QCheckBox(self.tr("Remember and restore layout"))
 
     def createCompilationCheckboxes(self):
@@ -460,6 +462,7 @@ class GeneralPage(QtGui.QWidget):
         """ 
         self.namesCheckBox.setChecked(options["names"])
         self.gridCheckBox.setChecked(options["grid"])
+        self.moveAlertCheckBox.setChecked(options["moveAlert"])
         self.smoothingCheckBox.setChecked(options["smoothing"])
         self.systrayCheckBox.setChecked(options["systray"])
         self.restoreLayoutCheckBox.setChecked(options["restore"])
@@ -520,6 +523,7 @@ class GeneralPage(QtGui.QWidget):
         options["smoothing"] = self.smoothingCheckBox.isChecked()
         options["systray"] = self.systrayCheckBox.isChecked()
         options["restore"] = self.restoreLayoutCheckBox.isChecked()
+        options["moveAlert"] = self.moveAlertCheckBox.isChecked()
 
         options["gridColor"] = self.gridLine.text()
         options["style"] = self.styleComboBox.currentText()

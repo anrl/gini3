@@ -25,7 +25,8 @@ options = {"names":True,
            "graphing":True, "username":"",
            "server":"localhost", "session":"GINI", "autoconnect":True,
            "localPort":"10001", "remotePort":"10000",
-           "restore":True}
+           "restore":True,
+           "moveAlert":True}
 
 mainWidgets = {"app":None,
                "main":None,
