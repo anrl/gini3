@@ -113,12 +113,20 @@ class Compiler:
         message += " is " + errorType + "."
         self.log.append(message)
 
+    def generateConnectionError(self, device, numCons):
+        """
+        Generate a compile error.
+        """
+        self.errors += 1
+        message = ' '.join(("Error:", device.getName(), "has less than", str(numCons), "connection(s)."))
+        self.log.append(message)
+
     def generateConnectionWarning(self, device, numCons):
         """
         Generate a compile warning.
         """
         self.warnings += 1
-        message = "Warning: " + device.getName() + " has less than " + str(numCons) + " connection(s)."
+        message = ' '.join(("Warning:", device.getName(), "has less than", str(numCons), "connection(s)."))
         self.log.append(message)
         
     def compile_subnet(self):
@@ -128,7 +136,9 @@ class Compiler:
         for subnet in self.compile_list["Subnet"]:
 
             edges = subnet.edges()
-            if len(edges) < 1:
+            if len(edges) < 2:
+                self.generateConnectionError(subnet, 2)
+            elif len(edges) < 1:
                 self.generateConnectionWarning(subnet, 1)
                 
             for prop in ["subnet", "mask"]:
@@ -388,6 +398,8 @@ class Compiler:
                 target = node
                 if node.device_type == "Subnet":
                     target = node.getTarget(otherDevice)
+                    if target is None:
+                        continue
                 otherDevice.setInterfaceProperty("subnet", subnet, target)
                 otherDevice.setInterfaceProperty("mask", mask, target)
             else:
