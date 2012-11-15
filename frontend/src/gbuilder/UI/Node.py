@@ -255,10 +255,7 @@ class Node(DropItem, Item):
         """
         Return all of the node's current connections.
         """
-        newList = []
-        for edge in self.edgeList:
-            newList.append(edge)
-        return newList
+        return self.edgeList[:]    # this notation gets a slice of the entire list, effectively cloning it
 
     def calculateForces(self):
         """
@@ -311,6 +308,11 @@ class Node(DropItem, Item):
         self.setPos(self.newPos)
         return True
 
+    def setPos(self, *args):
+        super(Node, self).setPos(*args)
+        for edge in self.edgeList:
+            edge.adjust()
+
     def shape(self):
         """
         Get the shape of the node.
@@ -343,6 +345,11 @@ class Node(DropItem, Item):
             mainWidgets["canvas"].connectNode(self)
         else:
             QtGui.QGraphicsItem.mousePressEvent(self, event)
+
+    def update(self):
+        super(Node, self).update()
+        for edge in self.edgeList:
+            edge.adjust()
 
     def mouseMoveEvent(self, event):
         """
