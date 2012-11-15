@@ -62,7 +62,7 @@ class PropertiesWindow(Dockable):
         elif not editable:
             val.setEditable(False)
             
-        if prop == "Name":
+        if prop == "id":
             self.model.insertRow(0, [pr, val])
         else:
             self.model.appendRow([pr, val])
@@ -82,7 +82,7 @@ class PropertiesWindow(Dockable):
         value = self.model.data(index)
         propertyIndex = self.model.index(index.row(), index.column()-1)
         prop = self.model.data(propertyIndex)
-        if prop.toString() == "Name":
+        if prop.toString() == "id":
             name = str(value.toString())
             if name.find(self.currentItem.device_type + "_") == 0:
                 try:

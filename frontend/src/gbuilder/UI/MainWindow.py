@@ -398,12 +398,13 @@ class MainWindow(Systray):
         tunnel = " -L " + options["localPort"] + ":localhost:" + options["remotePort"]
         server = "bash -c -i 'gserver " + options["remotePort"] + "' || sleep 5"
         command = ""
+        gserver = "gserver"
         
         if environ["os"] == "Windows":
             startpath = environ["tmp"] + "gserver.start"
             try:
                 startFile = open(startpath, "w")
-                startFile.write("echo -ne \"\\033]0;gserver\\007\"\n")
+                startFile.write("echo -ne \"\\033]0;" + gserver + "\\007\"\n")
                 startFile.write(server)
                 startFile.close()
             except:
@@ -417,7 +418,7 @@ class MainWindow(Systray):
                 command += base
             command += tunnel + " -m \"" + startpath + "\""
         else:
-            command += "xterm -T gserver -e " + base + tunnel + " \" " + server + "\""
+            command += "xterm -T \"" + gserver + "\" -e " + base + tunnel + " \" " + server + "\""
 
         self.server = subprocess.Popen(str(command), shell=True)
 

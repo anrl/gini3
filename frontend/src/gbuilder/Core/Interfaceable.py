@@ -46,6 +46,9 @@ class Interfaceable(Device):
             
         command = ""
         
+        window_name = str(self.getProperty("name"))  # the strcast is necessary for cloning
+        if(self.getName() != window_name):
+            window_name += " (" + self.getName() + ")"
         if environ["os"] == "Windows":
             
             startpath = environ["tmp"] + self.getName() + ".start"
@@ -64,7 +67,7 @@ class Interfaceable(Device):
                 command += base
             command += " -m \"" + startpath + "\""
         else:
-            command += "xterm -T " + self.getName() + " -e \"" + base + screen + "\""
+            command += "xterm -T \"" + window_name + "\" -e \"" + base + screen + "\""
 
         self.shell = subprocess.Popen(str(command), shell=True)#ShellStarter(command)
         #self.shell.start()

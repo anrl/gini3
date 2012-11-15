@@ -18,10 +18,8 @@ class Edge(QtGui.QGraphicsLineItem, Item):
         self.destPoint = QtCore.QPointF()
         self.source.addEdge(self)
         self.dest.addEdge(self)
-        self.properties = \
-            {
-                QtCore.QString("Name"):QtCore.QString("SomeEdge")
-            }
+        self.properties = {}
+        self.setProperty("id", "SomeEdge")
         self.interfaces = []
         
         self.setPen(QtGui.QPen(QtCore.Qt.black, 2, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin))
