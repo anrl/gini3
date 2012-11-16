@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # Written by Reehan Shaikh
 # Last update: April 11, 2006

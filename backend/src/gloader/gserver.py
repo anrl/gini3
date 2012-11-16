@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 from PyQt4 import QtNetwork, QtCore
 from TaskManager import *
