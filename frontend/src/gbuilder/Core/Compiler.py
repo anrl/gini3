@@ -56,6 +56,7 @@ class Compiler:
         if options["autogen"]:
             self.autogen_router()
             self.autogen_UML()
+            self.autogen_switch()
             self.autogen_mobile()
 
         self.routing_table_clear()
@@ -275,6 +276,13 @@ class Compiler:
                 
         table = self.formatRoutes(interface[QtCore.QString("routing")], device.device_type)
         self.output.write(table)    
+
+    def autogen_switch(self):
+        """
+        Auto-generate properties for switches.
+        """
+        for switch in self.compile_list["Switch"]:
+            switch.setProperty("mac", "fe:fd:04:00:00:%02x" % switch.getID())
             
     def compile_switch(self):
         """
@@ -282,6 +290,10 @@ class Compiler:
         """
         for switch in self.compile_list["Switch"]:
             self.output.write("<vs name=\"" + switch.getName() + "\">\n")
+            
+            self.output.write("\t<priority>" + switch.getProperty("Priority") + "</priority>\n")
+            self.output.write("\t<mac>" + switch.getProperty("mac") + "</mac>\n")
+
 
             edges = switch.edges()
             if len(edges) < 2:
@@ -292,7 +304,8 @@ class Compiler:
                 node = edge.getOtherDevice(switch)
                 if node.device_type == "Subnet":
                     subnetConnected = True
-                    break
+                if node.device_type == "Switch":
+                    self.output.write("\t<target>" + node.getName() + "</target>\n")
                     
             if not subnetConnected:
                 self.generateError(switch, "subnet", "missing")
@@ -489,10 +502,12 @@ class Compiler:
         """
         Helper method to find adjacent Routers.
         """
-        visitedNodes.append(device)
-
         otherDevice = con.getOtherDevice(device)
+        if otherDevice in visitedNodes:
+            return
         
+        visitedNodes.append(otherDevice)
+
         if otherDevice.device_type in ["Router", "Wireless_access_point"]:
             myself.addAdjacentRouter(otherDevice, interface)
         elif otherDevice.device_type in ["UML", "Mobile"]:

@@ -7,6 +7,7 @@
 
 class Switch:
     name = ""
+    targets = None
     port = ""
     remote = "localhost"
     hub = False
@@ -14,6 +15,13 @@ class Switch:
     def __init__(self, sName):
         "Initialize the Switch class"
         self.name = sName
+        self.targets = []
+        self.priority = ""
+        self.mac = ""
+      
+    def addTarget(self, newTarget):
+        self.targets.append(newTarget)
+
 
     def printMe(self):
         print "[Name: " + self.name + "]",

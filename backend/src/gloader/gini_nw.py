@@ -25,6 +25,12 @@ class GINI_NW:
             newSwitch = Switch(switch.getAttribute("name"))
             for para in switch.childNodes:
                 if (para.nodeType == para.ELEMENT_NODE):
+                    if (para.tagName.lower() == "priority"):
+                        newSwitch.priority = self.getTextPart(para)
+                    if (para.tagName.lower() == "mac"):
+                        newSwitch.mac = self.getTextPart(para)
+                    if (para.tagName.lower() == "target"):
+                        newSwitch.targets.append(self.getTextPart(para))
                     if (para.tagName.lower() == "port"):
                         newSwitch.port = self.getTextPart(para)
                     if (para.tagName.lower() == "remote"):

@@ -9,9 +9,12 @@ env = Environment(CPPPATH=usw_include)
 usw_src = Split ("""uswitch.c
                     hash.c
                     cleanup.c
-                    port.c""")
+                    port.c
+		    multiswitch.c""")
 
-uswitch = env.Program(usw_src)
+usw_libs = Split ("""
+			""")
+uswitch = env.Program(usw_src, LIBS=usw_libs)
 
 env.Install(gini_home + '/bin', uswitch)
 env.Alias('install', gini_home + '/bin')

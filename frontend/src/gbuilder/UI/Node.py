@@ -90,7 +90,7 @@ class Node(DropItem, Item):
             raise Exception
         name = self.device_type + "_%d" % index
         self.properties = {}
-        self.setProperty("id", name)
+        self.setProperty("Name", name)
         self.setProperty("name", name)
         self.interfaces = []
         

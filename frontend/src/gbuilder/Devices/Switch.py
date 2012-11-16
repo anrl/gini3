@@ -6,6 +6,8 @@ class Switch(Device):
     def __init__(self):
         Device.__init__(self)
         self.setProperty("Hub mode", "False")
+        self.setProperty("Priority", "100")
+        self.setProperty("mac", "")
 #       self.setProperty("mask", "")
 #       self.setProperty("subnet", "")
 #       self.setProperty("link_subnet", "0")

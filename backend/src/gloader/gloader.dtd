@@ -56,8 +56,9 @@
 
 
 <!-- virtual switch definition -->
-<!ELEMENT vs (port?, remote?, hub?)>
+<!ELEMENT vs (priority, mac, target*, port?, remote?, hub?)>
 <!ATTLIST vs name CDATA #REQUIRED>
+<!ELEMENT priority (#PCDATA)>
 <!ELEMENT port (#PCDATA)>
 <!ELEMENT remote (#PCDATA)>
 <!ELEMENT hub EMPTY>

@@ -7,6 +7,8 @@
 #include "error.h"
 #include "hash.h"
 #include "port.h"
+#include "multiswitch.h"
+
 
 #define IS_BROADCAST(mac) ((mac[0] & 1) == 1)
 
@@ -89,23 +91,24 @@ port_send(struct sockaddr * sa, struct packet * pkt, int len)
 	struct port *dst_port;
 
 	PORT_FIND(sa, src_port);
-	if (!src_port)
-		return NULL;
+	//    Removing this check because packets incoming from switches will not have
+	//    a source port.
+	//if (!src_port)
+	//	return NULL;
 
-	DPRINTF(1, "found source port!\n");
+	//DPRINTF(1, "found source port!\n");
 
 	/* update the src MAC's hash entry */
-	if (!hub_flag)
+	if ((!hub_flag) && (src_port != NULL))
 		hash_update(pkt->header.src, src_port);
 
 	/* locate the dst mac address */
-	dst_port = (IS_BROADCAST(pkt->header.dst)) 
-		? NULL 
-		: hash_find_port(pkt->header.dst);
+	dst_port = hash_find_port(pkt->header.dst);
 
-	/* if dst mac addr is NULL or broadcast or hub mode,
+	/* if dst mac addr is broadcast or hub mode,
 	 * then send to all ports */
-	if (!dst_port || hub_flag) {
+	if (IS_BROADCAST(pkt->header.dst) || hub_flag) {
+
 		if (debug_flag && !dst_port) {
 			fprintf(stderr, "Broadcast addr: "
 				"%02x:%02x:%02x:%02x:%02x:%02x",
@@ -126,8 +129,17 @@ port_send(struct sockaddr * sa, struct packet * pkt, int len)
 				(*dst_port->sender)(dst_port, pkt, len);
 			}
 		}
+
+		// Forward to all switches
+		ms_broadcast(pkt, len, sa);
+
 		DPRINTF(1, "broadcast sent\n");
-	} else {
+	}
+	else if (dst_port == NULL) {
+	       	// If the destination is not a direcly connected UML, forward to switches only
+		ms_broadcast(pkt, len, sa);
+	}
+	else {
 		DPRINTF(1, "found destination port!\n");
 		if (debug_flag) 
 			send_dbg(dst_port, pkt, len);

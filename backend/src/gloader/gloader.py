@@ -65,14 +65,31 @@ def createVS(switches, switchDir):
         print "Starting Switch %s...\t" % switch.name,
         ### ------ config ---------- ###
         # name the config file
-        subSwitchDir = "%s/%s" % (switchDir, switch.name)
+        subSwitchDir = "%s%s" % (switchDir, switch.name)
         makeDir(subSwitchDir)
         # move to the switch directory
         oldDir = os.getcwd()
         os.chdir(subSwitchDir)
+
+        ### Write targets file ###
+        configFile = "%s/targets.conf" % (subSwitchDir)
+        # delete confFile if already exists
+        if (os.access(configFile, os.F_OK)):
+            os.remove(configFile)
+        # create the config file
+        configOut = open(configFile, "w")
+        for target in switch.targets:
+            targetSocket = "%s%s/multiswitch\n" % (getFullyQualifiedDir(switchDir), target)
+            configOut.write(targetSocket)
+        configOut.close()
+
         switchFlags  = "-l %s.log " % VS_PROG
         switchFlags += "-p %s.pid " % VS_PROG
         switchFlags += "-s gini_socket.ctl "
+        switchFlags += "-t targets.conf "
+        switchFlags += "-P %s " % switch.priority
+        switchFlags += "-m %s " % switch.mac
+
         if (switch.hub):
             switchFlags += "--hub "
 

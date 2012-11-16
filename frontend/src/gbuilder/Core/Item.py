@@ -17,7 +17,7 @@ class Item(object):
         """
         Return the name of the item.
         """
-        return str(self.getProperty("id"))
+        return str(self.getProperty("Name"))
 
     def getID(self):
         """

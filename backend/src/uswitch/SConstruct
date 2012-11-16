@@ -20,14 +20,15 @@ env = Environment(CPPPATH=usw_include)
 usw_src = Split ("""uswitch.c
 		    hash.c
 		    cleanup.c
-		    port.c""")
+		    port.c
+		    multiswitch.c""")
 
 # Any library dependencies go here..
 
 usw_libs = Split ("""
 			""")
 
-uswitch = env.Program(usw_src)
+uswitch = env.Program(usw_src, LIBS=usw_libs)
 
 if GetOption('install') > 0 and gini_home != None:
 	env.Install(gini_home + '/bin', uswitch)

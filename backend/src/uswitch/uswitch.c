@@ -29,9 +29,11 @@
 #include "error.h"
 #include "port.h"
 #include "uswitch.h"
+#include "multiswitch.h"
+
 
 /* user flags */
-int debug_flag =	0;	/* 0 - normal, 1+ debug */
+int debug_flag =	2;	/* 0 - normal, 1+ debug */
 int force_flag =	0;
 int hub_flag = 		0;
 
@@ -45,6 +47,9 @@ static struct option long_options[] =
 	{"logfile",	required_argument,	NULL, 'l'},
 	{"pidfile",	required_argument,	NULL, 'p'},
 	{"sockfile",	required_argument,	NULL, 's'},
+	{"targetfile",	required_argument,	NULL, 't'},
+	{"priority",	required_argument,	NULL, 'P'},
+	{"mac",		required_argument,	NULL, 'm'},
 	{"udp_port",	required_argument,	NULL, 'u'},
 	{0, 0, 0, 0}
 };
@@ -63,6 +68,7 @@ static char * g_sockname 	= NULL;	/* name of socket file */
 
 struct fd *g_sockdatafd = NULL;	/* packets sent by UML */
 struct fd *g_sockctrlfd = NULL; /* control messages from UML */
+struct sockaddr_un g_sun_dat;
 
 struct fd *g_fdhead 	= NULL;	/* head of fd linked-list */
 int g_fdmax 		= 0;	/* next available file descriptor */
@@ -222,7 +228,7 @@ send_sock(struct port *p, struct packet *packet, int len)
  * This occurs when the control socket receives a message for
  * a file descriptor with a NULL remote port
  */
-static void
+void
 create_sock(struct fd *fd)
 {
 	int n;			/* number of bytes from read() */
@@ -390,9 +396,9 @@ handle_data_sock(int fd)
 {
 	int len;
 	struct packet packet;
-	struct sockaddr sa;
+	struct sockaddr_un sa;
 	struct port *p;
-	socklen_t sa_len = sizeof (struct sockaddr);
+	socklen_t sa_len = sizeof (sa);
 
 	DPRINTF(1, "event on data file descriptor %d\n", fd);
 
@@ -407,8 +413,9 @@ handle_data_sock(int fd)
 	/* send data to specific port */
 
 	p = port_send(&sa, &packet, len);
-	if (!p)
-		DPRINTF(0, "FATAL: no incoming port for packet\n");
+	//if (!p)
+	//	DPRINTF(0, "FATAL: no incoming port for packet\n");
+
 	/* XXX: port_find could use a cache... */
 //	PORT_FIND(&sa, p);
 //	if (p != NULL)
@@ -632,18 +639,21 @@ void work(struct timeval *gctime)
 	int n;
 	struct fd *fd;
         struct fd *next;
-//	fd_set set;
+	//fd_set set;
 
 	DPRINTF(1, "select() called on file descriptors");
 
 	FD_ZERO(&set);
 	for (fd = g_fdhead; fd != NULL; fd = fd->next) {
-//		if (!FD_ISSET(fd->fh, &set)) {
-			if (debug_flag)
-				fprintf(stderr, " %d", fd->fh);
-			FD_SET(fd->fh, &set);
-//		}
+	    //if (!FD_ISSET(fd->fh, &set)) {
+    		if (debug_flag)
+		    fprintf(stderr, " %d", fd->fh);
+		FD_SET(fd->fh, &set);
+	    //}
 	}
+
+	// Also set the multiswitch socket
+	FD_SET(ms_sock, &set);
 
 	if (debug_flag)
 		fprintf(stderr, "\n");
@@ -666,6 +676,10 @@ void work(struct timeval *gctime)
 				FD_CLR(fd->fh, &set);
 			}
 		}
+		if (FD_ISSET(ms_sock, &set)) {
+		    handle_data_sock(ms_sock);
+		    FD_CLR(ms_sock, &set);
+		}
 #if 0
 		/* now all entries should be cleared ! */
 		if (debug_flag >1) {
@@ -678,6 +692,7 @@ void work(struct timeval *gctime)
 		}
 #endif
 	}
+
 }
 
 /*
@@ -941,10 +956,13 @@ static void sig_usr(int sig)
 
 int main(int argc, char *argv[])
 {
+
 	int c;			/* getopt character */
 	int option_index = 0;	/* index into long_options struct */
 	struct sigaction sa_term;
         struct sigaction sa_usr;
+
+	int sa_un_len;
 
 	int sock_flag 		= 0;
 	int remote_flag 	= 0;
@@ -953,6 +971,11 @@ int main(int argc, char *argv[])
 
 	char * log_name		= NULL;
 	char * remote_name	= NULL;
+	char * targetfile	= NULL;
+	
+	int priority = 0;
+	char mac[6] = {0, 0, 0, 0, 0, 0};
+	
 
 	opterr = 1;	/* enable error msg when parsing options */
 
@@ -961,7 +984,7 @@ int main(int argc, char *argv[])
 	hash_init();
 	cleanup_init();
 
-	while((c = getopt_long(argc, argv, "+a:dhl:p:r:s:u:",
+	while((c = getopt_long(argc, argv, "+a:dhl:p:r:s:t:P:m:u:",
 			long_options, &option_index)) != -1) {
 		switch (c) {
 			case 0:
@@ -990,6 +1013,15 @@ int main(int argc, char *argv[])
 			case 's':	/* socket file: required */
 				sock_flag = 1;
 				g_sockname = optarg;
+				break;
+			case 't':
+				targetfile = optarg;
+				break;
+			case 'P':
+				priority = atoi(optarg);
+				break;
+			case 'm':
+				sscanf(optarg, "%hx:%hx:%hx:%hx:%hx:%hx", mac, mac+1, mac+2, mac+3, mac+4, mac+5);
 				break;
 			case 'u':
 				udp_flag = 1;
@@ -1025,6 +1057,7 @@ int main(int argc, char *argv[])
 //	if (remote_flag)
 //		init_remote(remote_name);
 
+
 	/* initialize signal handlers */
 
 	memset(&sa_term, '\0', sizeof (struct sigaction));
@@ -1041,6 +1074,13 @@ int main(int argc, char *argv[])
 		CLEANUP_DO("signal() failed");
 	if (signal(SIGUSR2, sig_usr) < 0)
 		CLEANUP_DO("signal() failed");
+
+	/* initialize the multiswitch module */
+	ms_init(priority, mac);
+	ms_parse_file(targetfile);
+
+	/* Run STP before any communication is allowed */
+	ms_stp();
 
 	/* setup and run main loop */
 
@@ -1069,7 +1109,8 @@ void usage(int status)
 "  -h, --help             display this help and exit\n"
 "  -l, --logfile FILE     set log file to FILE\n"
 "  -p, --pidfile FILE     set pid file to FILE\n"
-"  -s, --sockfile FILE    set socket to FILE\n\n"
+"  -s, --sockfile FILE    set socket to FILE\n"
+"  -t, --targetfile FILE     set target file to FILE\n\n"
 	, g_cmdname);
 	exit(status);
 }
