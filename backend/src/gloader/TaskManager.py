@@ -38,7 +38,7 @@ class TaskManager(QtCore.QThread):
             for i in range(1, len(lines)-2):
                 line = lines[i].split("\t")
                 parts = line[1].split(".")
-                status = line[3].strip("()\n").split(", ")[-1]
+                status = line[-1].strip("()\n").split(", ")[-1]
                 for dev in devFilter:
                     if parts[1].find(dev) == 0:
                         devices[parts[1]] = (parts[0], status)
