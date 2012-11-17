@@ -3,3 +3,10 @@
 *.o
 config.log
 backend/build
+bin/
+doc/
+etc/
+share/
+root_fs_beta2
+.sconf_temp/
+.sconsign.dblite
