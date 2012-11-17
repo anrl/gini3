@@ -4,7 +4,6 @@ Import('env')
 Import('gini_home')
 
 gbuilder_files = Split("""
-    gbuilder.py
     Core
     Devices
     images
@@ -15,8 +14,10 @@ gbuilder_files = Split("""
 #    linkCmd = "mklink $TARGET $SOURCE"
 #else:
 #    linkCmd = "ln $SOURCE $TARGET"
+env.Install(gini_home + '/share/gbuilder', 'gbuilder.py')
 
-env.Install(gini_home + '/share/gbuilder', gbuilder_files)
+for x in gbuilder_files:
+  env.Install(gini_home + '/share/gbuilder/' + x, Glob(x + "/*.py"))
 if env['PLATFORM'] != 'win32':
     env.Command(gini_home + '/bin/gbuilder', gini_home + '/share/gbuilder/gbuilder.py', "ln -s $SOURCE $TARGET")
 env.Alias('install', gini_home + '/share/gbuilder')
