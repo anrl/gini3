@@ -3,7 +3,6 @@
 # file: xml_processor.py
 
 from xml.parsers.xmlproc import xmlval
-from xml.parsers.xmlproc import xmldtd
 import xml.dom.minidom
 import os
 
@@ -18,7 +17,7 @@ class XMLProcessor:
     def __init__(self,file):
         "Initiates the class with the XML file and validates it"
         self.xmlFile = file
-        self.validateXML()
+        #self.validateXML()
         self.getGINI()
 
     def validateXML(self):
