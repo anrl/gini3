@@ -285,7 +285,7 @@ env.Alias('install','install-filesystem')
 
 frontend_dir = src_dir + "/frontend"
 
-faq = 'doc/FAQ.html'
+faq = '/doc/FAQ.html'
 
 env.Execute(Mkdir(prefix + "/tmp"))
 env.Execute(Mkdir(prefix + "/sav"))
