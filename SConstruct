@@ -25,11 +25,11 @@ Export('gini_home')
 
 src_dir = os.getcwd()
 
-prefix = ARGUMENTS.get('PREFIX',src_dir)
-try:
-  prefix = os.environ['PREFIX']
-except KeyError:
-  pass
+prefix = gini_home 
+# try:
+#   prefix = os.environ['PREFIX']
+# except KeyError:
+#   pass
 
 build_dir = src_dir + "/build"
 
