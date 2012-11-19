@@ -137,9 +137,9 @@ class Compiler:
         for subnet in self.compile_list["Subnet"]:
 
             edges = subnet.edges()
-            if len(edges) < 2:
-                self.generateConnectionError(subnet, 2)
-            elif len(edges) < 1:
+            #if len(edges) < 2:
+                #self.generateConnectionError(subnet, 2)
+            if len(edges) < 1:
                 self.generateConnectionWarning(subnet, 1)
                 
             for prop in ["subnet", "mask"]:
