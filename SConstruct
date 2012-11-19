@@ -54,10 +54,11 @@ def gen_python_path_file(target,source,env):
   output_file = open(target[0].abspath,'w')
   output_file.write('import os\n')
   output_file.write('GINI_ROOT = "%s"\n' % prefix)
-  if env['PLATFORM'] != 'win32': 
-    output_file.write('GINI_HOME = os.environ["HOME"] + "/.gini"\n')
-  else:
-    output_file.write('GINI_HOME = os.environ["USERPROFILE"] + "/gini_files"\n')
+  #if env['PLATFORM'] != 'win32': 
+    #output_file.write('GINI_HOME = os.environ["HOME"] + "/.gini"\n')
+  #else:
+    #output_file.write('GINI_HOME = os.environ["USERPROFILE"] + "/gini_files"\n')
+  output_file.write('GINI_HOME = "%s"\n'% prefix)
   output_file.close()
   return None
 
@@ -254,6 +255,8 @@ gloader_dir = backend_dir + "/src/gloader"
 gloader_conf = gloader_dir + "/gloader.dtd"
 
 env.Install(etc_dir, gloader_conf)
+
+env.PythonPathFile(gloader_dir + "/paths.py",None)
 
 result = env.Install(share_dir + '/gloader', Glob(gloader_dir + "/*.py"))
 env.AddPostAction(share_dir + "/gloader/gloader.py", Chmod(share_dir + "/gloader/gloader.py", 0755))
