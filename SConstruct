@@ -46,6 +46,27 @@ share_dir = prefix + "/share"
 
 env = Environment()
 
+#####################
+# Source Generators #
+#####################
+
+def gen_python_path_file(target,source,env):
+  output_file = open(target[0].abspath,'w')
+  output_file.write('import os\n')
+  output_file.write('GINI_ROOT = "%s"\n' % prefix)
+  if env['PLATFORM'] != 'win32': 
+    output_file.write('GINI_HOME = os.environ["HOME"] + "/.gini"\n')
+  else:
+    output_file.write('GINI_HOME = os.environ["USERPROFILE"] + "/gini_files"\n')
+  output_file.close()
+  return None
+
+gen_python_path_builder = Builder(action=gen_python_path_file,
+  single_target=True,
+  target_factory = FS.File)
+
+env.Append(BUILDERS = {'PythonPathFile':gen_python_path_builder})
+
 ################
 # Symlink Code #
 ################
@@ -313,6 +334,7 @@ gbuilder_folders = Split("""
 gbuilder_images = gbuilder_dir + "/images/*"
 
 env.Install(share_dir + '/gbuilder', gbuilder_dir + '/gbuilder.py')
+env.PythonPathFile(gbuilder_dir +'/Core/paths.py',None)
 
 # Install each of the gbuilder folders
 for x in gbuilder_folders:
@@ -324,5 +346,6 @@ env.Install(share_dir + '/gbuilder/images/', Glob(gbuilder_images))
 if env['PLATFORM'] != 'win32':
     env.SymLink(bin_dir + '/gbuilder', share_dir + '/gbuilder/gbuilder.py')
     env.Alias('install-gbuilder', bin_dir + '/gbuilder')
+    # Adding Path info to gbuilder
 env.Alias('install-gbuilder', share_dir + '/gbuilder')
 env.Alias('install', 'install-gbuilder')

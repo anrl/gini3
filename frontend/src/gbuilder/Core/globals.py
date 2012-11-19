@@ -1,17 +1,19 @@
 """ Various global variables """
 import os
 
+from Core.paths import GINI_HOME, GINI_ROOT
+
 PROG_NAME = "gBuilder"
 PROG_VERSION  = "2.0.1"
 
 environ = {"os":"Windows",
-           "path":os.environ["GINI_HOME"]+"/",
+           "path":GINI_ROOT+"/",
            "remotepath":"./",
-           "images":os.environ["GINI_HOME"]+"/share/gbuilder/images/",
-           "config":os.environ["GINI_HOME"]+"/etc/",
-           "sav":os.environ["GINI_HOME"]+"/sav/",
-           "tmp":os.environ["GINI_HOME"]+"/tmp/",
-           "doc":os.environ["GINI_HOME"]+"/doc/"}
+           "images":GINI_ROOT+"/share/gbuilder/images/",
+           "config":GINI_ROOT+"/etc/",
+           "sav":GINI_ROOT+"/sav/",
+           "tmp":GINI_ROOT+"/tmp/",
+           "doc":GINI_ROOT+"/doc/"}
 
 options = {"names":True,
            "systray":False,
