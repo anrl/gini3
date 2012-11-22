@@ -228,7 +228,7 @@ class ReceiveRouterStatsCommand(Command):
 class ReceiveWiresharkCaptureCommand(Command):
     def execute(self):
         name, capture = self.args.split(" ", 1)
-        outfile = environ["GINI_HOME"] + "/tmp/" + name + ".out"
+        outfile = environ["tmp"] + name + ".out"
         fd = open(outfile, "ab")
         fd.write(capture)
         fd.close()

@@ -1,6 +1,5 @@
 from PyQt4 import QtCore
 import os, time
-from paths import GINI_HOME, GINI_ROOT
 
 devFilter = ["WAP_","UML_","Router_","Mobile_"]
 
@@ -27,8 +26,8 @@ class TaskManager(QtCore.QThread):
         self.running = True
         self.devices = {}
         while self.running:
-            os.system("screen -wipe > %s/tmp/screenPID" % GINI_HOME)
-            screenIn = open("%s/tmp/screenPID" % GINI_HOME, "r")
+            os.system("screen -wipe > %s/tmp/screenPID" % os.environ["GINI_HOME"])
+            screenIn = open("%s/tmp/screenPID" % os.environ["GINI_HOME"], "r")
             lines = screenIn.readlines()
             screenIn.close()
 
@@ -48,7 +47,7 @@ class TaskManager(QtCore.QThread):
             self.reportStatus()
             time.sleep(1)
 
-        os.system("rm %s/tmp/screenPID" % GINI_HOME)
+        os.system("rm %s/tmp/screenPID" % os.environ["GINI_HOME"])
 
 if __name__ == "__main__":
     TaskManager().manage()
