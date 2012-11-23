@@ -40,7 +40,7 @@ class Compiler:
             self.log.append("Auto-routing is OFF.")
             
         self.output.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-        self.output.write("<!DOCTYPE gloader SYSTEM \"" + "etc/gloader.dtd"+"\">\n")
+        self.output.write("<!DOCTYPE gloader SYSTEM \"" + os.environ["GINI_SHARE"] + "/gloader/gloader.dtd"+"\">\n")
         self.output.write("<gloader>\n\n")
 
         if options["autogen"]:
