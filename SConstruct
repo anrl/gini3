@@ -58,13 +58,15 @@ def gen_environment_file(target,source,env):
   output_file = open(target[0].abspath,'w')
   output_file.write('#!/usr/bin/python2\n')
   output_file.write('import os,subprocess,sys\n\n')
+  output_file.write('previous_dir = os.getcwd()\n')
   output_file.write('os.chdir(os.path.dirname(os.path.realpath(__file__)))\n')
   output_file.write('os.environ["GINI_ROOT"] = os.path.realpath("%s")\n' % os.path.relpath(prefix,bindir))
   output_file.write('os.environ["GINI_SHARE"] = os.path.realpath("%s")\n' % os.path.relpath(sharedir,bindir))
   output_file.write('os.environ["GINI_HOME"] = os.environ["GINI_ROOT"]\n') #XXX change when it is set up right
   output_file.write('params = [os.path.realpath("%s")]\n' % os.path.relpath(source[0].abspath,bindir))
   output_file.write('if len(sys.argv) > 1: params.extend(sys.argv[1:])\n')
-  output_file.write('os.execv(os.path.realpath("%s"),params)' % os.path.relpath(source[0].abspath,bindir) )
+  output_file.write('os.chdir(previous_dir)\n')
+  output_file.write('os.execv(params[0],params)\n')
   return None
 
 gen_environment_file_builder = Builder(action=gen_environment_file, single_target = True, single_source = True, target_factory = FS.File, source_factory = FS.File)

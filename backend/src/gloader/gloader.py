@@ -736,7 +736,7 @@ def destroyVM(umls, umlDir, mode):
         print "[OK]"
         # delete the config files in the /tmp
         for nwIf in uml.interfaces:
-            configFile = "/tmp/%s.sh" % nwIf.mac.upper()
+            configFile = "%s/tmp/%s.sh" % (os.environ["GINI_HOME"],nwIf.mac.upper())
             if (os.access(configFile, os.W_OK)):
                 os.remove(configFile)
         if mode == 0:

@@ -718,6 +718,8 @@ init_logfile(char *name)
 	if (freopen(name, "a", stderr) == NULL)
 		CLEANUP_DO(ERR_FREOPEN);
 
+  DPRINTF(1, "stderr redirected\n");
+
 	if (setvbuf(stderr, NULL, _IOLBF, 0) != 0)
 		perror("setvbuf() failed");	/* not fatal */
 
@@ -996,7 +998,7 @@ int main(int argc, char *argv[])
 				/* XXX: getopt() can't handle optional
 				 * args very well...
 				 */
-				debug_flag++;
+				debug_flag = 2;
 				break;
 			case 'h': 	/* help */
 				usage(EXIT_SUCCESS);

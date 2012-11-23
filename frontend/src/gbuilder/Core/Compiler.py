@@ -56,9 +56,9 @@ class Compiler:
         if options["autogen"]:
             self.autogen_router()
             self.autogen_UML()
-            self.autogen_switch()
             self.autogen_mobile()
 
+        self.autogen_switch()
         self.routing_table_clear()
         if options["autorouting"]:
             self.routing_table_router()
