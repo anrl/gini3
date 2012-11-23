@@ -540,7 +540,7 @@ def createUMLCmdLine(uml):
     ## handle the file system option
     # construct the cow file name
     fileSystemName = getBaseName(uml.fileSystem.name)
-    fsCOWName = "%s.cow" % fileSystemName
+    fsCOWName = os.environ["GINI_HOME"] + "/data/" + uml.name + "/" + fileSystemName + ".cow"
     if (uml.fileSystem.type.lower() == "cow"):
         command += "ubd0=%s,%s " % (fsCOWName, uml.fileSystem.name)
     else:
@@ -551,7 +551,8 @@ def createUMLCmdLine(uml):
     ## handle the boot option
     if (uml.boot):
         command += "con0=%s " % uml.boot
-    command += "hostfs=$GINI_HOME "
+    command += "hostfs=%s " % os.environ["GINI_HOME"]
+    print command
     return command
 
 def getBaseName(pathName):
