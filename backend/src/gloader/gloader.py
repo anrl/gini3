@@ -276,6 +276,7 @@ def createVR(myGINI, options):
         os.chdir(subRouterDir)
         command = "screen -d -m -L -S %s %s " % (router.name, GR_PROG_BIN)
         command += "--config=%s.conf " % GR_PROG
+        command += "--confpath=" + os.environ["GINI_HOME"] + "/data/" + router.name + " "
         command += "--interactive=1 "
         command += "%s" % router.name
         #print command
@@ -552,7 +553,6 @@ def createUMLCmdLine(uml):
     if (uml.boot):
         command += "con0=%s " % uml.boot
     command += "hostfs=%s " % os.environ["GINI_HOME"]
-    print command
     return command
 
 def getBaseName(pathName):
