@@ -287,7 +287,7 @@ env.Alias('install','install-wgini')
 gloader_dir = backend_dir + "/src/gloader" 
 gloader_conf = gloader_dir + "/gloader.dtd"
 
-env.Install(etcdir, gloader_conf)
+env.Install(sharedir + "/gloader/", gloader_conf)
 
 result = env.Install(sharedir + '/gloader', Glob(gloader_dir + "/*.py"))
 post_chmod(sharedir + "/gloader/gloader.py")

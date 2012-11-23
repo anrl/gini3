@@ -165,7 +165,7 @@ def createVWR(myGINI, options):
 
         ### ------- execute ---------- ###
         # go to the router directory to execute the command
-        os.chdir(os.environ["GINI_HOME"]+"/bin")        
+        os.chdir(os.environ["GINI_HOME"]+"/data")        
         cmd = "%s -i 1 -c %s -n %d -d uml_virtual_switch" % (GWR_PROG_BIN, configFile, len(nodes))
         #print "running cmd %s" % cmd
         wrouter.num = wrouter.name.split("Wireless_access_point_")[-1]
@@ -332,7 +332,7 @@ def createVM(myGINI, options):
 
 def createVMB(myGINI, options):
     "create UML config file, and start the UML"
-    baseDir = os.environ["GINI_HOME"] + "/bin/uml_virtual_switch"
+    baseDir = os.environ["GINI_HOME"] + "/data/uml_virtual_switch"
     makeDir(baseDir)
     makeDir(options.umlDir)
     oldDir = os.getcwd()
@@ -403,9 +403,9 @@ def getSocketName(nwIf, name, myGINI, options):
                     break
             nodes.append(name)
             if switch_sharing:
-                newDir = os.environ["GINI_HOME"] + "/bin/uml_virtual_switch/VS_%d" % (i+1)
+                newDir = os.environ["GINI_HOME"] + "/data/uml_virtual_switch/VS_%d" % (i+1)
             else:
-                newDir = os.environ["GINI_HOME"] + "/bin/uml_virtual_switch/VS_%d" % len(nodes)                  
+                newDir = os.environ["GINI_HOME"] + "/data/uml_virtual_switch/VS_%d" % len(nodes)                  
                 system("mkdir %s" % newDir)
                 os.chdir(newDir)
                 configOut = open("uswitch.conf", "w")
@@ -643,7 +643,7 @@ def destroyVWR(wrouters, routerDir):
             return False    
     
         oldDir = os.getcwd()
-        switchDir = "%s/bin/uml_virtual_switch" % os.environ["GINI_HOME"]
+        switchDir = "%s/data/uml_virtual_switch" % os.environ["GINI_HOME"]
         os.chdir(switchDir)
         for filename in os.listdir(switchDir):
             pidfile = filename+"/uswitch.pid"            
