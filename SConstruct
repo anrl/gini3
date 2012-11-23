@@ -337,9 +337,9 @@ filesystem_src = filesystem_dir + "/GiniLinux-fs-1.0q.gz"
 
 # Unzip the gini UML fs into the root gini directory
 # TODO move this somewhere sensical
-env.Command(prefix + '/root_fs_beta2', filesystem_src, "gzip -cd $SOURCE > $TARGET")
+env.Command(sharedir + '/filesystem/root_fs_beta2', filesystem_src, "gzip -cd $SOURCE > $TARGET")
 
-env.Alias('install-filesystem',prefix + '/root_fs_beta2')
+env.Alias('install-filesystem',sharedir + '/filesystem/root_fs_beta2')
 env.Alias('install','install-filesystem')
 
 ############
