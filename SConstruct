@@ -212,7 +212,7 @@ grouter_libs = Split ("""readline
                          util
                          m""")
 
-grouter = grouter_env.Program("grouter", Glob(grouter_build_dir + "/*.c"), LIBS=grouter_libs)
+grouter = grouter_env.Program(grouter_build_dir + "/grouter", Glob(grouter_build_dir + "/*.c"), LIBS=grouter_libs)
 
 env.Install(sharedir + "/grouter/", grouter)
 post_chmod(sharedir + "/grouter/grouter")
@@ -237,7 +237,7 @@ VariantDir(uswitch_build_dir, uswitch_dir, duplicate=0)
 
 uswitch_env = Environment(CPPPATH=uswitch_include)
 
-uswitch = uswitch_env.Program("uswitch", Glob(uswitch_build_dir + "/*.c"))
+uswitch = uswitch_env.Program(uswitch_build_dir + "/uswitch", Glob(uswitch_build_dir + "/*.c"))
 
 env.Install(sharedir + "/uswitch/", uswitch)
 post_chmod(sharedir + "/uswitch/uswitch")
@@ -271,7 +271,7 @@ wgini_libs = Split ("""readline
     util
     m""")
 
-gwcenter = wgini_env.Program("gwcenter",Glob(wgini_build_dir + "/*.c"), LIBS=wgini_libs)
+gwcenter = wgini_env.Program(wgini_build_dir + "/gwcenter",Glob(wgini_build_dir + "/*.c"), LIBS=wgini_libs)
 
 env.Install(sharedir + "/wgini/", gwcenter)
 post_chmod(sharedir + "/wgini/gwcenter")
@@ -356,9 +356,6 @@ frontend_dir = src_dir + "/frontend"
 
 faq = '/doc/FAQ.html'
 
-env.Execute(Mkdir(prefix + "/tmp"))
-env.Execute(Mkdir(prefix + "/sav"))
-env.Execute(Mkdir(prefix + "/etc"))
 if env['PLATFORM'] == 'win32':
     dlls = env.Install(bindir, Glob(frontend_dir + "/bin/*"))
     env.Alias('install-windows', dlls)
