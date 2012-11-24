@@ -408,6 +408,9 @@ class ReceiveRestartCommand(Command):
             self.restartRouter()
         elif self.args.find("UML") == 0 or self.args.find("Mobile") == 0:
             self.restartUML()
+        elif self.args.find("REALM") == 0:
+            self.restartUML()
+
         elif self.args.find("Switch") == 0:
             self.restartSwitch()
 
@@ -434,7 +437,7 @@ class ReceiveRestartCommand(Command):
         subprocess.call(["/bin/bash", "-c", "cp %s/tmp/UML_bak/FE* %s/tmp" % (os.environ["GINI_HOME"], os.environ["GINI_HOME"])])
         if subprocess.call(["/bin/bash", "-c", "uml_mconsole " + self.args + " reboot"], stdout=open("/dev/null", "w"), stderr=open("/dev/null", "w")):
             umldir = datadir + "/" + self.args
-            olddir = os.getcwd()
+            olddir = os.getcwd()or self.args.find("Mobile") == 0 or self.args.find("REALM") == 0
             os.chdir(umldir)
             subprocess.call(["/bin/bash", "-c", "./startit.sh"])
             os.chdir(olddir)
@@ -467,7 +470,7 @@ class ReceiveTerminateCommand(Command):
         print "terminating " + self.args + "..."
         if self.args.find("Router") == 0:
             self.terminateRouter()
-        elif self.args.find("UML") == 0 or self.args.find("Mobile") == 0:
+        elif self.args.find("UML") == 0 or self.args.find("Mobile") == 0 or self.args.find("REALM") == 0:
             self.terminateUML()
 
     def terminateUML(self):

@@ -1,7 +1,7 @@
 from PyQt4 import QtCore
 import os, time
 
-devFilter = ["WAP_","UML_","Router_","Mobile_"]
+devFilter = ["WAP_","UML_","Router_","Mobile_","REALM_"]
 
 class TaskManager(QtCore.QThread):
     def __init__(self, server):

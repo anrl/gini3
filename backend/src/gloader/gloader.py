@@ -48,6 +48,8 @@ def startGINI(myGINI, options):
     success = success and createVM(myGINI, options)
     print "\nStarting Wireless access points..."
     success = success and createVWR(myGINI, options)       
+    print "\nStarting REALMs..."
+    success = success and createVRM(myGINI, options)
 
     if (not success):
         print "Problem in creating GINI network"
@@ -291,6 +293,7 @@ def createVR(myGINI, options):
 def createVM(myGINI, options):
     "create UML config file, and start the UML"
     makeDir(options.umlDir)
+    print myGINI.vm
     for uml in myGINI.vm:
         print "Starting UML %s...\t" % uml.name,
         subUMLDir = "%s/%s" % (options.umlDir, uml.name)
@@ -379,6 +382,47 @@ def createVMB(myGINI, options):
         os.chdir(oldDir)
     return True
 
+def createVRM(myGINI, options):
+    "create REALM config file, and start the REALM"
+    makeDir(options.umlDir)
+    for realm in myGINI.vrm:
+        print "Starting REALM %s...\t" % realm.name,
+        subUMLDir = "%s/%s" % (options.umlDir, realm.name)
+        makeDir(subUMLDir)
+        # create command line
+        command = createUMLCmdLine(realm)
+        ### ---- process the UML interfaces ---- ###
+        # it creates one config for each interface in the /tmp/ directory
+        # and returns a string to be attached to the UML exec command line        
+        for nwIf in realm.interfaces:
+            # check whether it is connecting to a switch or router
+            socketName = getSocketName(nwIf, realm.name, myGINI, options);
+            if (socketName == "fail"):
+                print "REALM %s [interface %s]: Target not found" % (realm.name, nwIf.name)
+                return False
+            else:
+                # create the config file in /tmp and 
+                # return a line to be added in the command
+                outLine = getVMIFOutLine(nwIf, socketName, realm.name)
+            if (outLine):
+                command += "%s " % outLine
+            else:
+                print "[FAILED]"
+                return False
+        ### ------- execute ---------- ###
+        # go to the UML directory to execute the command
+
+        oldDir = os.getcwd()
+        os.chdir(subUMLDir)
+        startOut = open("startit.sh", "w")
+        startOut.write(command)
+        startOut.close()
+        os.chmod("startit.sh",0755)
+        system("./startit.sh")
+        print "[OK]"
+        os.chdir(oldDir)
+    return True
+
 def makeDir(dirName):
     "create a directory if not exists"
     if (not os.access(dirName, os.F_OK)):
@@ -398,7 +442,7 @@ def getSocketName(nwIf, name, myGINI, options):
             oldDir = os.getcwd()
             switch_sharing = False
             for i in range(len(nodes)):
-                if nodes[i].find("UML_") >= 0:
+                if (nodes[i].find("UML_")+nodes[i].find("REALM_")) >= 0:
                     switch_sharing = True
                     break
             nodes.append(name)
@@ -445,6 +489,13 @@ def getSocketName(nwIf, name, myGINI, options):
             targetDir = getFullyQualifiedDir(options.routerDir)
             return "%s/%s/%s_%s.ctl" % \
                    (targetDir, name, SOCKET_NAME, nwIf.name)
+
+    realms = myGINI.vrm
+    for realm in realms:
+        if (realm.name == nwIf.target):
+            targetDir = getFullyQualifiedDir(options.routerDir)
+            return "%s/%s/%s_%s.ctl" % \
+                       (targetDir, name, SOCKET_NAME, nwIf.name)
     return "fail"
 
 def getFullyQualifiedDir(dirName):
@@ -585,6 +636,12 @@ def destroyGINI(myGINI, options):
     except:
         pass
 
+    print "\nTerminating REALMs..."
+    try:
+        result = result and  destroyVM(myGINI.vrm, options.umlDir, 2)
+    except:
+        pass
+
     print "\nTerminating UMLs..."
     try:
         result = result and  destroyVM(myGINI.vm, options.umlDir, 0)
@@ -710,6 +767,8 @@ def destroyVM(umls, umlDir, mode):
     for uml in umls:
         if mode == 0:        
             print "Stopping UML %s..." % uml.name
+        elif mode == 2:
+            print "Stopping REALM %s..." % uml.name
         else:
             print "Stopping Mobile %s..." % uml.name
         command = "%s %s cad > /dev/null 2>&1" % (MCONSOLE_PROG_BIN, uml.name)      
@@ -740,6 +799,8 @@ def destroyVM(umls, umlDir, mode):
                 os.remove(configFile)
         if mode == 0:
             print "\tStopping UML %s...\t[OK]" % uml.name
+        elif mode == 2:
+            print "\tStopping REAML %s...\t[OK]" % uml.name
         else:
             print "\tStopping Mobile %s...\t[OK]" % uml.name
             
@@ -748,6 +809,13 @@ def destroyVM(umls, umlDir, mode):
     if umls:
         if mode == 0:    
             print "Waiting for UMLs to shutdown...",
+            sys.stdout.flush()
+
+            while checkProcAlive(VM_PROG_BIN):
+                time.sleep(UML_WAIT_DELAY)
+
+        elif mode == 2:
+            print "Waiting for REALMs to shutdown...",
             sys.stdout.flush()
 
             while checkProcAlive(VM_PROG_BIN):

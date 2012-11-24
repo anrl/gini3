@@ -26,7 +26,7 @@ class Compiler:
             if isinstance(device, Device):
                 self.compile_list[device.device_type].append(device)
 
-    def compile(self):
+    def compile(self, server):
         """
         Compile the topology into xml.
         """
@@ -56,6 +56,7 @@ class Compiler:
         if options["autogen"]:
             self.autogen_router()
             self.autogen_UML()
+            self.autogen_REALM(server)
             self.autogen_switch()
             self.autogen_mobile()
 
@@ -69,6 +70,7 @@ class Compiler:
         
         self.compile_router()
         self.compile_UML()
+        self.compile_REALM()
         self.compile_mobile()
 
         self.output.write("</gloader>\n")
@@ -354,6 +356,53 @@ class Compiler:
             
             self.output.write("</vm>\n\n")
 
+#********************************* REALM
+    def autogen_REALM(self, server):
+        """
+        Auto-generate properties for REALMs.
+        """
+        for realm in self.compile_list["REALM"]:
+            for interface in realm.getInterfaces():
+                if options["autogen"]:
+                    try:
+                        subnet = str(realm.getInterfaceProperty("subnet")).rsplit(".", 1)[0]
+                    except:
+                        continue
+                    realm.setInterfaceProperty("ipv4", "%s.%d" % (subnet, realm.getID()+1+len(self.compile_list["UML"])))
+                    realm.setInterfaceProperty("mac", "fe:fd:02:00:01:%02x" % realm.getID()) 
+            # send info to sever
+            hostname = realm.properties["Hosts"][realm.hostIndex]
+            ip_addr =  realm.getProperty("ipv4")
+            mac_addr = realm.getProperty("mac")
+            server.send(','.join(map(str, ("assign","start",hostname,ip_addr,mac_addr,"end"))))
+
+
+    def compile_REALM(self):
+        """
+        Compile all the REALMs.
+        """
+        for realm in self.compile_list["REALM"]:
+            self.output.write("<vrm name=\"" + realm.getName() + "\">\n")
+        self.output.write("\t<filesystem type=\"" + realm.getProperty("filetype") + "\">"
+                              + realm.getProperty("filesystem") + "</filesystem>\n")
+        print realm.getName()
+
+        interfaces = realm.getInterfaces()
+        if len(interfaces) < 1:
+            self.generateConnectionWarning(realm, 1)
+
+        for interface in interfaces:
+
+            self.output.write("\t<if>\n")
+
+            mapping = {"subnet":"network", "mac":"mac", "ipv4":"ip"}
+            self.writeInterface(realm, interface, mapping)
+
+            self.output.write("\t</if>\n")
+
+        self.output.write("</vrm>\n\n")
+#******************************FINISH REALM
+
     def autogen_mobile(self):
         """
         Auto-generate properties for Mobiles.
@@ -407,7 +456,7 @@ class Compiler:
 
         for con in node.edges():
             otherDevice = con.getOtherDevice(node)
-            if otherDevice.device_type in ["Router", "UML", "Mobile"]:
+            if otherDevice.device_type in ["Router", "UML", "REALM", "Mobile"]:
                 target = node
                 if node.device_type == "Subnet":
                     target = node.getTarget(otherDevice)
@@ -431,6 +480,10 @@ class Compiler:
             interfaceable.emptyAdjacentLists()
             interfaceable.emptyRouteTable()
 
+        for interfaceable in self.compile_list["REALM"]:
+            interfaceable.emptyAdjacentLists()
+            interfaceable.emptyRouteTable()
+
     def routing_table_interfaceable(self, devType):
         """
         Compute route tables of devices of type devType.
@@ -448,6 +501,17 @@ class Compiler:
         self.routing_table_interfaceable("UML")
 
         for uml in self.compile_list["UML"]:
+            for subnet in self.compile_list["Subnet"]:
+                if not uml.hasSubnet(subnet.getProperty("subnet")):
+                    uml.addRoutingEntry(subnet.getProperty("subnet"))
+
+    def routing_table_realm(self):
+        """
+        Compute route tables of REALMs.
+        """
+        self.routing_table_interfaceable("REALM")
+
+        for uml in self.compile_list["REALM"]:
             for subnet in self.compile_list["Subnet"]:
                 if not uml.hasSubnet(subnet.getProperty("subnet")):
                     uml.addRoutingEntry(subnet.getProperty("subnet"))
@@ -510,7 +574,7 @@ class Compiler:
 
         if otherDevice.device_type in ["Router", "Wireless_access_point"]:
             myself.addAdjacentRouter(otherDevice, interface)
-        elif otherDevice.device_type in ["UML", "Mobile"]:
+        elif otherDevice.device_type in ["UML", "Mobile", "REALM"]:
             pass
         else:
             for c in otherDevice.edges():
@@ -532,7 +596,7 @@ class Compiler:
         """
         Format the routes in xml.
         """
-        if devType == "UML":
+        if devType == "UML" or devType == "REALM":
             header = "\t\t<route type=\"net\" "
             gateway = "\" gw=\""
             footer = "</route>\n"

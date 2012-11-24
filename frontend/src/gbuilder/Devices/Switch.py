@@ -20,12 +20,16 @@ class Switch(Device):
         node = edge.getOtherDevice(self)
         if node.device_type == "UML":
             node.addInterface(self)
+        elif node.device_type == "REALM":
+            node.addInterface(self)
 
     def removeEdge(self, edge):
         Device.removeEdge(self, edge)
 
         node = edge.getOtherDevice(self)
         if node.device_type == "UML":
+            node.removeInterface(self)
+        elif node.device_type == "REALM":
             node.removeInterface(self)
     
     def getTarget(self, node):

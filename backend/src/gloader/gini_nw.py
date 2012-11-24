@@ -7,6 +7,7 @@ from gini_components import *
 class GINI_NW:
     switches = []
     vm = []
+    vrm = []
     vmb = []
     vr = []
     vwr = []
@@ -15,6 +16,7 @@ class GINI_NW:
         "Initialize the GINI_NW class"
         self.getSwitches(docDOM.getElementsByTagName("vs"))
         self.getVMs(docDOM.getElementsByTagName('vm'))
+        self.getVRMs(docDOM.getElementsByTagName('vrm'))
         self.getVMBs(docDOM.getElementsByTagName("vmb"))
         self.getVRs(docDOM.getElementsByTagName("vr"))
 	self.getVWRs(docDOM.getElementsByTagName("vwr"))
@@ -62,7 +64,28 @@ class GINI_NW:
             self.vm.append(newVM)
         return True
                                 
-            
+    def getVRMs(self, elements):
+        "get remote machine configurations"
+        for vrm in elements:
+            newVRM = VRM(vrm.getAttribute("name"))
+            for para in vrm.childNodes:
+                if (para.nodeType == para.ELEMENT_NODE):
+                    if (para.tagName.lower() == "filesystem"):
+                        newVRM.fileSystem = FileSystem()
+                        newVRM.fileSystem.type = para.getAttribute("type")
+                        newVRM.fileSystem.name = os.environ["GINI_HOME"] + "/" + self.getTextPart(para)
+                    if (para.tagName.lower() == "mem"):
+                        newVRM.mem = self.getTextPart(para)
+                    if (para.tagName.lower() == "kernel"):
+                        newVRM.kernel = self.getTextPart(para)
+                    if (para.tagName.lower() == "boot"):
+                        newVRM.boot = self.getBoot(para)
+                    if (para.tagName.lower() == "if"):
+                        newIF = self.getVMIF(para, len(newVRM.interfaces))
+                        newVRM.addInterface(newIF)
+            self.vrm.append(newVRM)
+        return True
+
     def getVMBs(self, elements):
         "get wireless virtual machine configurations"
         for vmb in elements:

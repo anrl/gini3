@@ -3,6 +3,17 @@
 from PyQt4 import QtCore, QtGui
 from Core.globals import mainWidgets
 from Dockable import *
+from PropertyComboBox import PropertyComboBox
+#from Devices.REALM import ConncetM
+
+class ConnectM():
+    def __init__ (self,name,ip,mac,port):
+        self.name=name
+        self.ip=ip
+        self.mac=mac
+        self.port=port
+        alist={"m1":ConnectM("m1","ip1","mac1","port1"),"m2":ConnectM("m1","ip2","ma     c2","port2")}
+
 
 class PropertyCheckBox(QtGui.QCheckBox):
     def __init__(self, item, prop, parent = None):
@@ -45,7 +56,7 @@ class PropertiesWindow(Dockable):
                      self.dockChanged)
         self.connect(self.model, QtCore.SIGNAL("dataChanged(QModelIndex,QModelIndex)"), self.changed)
         
-    def addProperty(self, prop, value, editable=True, checkable=False):
+    def addProperty(self, prop, value, editable=True, checkable=False, combo=False):
         """
         Add a property to display in the window.
         """
@@ -54,7 +65,7 @@ class PropertiesWindow(Dockable):
         pr.setEditable(False)
     
         val = QtGui.QStandardItem()
-        if not checkable:
+        if not (checkable or combo):
             val.setData(QtCore.QVariant(value), QtCore.Qt.EditRole)
             
         if mainWidgets["main"].isRunning():
@@ -74,6 +85,10 @@ class PropertiesWindow(Dockable):
                 self.sourceView.setIndexWidget(index, checkbox)
                 if value == "True":
                     checkbox.setChecked(True)
+        if combo:
+            index = self.model.indexFromItem(val)
+            combobox = PropertyComboBox(self.currentItem, self, prop, value)
+            self.sourceView.setIndexWidget(index, combobox)
         
     def changed(self, index, index2):
         """
@@ -125,12 +140,15 @@ class PropertiesWindow(Dockable):
         for prop, value in self.currentItem.getProperties().iteritems():
             editable = True
             checkable = False
+            combo = False
             if prop == "Hub mode":
                 checkable = True
+            elif prop == "Hosts":
+                combo = True
             elif self.currentItem.device_type == "Switch":
                 if prop == "subnet" or prop == "mask":
                     continue#editable = False
-            self.addProperty(prop, value, editable, checkable)
+            self.addProperty(prop, value, editable, checkable, combo)
 
     def clear(self):
         """
