@@ -671,8 +671,10 @@ def destroyVR(routers, routerDir):
         pidFileFound = True
         if (os.access(pidFile, os.R_OK)):
             # kill the router
-            routerPID = getPIDFromFile(pidFile)
-            os.kill(routerPID, signal.SIGTERM)
+            # routerPID = getPIDFromFile(pidFile)
+            # os.kill(routerPID, signal.SIGTERM)
+            command = "screen -S %s -X quit" % router.name
+            system(command)
         else:
             pidFileFound = False
             print "[FAILED]"
