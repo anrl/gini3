@@ -4,6 +4,7 @@
 config.log
 backend/build
 bin/
+build/
 doc/
 etc/
 share/
