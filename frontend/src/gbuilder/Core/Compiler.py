@@ -40,7 +40,7 @@ class Compiler:
             self.log.append("Auto-routing is OFF.")
             
         self.output.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-        self.output.write("<!DOCTYPE gloader SYSTEM \"" + "etc/gloader.dtd"+"\">\n")
+        self.output.write("<!DOCTYPE gloader SYSTEM \"" + os.environ["GINI_SHARE"] + "/gloader/gloader.dtd"+"\">\n")
         self.output.write("<gloader>\n\n")
 
         if options["autogen"]:
@@ -56,9 +56,9 @@ class Compiler:
         if options["autogen"]:
             self.autogen_router()
             self.autogen_UML()
-            self.autogen_switch()
             self.autogen_mobile()
 
+        self.autogen_switch()
         self.routing_table_clear()
         if options["autorouting"]:
             self.routing_table_router()
@@ -137,9 +137,9 @@ class Compiler:
         for subnet in self.compile_list["Subnet"]:
 
             edges = subnet.edges()
-            if len(edges) < 2:
-                self.generateConnectionError(subnet, 2)
-            elif len(edges) < 1:
+            #if len(edges) < 2:
+                #self.generateConnectionError(subnet, 2)
+            if len(edges) < 1:
                 self.generateConnectionWarning(subnet, 1)
                 
             for prop in ["subnet", "mask"]:

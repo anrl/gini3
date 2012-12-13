@@ -165,7 +165,7 @@ def createVWR(myGINI, options):
 
         ### ------- execute ---------- ###
         # go to the router directory to execute the command
-        os.chdir(os.environ["GINI_HOME"]+"/bin")        
+        os.chdir(os.environ["GINI_HOME"]+"/data")        
         cmd = "%s -i 1 -c %s -n %d -d uml_virtual_switch" % (GWR_PROG_BIN, configFile, len(nodes))
         #print "running cmd %s" % cmd
         wrouter.num = wrouter.name.split("Wireless_access_point_")[-1]
@@ -276,6 +276,7 @@ def createVR(myGINI, options):
         os.chdir(subRouterDir)
         command = "screen -d -m -L -S %s %s " % (router.name, GR_PROG_BIN)
         command += "--config=%s.conf " % GR_PROG
+        command += "--confpath=" + os.environ["GINI_HOME"] + "/data/" + router.name + " "
         command += "--interactive=1 "
         command += "%s" % router.name
         #print command
@@ -332,7 +333,7 @@ def createVM(myGINI, options):
 
 def createVMB(myGINI, options):
     "create UML config file, and start the UML"
-    baseDir = os.environ["GINI_HOME"] + "/bin/uml_virtual_switch"
+    baseDir = os.environ["GINI_HOME"] + "/data/uml_virtual_switch"
     makeDir(baseDir)
     makeDir(options.umlDir)
     oldDir = os.getcwd()
@@ -403,9 +404,9 @@ def getSocketName(nwIf, name, myGINI, options):
                     break
             nodes.append(name)
             if switch_sharing:
-                newDir = os.environ["GINI_HOME"] + "/bin/uml_virtual_switch/VS_%d" % (i+1)
+                newDir = os.environ["GINI_HOME"] + "/data/uml_virtual_switch/VS_%d" % (i+1)
             else:
-                newDir = os.environ["GINI_HOME"] + "/bin/uml_virtual_switch/VS_%d" % len(nodes)                  
+                newDir = os.environ["GINI_HOME"] + "/data/uml_virtual_switch/VS_%d" % len(nodes)                  
                 system("mkdir %s" % newDir)
                 os.chdir(newDir)
                 configOut = open("uswitch.conf", "w")
@@ -540,7 +541,7 @@ def createUMLCmdLine(uml):
     ## handle the file system option
     # construct the cow file name
     fileSystemName = getBaseName(uml.fileSystem.name)
-    fsCOWName = "%s.cow" % fileSystemName
+    fsCOWName = os.environ["GINI_HOME"] + "/data/" + uml.name + "/" + fileSystemName + ".cow"
     if (uml.fileSystem.type.lower() == "cow"):
         command += "ubd0=%s,%s " % (fsCOWName, uml.fileSystem.name)
     else:
@@ -551,7 +552,7 @@ def createUMLCmdLine(uml):
     ## handle the boot option
     if (uml.boot):
         command += "con0=%s " % uml.boot
-    command += "hostfs=$GINI_HOME "
+    command += "hostfs=%s " % os.environ["GINI_HOME"]
     return command
 
 def getBaseName(pathName):
@@ -643,7 +644,7 @@ def destroyVWR(wrouters, routerDir):
             return False    
     
         oldDir = os.getcwd()
-        switchDir = "%s/bin/uml_virtual_switch" % os.environ["GINI_HOME"]
+        switchDir = "%s/data/uml_virtual_switch" % os.environ["GINI_HOME"]
         os.chdir(switchDir)
         for filename in os.listdir(switchDir):
             pidfile = filename+"/uswitch.pid"            
@@ -670,8 +671,10 @@ def destroyVR(routers, routerDir):
         pidFileFound = True
         if (os.access(pidFile, os.R_OK)):
             # kill the router
-            routerPID = getPIDFromFile(pidFile)
-            os.kill(routerPID, signal.SIGTERM)
+            # routerPID = getPIDFromFile(pidFile)
+            # os.kill(routerPID, signal.SIGTERM)
+            command = "screen -S %s -X quit" % router.name
+            system(command)
         else:
             pidFileFound = False
             print "[FAILED]"
@@ -735,7 +738,7 @@ def destroyVM(umls, umlDir, mode):
         print "[OK]"
         # delete the config files in the /tmp
         for nwIf in uml.interfaces:
-            configFile = "/tmp/%s.sh" % nwIf.mac.upper()
+            configFile = "%s/tmp/%s.sh" % (os.environ["GINI_HOME"],nwIf.mac.upper())
             if (os.access(configFile, os.W_OK)):
                 os.remove(configFile)
         if mode == 0:

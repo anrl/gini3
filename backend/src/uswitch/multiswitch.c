@@ -247,6 +247,7 @@ int ms_init (uint16_t priority, uint8_t *mac) {
     int foo = 1;
 
     getcwd(ms_sock_path, 1024);
+    /* strcpy(ms_sock_path,getenv("GINI_HOME")); */
     strcat(ms_sock_path, "/multiswitch");
 
     // Delete the file if it already exists

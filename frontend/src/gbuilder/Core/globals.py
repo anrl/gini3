@@ -4,14 +4,17 @@ import os
 PROG_NAME = "gBuilder"
 PROG_VERSION  = "2.0.1"
 
+GINI_ROOT = os.environ["GINI_ROOT"]
+GINI_HOME = os.environ["GINI_HOME"]
+
 environ = {"os":"Windows",
-           "path":os.environ["GINI_HOME"]+"/",
+           "path":GINI_ROOT+"/",
            "remotepath":"./",
-           "images":os.environ["GINI_HOME"]+"/share/gbuilder/images/",
-           "config":os.environ["GINI_HOME"]+"/etc/",
-           "sav":os.environ["GINI_HOME"]+"/sav/",
-           "tmp":os.environ["GINI_HOME"]+"/tmp/",
-           "doc":os.environ["GINI_HOME"]+"/doc/"}
+           "images":os.environ["GINI_SHARE"] +"/gbuilder/images/",
+           "config":GINI_HOME+"/etc/",
+           "sav":GINI_HOME+"/sav/",
+           "tmp":GINI_HOME+"/tmp/",
+           "doc":GINI_ROOT+"/doc/"}
 
 options = {"names":True,
            "systray":False,

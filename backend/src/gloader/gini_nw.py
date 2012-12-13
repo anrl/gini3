@@ -49,7 +49,7 @@ class GINI_NW:
                     if (para.tagName.lower() == "filesystem"):
                         newVM.fileSystem = FileSystem()
                         newVM.fileSystem.type = para.getAttribute("type")
-                        newVM.fileSystem.name = os.environ["GINI_HOME"] + "/" + self.getTextPart(para)
+                        newVM.fileSystem.name = os.environ["GINI_SHARE"] + "/filesystem/" + self.getTextPart(para)
                     if (para.tagName.lower() == "mem"):
                         newVM.mem = self.getTextPart(para)
                     if (para.tagName.lower() == "kernel"):
@@ -72,7 +72,7 @@ class GINI_NW:
                     if (para.tagName.lower() == "filesystem"):
                         newVMB.fileSystem = FileSystem()
                         newVMB.fileSystem.type = para.getAttribute("type")
-                        newVMB.fileSystem.name = os.environ["GINI_HOME"] + "/" + self.getTextPart(para)
+                        newVMB.fileSystem.name = os.environ["GINI_SHARE"] + "/filesystem/" + self.getTextPart(para)
                     if (para.tagName.lower() == "mem"):
                         newVMB.mem = self.getTextPart(para)
                     if (para.tagName.lower() == "kernel"):
