@@ -9,6 +9,8 @@ from Node import *
 from Edge import *
 from Configuration import *
 from Core.globals import *
+import thread
+import socket
 from ExportWindow import *
 from SendDirectoryWindow import *
 from Properties import *
@@ -20,12 +22,23 @@ from Tutorial import *
 from TaskManagerWindow import *
 import Core.globals
     
+HOST = 'localhost'    # The remote host
+PORT = 23456              # The same port as used by the server
+
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.connect((HOST, PORT))
+
 class MainWindow(Systray):
     
     def __init__(self, app):
         """
         Create a main window for the given application.
         """
+
+        # load real machine info
+        thread.start_new_thread(self.regreceiver, ())
+        server.send('getinfo')
+
         defaultOptions["palette"] = app.palette()
         Systray.__init__(self)
 
@@ -72,6 +85,28 @@ class MainWindow(Systray):
             
         self.loadProject()        
 
+
+    def regreceiver(self):
+
+        data_temp = ''
+    
+        while True:
+            datau = server.recv(4096)
+            if not datau: break
+            print datau   
+            if 'finish' in datau:
+                data = data_temp + datau
+                data_temp = ''
+            else:
+                data_temp = data_temp + datau
+                continue
+                    
+            if data != 'assign accepted finish':
+                datarev = data
+        print datarev
+ 
+        server.close()
+ 
     def center(self):
         """
         Center the window.
@@ -444,7 +479,7 @@ class MainWindow(Systray):
         
         scene = self.canvas.scene()
         compiler = Compiler(scene.items(), self.filename)
-        xmlFile = compiler.compile()
+        xmlFile = compiler.compile(server)
 
         self.properties.display()
         self.interfaces.display()

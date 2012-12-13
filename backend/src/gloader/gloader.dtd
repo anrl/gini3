@@ -1,5 +1,5 @@
 <!-- GLOADERT DTD -->
-<!ELEMENT gloader (vs*, vr*, vwr*, vm*, vmb*)>
+<!ELEMENT gloader (vs*, vr*, vwr*, vm*, vmb*, vrm*)>
 
 
 <!-- wired router definition -->
@@ -88,4 +88,8 @@
 <!ELEMENT x (#PCDATA)>
 <!ELEMENT y (#PCDATA)>
 
+
+<!-- real remote machine definition -->
+<!ELEMENT vrm (filesystem, mem?, kernel?, boot?, if*)>
+<!ATTLIST vrm name CDATA #REQUIRED>
 

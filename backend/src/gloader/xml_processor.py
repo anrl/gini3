@@ -3,6 +3,7 @@
 # file: xml_processor.py
 
 #from xml.parsers.xmlproc import xmlval
+#from xml.parsers.xmlproc import xmldtd
 import xml.dom.minidom
 import os
 
@@ -17,7 +18,7 @@ class XMLProcessor:
     def __init__(self,file):
         "Initiates the class with the XML file and validates it"
         self.xmlFile = file
-        #self.validateXML()
+        self.validateXML()
         self.getGINI()
 
     def validateXML(self):
@@ -48,6 +49,7 @@ class XMLProcessor:
         result = result and self.checkDuplicatePorts(self.giniNW.switches)
         # Rule 5: Given filesystem is correct
         result = result and self.checkFileSystem(self.giniNW.vm)
+        result = result and self.checkDuplicateNames("REALM", self.giniNW.vrm)
         # Rule 6: No duplication in network interface configuration &&
         # Rule 7: Valid IP addresses in network interface configuration
         for vm in self.giniNW.vm:
