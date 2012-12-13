@@ -62,7 +62,7 @@ def gen_environment_file(target,source,env):
   output_file.write('os.chdir(os.path.dirname(os.path.realpath(__file__)))\n')
   output_file.write('os.environ["GINI_ROOT"] = os.path.realpath("%s")\n' % os.path.relpath(prefix,bindir))
   output_file.write('os.environ["GINI_SHARE"] = os.path.realpath("%s")\n' % os.path.relpath(sharedir,bindir))
-  output_file.write('os.environ["GINI_HOME"] = os.environ["HOME"] + "/.gini"\n') #XXX change when it is set up right
+  output_file.write('os.environ["GINI_HOME"] = os.environ["HOME"] + "/.gini"\n') 
   output_file.write('if not os.path.exists(os.environ["GINI_HOME"] + "/etc"): os.makedirs(os.environ["GINI_HOME"] + "/etc")\n')
   output_file.write('if not os.path.exists(os.environ["GINI_HOME"] + "/sav"): os.makedirs(os.environ["GINI_HOME"] + "/sav")\n')
   output_file.write('if not os.path.exists(os.environ["GINI_HOME"] + "/data"): os.makedirs(os.environ["GINI_HOME"] + "/data")\n')
