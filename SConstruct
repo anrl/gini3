@@ -339,11 +339,11 @@ env.Alias('install','install-kernel')
 
 filesystem_dir = backend_dir + "/fs"
 
-filesystem_src = filesystem_dir + "/GiniLinux-fs-1.0q.gz"
+filesystem_src = filesystem_dir + "/GiniLinux-fs-1.0q.tar.gz"
 
 # Unzip the gini UML fs into the root gini directory
-# TODO move this somewhere sensical
-env.Command(sharedir + '/filesystem/root_fs_beta2', filesystem_src, "gzip -cd $SOURCE > $TARGET")
+# TODO this is really bad
+env.Command(sharedir + '/filesystem/root_fs_beta2', filesystem_src, "cd " + filesystem_dir + ";tar -xzf GiniLinux-fs-1.0q.tar.gz --atime-preserve;cp -p GiniLinux-fs-1.0q ../../$TARGET;rm GiniLinux-fs-1.0q")
 
 env.Alias('install-filesystem',sharedir + '/filesystem/root_fs_beta2')
 env.Alias('install','install-filesystem')
