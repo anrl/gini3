@@ -424,7 +424,8 @@ void SocketNameGen(int id, char* sktname) {
 
 	if (wgnconfig.vs_directory == NULL) { 
 		sprintf(index,"%d",id);
-		strcpy(sktname,"uml_virtual_switch/");
+    strcpy(sktname,getenv("GINI_HOME"));
+		strcat(sktname,"/data/uml_virtual_switch/");
 		strcat(sktname,index);
 		strcat(sktname,"/uml");
 		strcat(sktname, index);

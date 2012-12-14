@@ -4,9 +4,11 @@
 config.log
 backend/build
 bin/
+build/
 doc/
 etc/
 share/
 root_fs_beta2
 .sconf_temp/
 .sconsign.dblite
+frontend/src/gbuilder/Core/paths.py
