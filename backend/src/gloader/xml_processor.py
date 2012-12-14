@@ -2,7 +2,7 @@
 
 # file: xml_processor.py
 
-from xml.parsers.xmlproc import xmlval
+#from xml.parsers.xmlproc import xmlval
 import xml.dom.minidom
 import os
 
@@ -22,8 +22,9 @@ class XMLProcessor:
 
     def validateXML(self):
         "Validate the specified xmlFile; need not to be called from outside"
-        myValidator = xmlval.XMLValidator()
-        myValidator.parse_resource(self.xmlFile)
+        pass
+        #myValidator = xmlval.XMLValidator()
+        #myValidator.parse_resource(self.xmlFile)
 
     def getGINI(self):
         # get the doc DOM object
