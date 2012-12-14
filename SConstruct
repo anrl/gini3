@@ -7,6 +7,7 @@
 #
 import os.path,stat
 import sys
+import py_compile
 from SCons.Node import FS
 
 #import SconsBuilder
@@ -43,12 +44,24 @@ sharedir = prefix + "/share"
 
 env = Environment()
 
+env.Clean(build_dir,build_dir)
+env.Clean(bindir,bindir)
+env.Clean(sharedir,sharedir)
+
 ##################
 # helper methods #
 ##################
 
 def post_chmod(target):
   env.AddPostAction(target, "chmod +x " + target)
+
+def actually_compile_python(target,source,env):
+  py_compile.compile(source[0].abspath)
+
+def compile_python(env,source,alias = None):
+  env.Command(source + "c", source , actually_compile_python)
+  if alias:
+    env.Alias(alias,source + "c")
 
 #####################
 # Source Generators #
@@ -223,6 +236,8 @@ env.Install(sharedir + '/grouter/helpdefs', Glob(grouter_include + '/helpdefs/*'
 
 env.Alias('install-grouter',bindir + '/grouter')
 env.Alias('install-grouter',sharedir + '/grouter/helpdefs')
+env.Clean(bindir + "/grouter",sharedir + "/grouter/grouter")
+env.Clean("install-grouter",sharedir + "/grouter")
 env.Alias('install','install-grouter')
 
 ###########
@@ -245,6 +260,7 @@ env.PythonEnvFile(bindir + "/uswitch" ,sharedir + "/uswitch/uswitch")
 post_chmod(bindir + "/uswitch")
 
 env.Alias('install-uswitch',bindir + '/uswitch')
+env.Clean(sharedir + "/uswitch",sharedir + "/uswitch")
 env.Alias('install','install-uswitch')
 
 #########
@@ -284,6 +300,7 @@ env.PythonEnvFile(bindir + "/gwcenter.sh", sharedir + "/wgini/gwcenter.sh")
 post_chmod(sharedir + "/wgini/gwcenter.sh")
 
 env.Alias('install-wgini',bindir + "/gwcenter")
+env.Clean(sharedir + "/wgini",sharedir + "/wgini")
 env.Alias('install','install-wgini')
 
 ###########
@@ -296,6 +313,10 @@ gloader_conf = gloader_dir + "/gloader.dtd"
 env.Install(sharedir + "/gloader/", gloader_conf)
 
 result = env.Install(sharedir + '/gloader', Glob(gloader_dir + "/*.py"))
+
+for file in Glob(sharedir + '/gloader/*.py'):
+  compile_python(env,file.abspath,"install-gloader")
+env.Clean(sharedir + "/gloader",sharedir + "/gloader")
 post_chmod(sharedir + "/gloader/gloader.py")
 post_chmod(sharedir + "/gloader/gserver.py")
 
@@ -331,6 +352,7 @@ post_chmod(bindir + '/linux-2.6.26.1')
 
 env.Alias('install-kernel', bindir + '/glinux')
 env.Alias('install-kernel', bindir + '/linux-2.6.26.1')
+env.Clean(sharedir + '/kernel/',sharedir + '/kernel/')
 env.Alias('install','install-kernel')
 
 ##############
@@ -346,6 +368,7 @@ filesystem_src = filesystem_dir + "/GiniLinux-fs-1.0q.tar.gz"
 env.Command(sharedir + '/filesystem/root_fs_beta2', filesystem_src, "pushd " + filesystem_dir + ";tar -xzf GiniLinux-fs-1.0q.tar.gz --atime-preserve;popd;cp -p " + filesystem_dir + "/GiniLinux-fs-1.0q $TARGET;rm " + filesystem_dir + "/GiniLinux-fs-1.0q")
 
 env.Alias('install-filesystem',sharedir + '/filesystem/root_fs_beta2')
+env.Clean(sharedir + '/filesystem',sharedir + '/filesystem')
 env.Alias('install','install-filesystem')
 
 ############
@@ -362,6 +385,7 @@ if env['PLATFORM'] == 'win32':
     env.Alias('install','install-windows')
 env.Install(prefix + '/doc', frontend_dir + faq)
 env.Alias('install-doc', prefix + '/doc')
+env.Clean(prefix + '/doc',prefix + '/doc')
 env.Alias('install','install-doc')
 
 ############
@@ -379,13 +403,18 @@ gbuilder_folders = Split("""
 gbuilder_images = gbuilder_dir + "/images/*"
 
 env.Install(sharedir + '/gbuilder', gbuilder_dir + '/gbuilder.py')
+compile_python(env,gbuilder_dir + '/gbuilder.py',"install-gbuilder")
 
 # Install each of the gbuilder folders
 for x in gbuilder_folders:
   env.Install(sharedir + '/gbuilder/' + x, Glob(gbuilder_dir + "/" + x + "/*.py"))
+  for file in Glob(sharedir + '/gbuilder/' + x + '/*.py'):
+    compile_python(env,file.abspath,"install-gbuilder")
+  env.Clean(sharedir + "/gbuilder",sharedir + "/gbuilder/" + x)
 post_chmod(sharedir + '/gbuilder/gbuilder.py')
 # Install images
 env.Install(sharedir + '/gbuilder/images/', Glob(gbuilder_images))
+env.Clean(sharedir + '/gbuilder/images/',sharedir + '/gbuilder/images/')
 
 if env['PLATFORM'] != 'win32':
     #env.SymLink(bindir + '/gbuilder', sharedir + '/gbuilder/gbuilder.py')
@@ -394,4 +423,5 @@ if env['PLATFORM'] != 'win32':
     env.Alias('install-gbuilder', bindir + '/gbuilder')
     # Adding Path info to gbuilder
 env.Alias('install-gbuilder', sharedir + '/gbuilder')
+env.Clean(sharedir + '/gbuilder',sharedir + '/gbuilder')
 env.Alias('install', 'install-gbuilder')
