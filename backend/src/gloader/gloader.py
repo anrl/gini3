@@ -779,7 +779,8 @@ def destroyVM(umls, umlDir, mode):
             print "Stopping UML %s..." % uml.name
         elif mode == 2:
             print "Stopping REALM %s..." % uml.name
-            system("screen -S " + uml.name + "-vtap -X quit")
+            system("screen -S " + uml.name + "-vtap -p 0 -X stuff \"quitt\n\"")
+            # system("screen -S " + uml.name + "-vtap -X quit")
             system("screen -S " + uml.name + "-vtproxy -X quit")
         else:
             print "Stopping Mobile %s..." % uml.name

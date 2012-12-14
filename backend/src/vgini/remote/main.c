@@ -32,6 +32,11 @@ int server_fd;
 int gini_fd;
 int gini_status;
 
+char buf_ipfo[256] = {0};
+char buf_parp[256] = {0};
+char buf_sysc[256] = {0};
+char gini_ip[20];
+
 void *gini_polling(void *val);
 /*
  * Redefine signal handlers
@@ -119,7 +124,7 @@ int main(int ac, char *av[])
       perror("char string (second parameter does not contain valid ipaddress");
       close(serverSocketFD);
       exit(EXIT_FAILURE);
-    }
+    }/proc/sys/net/ipv4/ip_forward
 
     if (-1 == connect(serverSocketFD, (const struct sockaddr *)&serverSockAddr, sizeof(struct sockaddr_in)))
     {
@@ -177,7 +182,6 @@ void *gini_polling(void *val)
 	socklen_t fromlen;
 	char tmpbuf[2000];
 	char *nexttok;
-	char gini_ip[20];
 	char gini_mac[20];
 	char cmd[100];
 	ssize_t recsize;
@@ -287,6 +291,43 @@ void *gini_polling(void *val)
 	ret = system("ifconfig tap0 up");
 	gini_status = ON;
 
+	char c;
+	c = 0;
+	FILE *fp_ipfo = fopen("/proc/sys/net/ipv4/ip_forward", "r");
+	if (fp_ipfo != NULL)
+	{
+		for (i=0; c != EOF; i++)
+		{
+			c = fgetc(fp_ipfo);
+			if (c != EOF)
+				buf_ipfo[i] = c;
+		}
+		fclose(fp_ipfo);
+	}
+	c = 0;
+	FILE *fp_parp = fopen("/proc/sys/net/ipv4/conf/eth0/proxy_arp", "r");
+	if (fp_parp != NULL)
+	{
+		for (i=0; c != EOF; i++)
+		{
+			c = fgetc(fp_parp);
+			if (c != EOF)
+				buf_parp[i] = c;
+		}
+		fclose(fp_parp);
+	}
+	c = 0;
+	FILE *fp_sysc = popen("/sbin/sysctl -n net.ipv6.conf.all.forwarding", "r");
+	if (fp_sysc != NULL)
+	{
+		for (i=0; c != EOF; i++)
+		{
+			c = fgetc(fp_sysc);
+			if (c != EOF)
+				buf_sysc[i] = c;
+		}
+		pclose(fp_sysc);
+	}
 	ret = system("echo 1 > /proc/sys/net/ipv4/ip_forward");
 	ret = system("echo 1 > /proc/sys/net/ipv4/conf/tap0/proxy_arp");
 	ret = system("echo 1 > /proc/sys/net/ipv4/conf/eth0/proxy_arp");

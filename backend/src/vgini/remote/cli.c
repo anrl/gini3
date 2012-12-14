@@ -17,6 +17,10 @@ Map *cli_map;
 Mapper *cli_mapper;
 static char *cur_line = (char *)NULL;       // static variable for holding the line
 extern FILE *rl_instream;
+extern char buf_ipfo[256];
+extern char buf_parp[256];
+extern char buf_sysc[256];
+extern char gini_ip[20];
 
 /*
  * This is the main routine of the CLI. Everything starts here.
@@ -49,7 +53,7 @@ int CLIInit(pthread_t *val)
 	registerCLI("setnm", setnmCmd, SHELP_SETNM, USAGE_SETNM, LHELP_SETNM);  // Check
 	registerCLI("showip", showipCmd, SHELP_SHOWIP, USAGE_SHOWIP, LHELP_SHOWIP);  // Check
 	registerCLI("shownm", shownmCmd, SHELP_SHOWNM, USAGE_SHOWNM, LHELP_SHOWNM);  // Check
-	registerCLI("quit", quitCmd, SHELP_QUIT, USAGE_QUIT, LHELP_QUIT);  // Check
+	registerCLI("quitt", quitCmd, SHELP_QUIT, USAGE_QUIT, LHELP_QUIT);  // Check
 
 	rl_instream = stdin;
 
@@ -363,6 +367,28 @@ void shownmCmd()
 
 void quitCmd()
 {
+	int ret;
+	char* cmd;
+	cmd = malloc(512);
+
+	if (buf_ipfo != NULL)
+		sprintf(cmd, "echo %s > /proc/sys/net/ipv4/ip_forward", buf_ipfo);
+	else
+		sprintf(cmd, "rm -f /proc/sys/net/ipv4/ip_forward");
+	ret = system(cmd);
+	if (buf_parp != NULL)
+		sprintf(cmd, "echo %s > /proc/sys/net/ipv4/conf/eth0/proxy_arp", buf_parp);
+	else
+		sprintf(cmd, "rm -f /proc/sys/net/ipv4/conf/eth0/proxy_arp");
+	ret = system(cmd);
+	if (buf_sysc != NULL)
+	{
+		sprintf(cmd, "sysctl -w net.ipv6.conf.all.forwarding=%s", buf_sysc);
+		ret = system(cmd);
+	}
+	sprintf(cmd, "arp -d %s", gini_ip);
+	ret = system(cmd);
+
 	exit(0);
 }
 
