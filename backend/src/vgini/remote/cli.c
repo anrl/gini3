@@ -102,8 +102,8 @@ void parseACLICmd(char *str)
 		clie->handler((void *)clie);
 	else
 	{
-		printf("WARNING: %s not a gRouter command (deferring to Linux)\n", token);
-		ret = system(orig_str);
+		printf("%s not a gRouter command\n", token);
+		//ret = system(orig_str);
 	}
 }
 

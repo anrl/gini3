@@ -79,16 +79,16 @@ int main(int ac, char *av[])
 		strcpy(server_addr, "127.0.0.1");
 		server_port = 50007;
 	}
-	else if (ac == 2)	// set specific ip
-	{
-		strcpy(server_addr, av[1]);
-		server_port = 50007;
-	}
-	else if (ac == 3)	// set specific ip & port
-	{
-		strcpy(server_addr, av[1]);
-		server_port = (short)atoi(av[2]);
-	}
+	// else if (ac == 2)	// set specific ip
+	// {
+	// 	strcpy(server_addr, av[1]);
+	// 	server_port = 50007;
+	// }
+	// else if (ac == 3)	// set specific ip & port
+	// {
+	// 	strcpy(server_addr, av[1]);
+	// 	server_port = (short)atoi(av[2]);
+	// }
 	else				// error command line
 	{
 		fprintf(stderr, "Command Line Error!\n");
@@ -183,6 +183,11 @@ void *gini_polling(void *val)
 	ssize_t recsize;
 	int ret;
 
+	int i;
+	int numbers;
+	int pieces;
+	int len;
+
 	fromlen = sizeof(struct sockaddr_in);
 
 	// receive the first packet from gini, set virtual address, set status=ON
@@ -211,6 +216,69 @@ void *gini_polling(void *val)
 		printf("gini command error.\n");
 		exit (1);
 	}
+
+	// Verify the input for the IP is valid
+	numbers = 0;
+	pieces = 0;
+	len = strlen(gini_ip);
+	for (i = 0; i < len; i++)
+	{
+		if('0' <= gini_ip[i] && gini_ip[i] <= '9')
+		{
+			if(numbers++ >= 3)
+			{
+				printf("Too many numbers in IP\n");
+				exit (1);
+			}
+		}
+		else if (gini_ip[i] == '.')
+		{
+			if(pieces++ >= 3)
+			{
+				printf("Too many pieces in IP\n");
+				exit (1);
+			}
+			numbers = 0;
+		}
+		else
+		{
+			printf("Invalid character for IP\n");
+			exit (1);
+		}
+	}
+
+	// Verify the input for the MAC is valid
+	numbers = 0;
+	pieces = 0;
+	len = strlen(gini_mac);
+	for (i=0; i < len; i++)
+	{
+		if (('0' <= gini_mac[i] && gini_mac[i] <= '9') ||
+			('a' <= gini_mac[i] && gini_mac[i] <= 'f') ||
+			('A' <= gini_mac[i] && gini_mac[i] <= 'F'))
+		{
+			if (numbers++ >= 2)
+			{
+				printf("Too many numbers for MAC\n");
+				exit (1);
+			}
+		}
+		else if (gini_mac[i] == ':')
+		{
+			if (pieces++ >= 5)
+			{
+				printf("Too many pieces in the MAC");
+				exit (1);
+			}
+			numbers = 0;
+		}
+		else
+		{
+			printf("Invalid character for MAC\n");
+			exit (1);
+		}
+	}
+
 	ret = system("ifconfig tap0 down");
 	sprintf(cmd, "ifconfig tap0 hw ether %s", gini_mac);
 	ret = system(cmd);

@@ -414,13 +414,13 @@ def createVRM(myGINI, options):
         # go to the UML directory to execute the command
 
             oldDir = os.getcwd()
-            os.chdir(subUMLDir)
-            startOut = open("startit.sh", "w")
-            startOut.write(command)
-            startOut.close()
-            os.chmod("startit.sh",0755)
-            system("./startit.sh")
-            print "[OK]"
+            # os.chdir(subUMLDir)
+            # startOut = open("startit.sh", "w")
+            # startOut.write(command)
+            # startOut.close()
+            # os.chmod("startit.sh",0755)
+            # system("./startit.sh")
+            # print "[OK]"
             os.chdir(os.environ["GINI_SHARE"]+"/vgini")
             vtap = "screen -d -m -S %s-vtap ./vtap" % realm.name
             print vtap
