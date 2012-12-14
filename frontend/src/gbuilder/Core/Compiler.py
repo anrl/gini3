@@ -290,27 +290,41 @@ class Compiler:
         """
         for switch in self.compile_list["Switch"]:
             self.output.write("<vs name=\"" + switch.getName() + "\">\n")
-            
+
             self.output.write("\t<priority>" + switch.getProperty("Priority") + "</priority>\n")
             self.output.write("\t<mac>" + switch.getProperty("mac") + "</mac>\n")
 
-
-            edges = switch.edges()
-            if len(edges) < 2:
+            subnet = None
+            if len(switch.edges()) < 2:
                 self.generateConnectionWarning(switch, 2)
 
-            subnetConnected = False
-            for edge in edges:
-                node = edge.getOtherDevice(switch)
-                if node.device_type == "Subnet":
-                    subnetConnected = True
-                if node.device_type == "Switch":
-                    self.output.write("\t<target>" + node.getName() + "</target>\n")
-                    
-            if not subnetConnected:
+            first = True
+            Q = [switch]
+            switch_seen = set([switch])
+            while Q:
+                t = Q.pop(0)
+                for edge in t.edges():
+                    node = edge.getOtherDevice(t)
+                    if node.device_type == "Subnet":
+                        if (subnet is None) or (subnet == node):
+                            subnet = node
+                        else:
+                            self.generateError(t, "subnet", "inconsistent due to multiple values (only connect to a single subnet)")
+                            return
+                    if node.device_type == "Switch":
+                        # should look around for a subnet
+                        if node not in switch_seen:
+                            switch_seen.add(node)
+                            Q.append(node)
+                            if first:
+                                self.output.write("\t<target>" + node.getName() + "</target>\n")
+                first = False
+
+            if subnet is None:
                 self.generateError(switch, "subnet", "missing")
                 return
-                
+
+            switch.setProperty("subnet", subnet.getProperty("subnet"))
             if switch.getProperty("Hub mode") == "True":
                 self.output.write("\t<hub/>\n")
             self.output.write("</vs>\n\n")
