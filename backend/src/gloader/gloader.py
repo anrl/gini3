@@ -594,7 +594,7 @@ def createUMLCmdLine(uml):
     fileSystemName = getBaseName(uml.fileSystem.name)
     fsCOWName = os.environ["GINI_HOME"] + "/data/" + uml.name + "/" + fileSystemName + ".cow"
     if (uml.fileSystem.type.lower() == "cow"):
-        command += "ubd0=%s,%s " % (fsCOWName, uml.fileSystem.name)
+        command += "ubd0=%s,%s " % (fsCOWName, os.environ["GINI_SHARE"] + "/filesystem/" + fileSystemName)
     else:
         command += "ubd0=%s " % uml.fileSystem.name
     ## handle the mem option

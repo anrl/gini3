@@ -1,6 +1,5 @@
 #include <unistd.h>
 #include <stdio.h>
-#include <curses.h>
 #include <string.h>
 #include <assert.h>
 #include <sys/types.h>
@@ -85,9 +84,9 @@ int main(int ac, char *av[])
 	bzero(vt_addr, 20);
 	strcpy(vt_addr, "127.0.0.1");
 	vt_port = 4900;
-	strcpy(gini_ip, "10.0.0.2");
-	strcpy(gini_mac, "fe:fd:03:01:00:07");
-	strcpy(sock_file, "/home/garfunkle/gini/data/Router_1/gini_socket_eth3.ctl");
+	strcpy(gini_ip, "192.168.1.2");
+	strcpy(gini_mac, "fe:fd:03:01:00:01");
+	strcpy(sock_file, "/home/bshagi/.gini/data/Router_1/gini_socket_eth1.ctl");
 
 	if (ac == 1)		// no parameter
 	{

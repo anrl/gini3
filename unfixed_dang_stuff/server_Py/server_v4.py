@@ -51,8 +51,8 @@ def regsender(): # send register info to gini
         data = togini.recv(1024)
         if not data: break
         if 'getinfo' in data: #string.find
-            for i in range(len(aList)):
-                togini.send(aList[i])
+            for i in aList:
+                togini.send(i)
             togini.send('finish')
         elif 'assign' in data:
             togini.send('assign accepted finish')

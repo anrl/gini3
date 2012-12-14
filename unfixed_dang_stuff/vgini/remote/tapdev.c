@@ -1,6 +1,5 @@
 #include <unistd.h>
 #include <stdio.h>
-#include <curses.h>
 #include <string.h>
 #include <assert.h>
 #include <sys/types.h>
