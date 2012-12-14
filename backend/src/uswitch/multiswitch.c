@@ -27,11 +27,11 @@ typedef struct _switch_t switch_t;
 
 struct _switch_t {
 
-    uint32_t id;		// locally unique identifier
-    struct sockaddr_un sun;	// socket address used to communicate to the remote switch
-    uint8_t blocked;		// boolean: if true, no data is forwarded through the port
-    bpdu_t bpdu;		// used for STP
-    switch_t *next;		// next port
+    uint32_t id;                // locally unique identifier
+    struct sockaddr_un sun;        // socket address used to communicate to the remote switch
+    uint8_t blocked;                // boolean: if true, no data is forwarded through the port
+    bpdu_t bpdu;                // used for STP
+    switch_t *next;                // next port
 
 };
 
@@ -40,16 +40,16 @@ struct _switch_t {
 // Global variables
 //
 
-char ms_sock_path[1024];	// path to local socket file
-int ms_sock;			// local socket
-struct sockaddr_un local_sun;	// local sockaddr_un
+char ms_sock_path[1024];        // path to local socket file
+int ms_sock;                        // local socket
+struct sockaddr_un local_sun;        // local sockaddr_un
 
 struct packet local_pkt;  // used in STP for sending BPDUs
 bpdu_t *local_bpdu = (bpdu_t *)(local_pkt.data);
 int pkt_len = sizeof(local_pkt.header) + sizeof(bpdu_t);
 
-switch_t *ms_list = NULL;	// switch port list
-switch_t *root_switch = NULL;	// next hop towards the root
+switch_t *ms_list = NULL;        // switch port list
+switch_t *root_switch = NULL;        // next hop towards the root
 
 
 //
@@ -75,9 +75,9 @@ void ms_list_clear () {
     switch_t *t;
 
     while (s != NULL) {
-	t = s;
-	s = s->next;
-	free(t);
+        t = s;
+        s = s->next;
+        free(t);
     }
 
 }
@@ -91,8 +91,8 @@ switch_t *ms_list_find (struct sockaddr_un *sun) {
     switch_t *s;
 
     for (s = ms_list; s != NULL; s = s->next) {
-	if (strcmp(s->sun.sun_path, sun->sun_path) == 0)
-	    break;
+        if (strcmp(s->sun.sun_path, sun->sun_path) == 0)
+            break;
     }
 
     return s;
@@ -118,8 +118,8 @@ void ms_broadcast_bpdu () {
     switch_t *s;
 
     for (s = ms_list; s != NULL; s = s->next) {
-	local_bpdu->port = s->id;
-	sendto(ms_sock, &local_pkt, pkt_len, 0, (struct sockaddr *) &(s->sun), sizeof(s->sun));
+        local_bpdu->port = s->id;
+        sendto(ms_sock, &local_pkt, pkt_len, 0, (struct sockaddr *) &(s->sun), sizeof(s->sun));
     }
 
 }
@@ -133,22 +133,22 @@ int ms_bpdu_supersedes (bpdu_t *bpdu) {
     int c = memcmp(bpdu->root.id, local_bpdu->root.id, 8);
 
     if (c < 0)
-	return 1;	// the BPDU has a better root
+        return 1;        // the BPDU has a better root
 
     if (c == 0) {
-	if (bpdu->cost < local_bpdu->cost) {
-	    return 1;	// the BPDU has the same root but a better cost
-	}
-	if (bpdu->cost == local_bpdu->cost) {
-	    if (memcmp(bpdu->bridge.id, local_bpdu->gateway.id, 8) < 0) {
-		// The BPDU has the same root and cost, but the sender has a higher
-		// priority than our current gateway.
-		return 1;
-	    }
-	}
+        if (bpdu->cost < local_bpdu->cost) {
+            return 1;        // the BPDU has the same root but a better cost
+        }
+        if (bpdu->cost == local_bpdu->cost) {
+            if (memcmp(bpdu->bridge.id, local_bpdu->gateway.id, 8) < 0) {
+                // The BPDU has the same root and cost, but the sender has a higher
+                // priority than our current gateway.
+                return 1;
+            }
+        }
     }
 
-    return 0;	// our current information is better than the BPDU's
+    return 0;        // our current information is better than the BPDU's
 
 }
 
@@ -171,23 +171,23 @@ void ms_receive_bpdu (switch_t *sender, bpdu_t *bpdu) {
     // If the BPDU contains better information
     if (ms_bpdu_supersedes(bpdu)) {
 
-	// Update our root, cost, and gateway
-	memcpy(local_bpdu->root.id, bpdu->root.id, 8);
-	local_bpdu->cost = bpdu->cost;
-	memcpy(local_bpdu->gateway.id, bpdu->bridge.id, 8);
-	root_switch = sender;
+        // Update our root, cost, and gateway
+        memcpy(local_bpdu->root.id, bpdu->root.id, 8);
+        local_bpdu->cost = bpdu->cost;
+        memcpy(local_bpdu->gateway.id, bpdu->bridge.id, 8);
+        root_switch = sender;
 
-	// Send this updated information to everyone
-	ms_broadcast_bpdu();
+        // Send this updated information to everyone
+        ms_broadcast_bpdu();
 
     }
 
     // Update the open/blocked state of all switch ports
     for (s = ms_list; s != NULL; s = s->next) {
-	if ((s != root_switch) && (memcmp(s->bpdu.gateway.id, local_bpdu->bridge.id, 8)))
-	    s->blocked = 1;
-	else
-	    s->blocked = 0;
+        if ((s != root_switch) && (memcmp(s->bpdu.gateway.id, local_bpdu->bridge.id, 8)))
+            s->blocked = 1;
+        else
+            s->blocked = 0;
     }
 
 }
@@ -195,8 +195,8 @@ void ms_receive_bpdu (switch_t *sender, bpdu_t *bpdu) {
 /*
  * Print debugging information on the local switch and all switch ports to a file (debug.txt).
  */
-#define ID_ARG		"%2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X"
-#define ID_VAL(X)	(X)[0],(X)[1],(X)[2],(X)[3],(X)[4],(X)[5],(X)[6],(X)[7]
+#define ID_ARG                "%2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X"
+#define ID_VAL(X)        (X)[0],(X)[1],(X)[2],(X)[3],(X)[4],(X)[5],(X)[6],(X)[7]
 void ms_debug_print () {
 
     FILE *f;
@@ -216,15 +216,15 @@ void ms_debug_print () {
 
     // All switch ports
     for (s = ms_list; s != NULL; s = s->next) {
-	fprintf(f, "=== Switch Port ===\n");
-	fprintf(f, "%s\n", s->sun.sun_path);
-	fprintf(f, "Bridge ID:\t"ID_ARG"\n", ID_VAL(s->bpdu.bridge.id));
-	fprintf(f, "Root ID:\t"ID_ARG"\n", ID_VAL(s->bpdu.root.id));
-	fprintf(f, "Gateway ID:\t"ID_ARG"\n", ID_VAL(s->bpdu.gateway.id));
-	fprintf(f, "Root?\t\t%s\n", (s == root_switch) ? "YES":"No");
-	fprintf(f, "Cost:\t\t%d\n", s->bpdu.cost);
-	fprintf(f, "State:\t\t%s\n", (s->blocked) ? "BLOCKED" : "Open");
-	fprintf(f, "\n\n");
+        fprintf(f, "=== Switch Port ===\n");
+        fprintf(f, "%s\n", s->sun.sun_path);
+        fprintf(f, "Bridge ID:\t"ID_ARG"\n", ID_VAL(s->bpdu.bridge.id));
+        fprintf(f, "Root ID:\t"ID_ARG"\n", ID_VAL(s->bpdu.root.id));
+        fprintf(f, "Gateway ID:\t"ID_ARG"\n", ID_VAL(s->bpdu.gateway.id));
+        fprintf(f, "Root?\t\t%s\n", (s == root_switch) ? "YES":"No");
+        fprintf(f, "Cost:\t\t%d\n", s->bpdu.cost);
+        fprintf(f, "State:\t\t%s\n", (s->blocked) ? "BLOCKED" : "Open");
+        fprintf(f, "\n\n");
     }
 
     fclose(f);
@@ -255,7 +255,7 @@ int ms_init (uint16_t priority, uint8_t *mac) {
 
     // Create the socket
     if ((ms_sock = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1) {
-	return -1;
+        return -1;
     }
 
     // Bind to SOCKET_FILE
@@ -264,8 +264,8 @@ int ms_init (uint16_t priority, uint8_t *mac) {
     strcpy(local_sun.sun_path, ms_sock_path);
 
     if (bind(ms_sock, (struct sockaddr *) &local_sun, sizeof(local_sun)) == -1) {
-	close(ms_sock);
-	return -1;
+        close(ms_sock);
+        return -1;
     }
 
     cleanup_add(ms_cleanup);
@@ -315,26 +315,26 @@ void ms_parse_file (char *path) {
     int id = 1;
 
     if ((f = fopen(path, "r")) == NULL)
-	return;
+        return;
 
     for (;;) {
 
-	if (fgets(buf, 1024, f) == NULL)
-	    break;
+        if (fgets(buf, 1024, f) == NULL)
+            break;
 
-	len = strlen(buf);
-	buf[len-1] = '\0';  // remove trailing newline
+        len = strlen(buf);
+        buf[len-1] = '\0';  // remove trailing newline
 
-	s = malloc(sizeof(switch_t));
-	s->id = id++;
-	s->sun.sun_family = AF_UNIX;
-	strcpy(s->sun.sun_path, buf);
-	s->blocked = 0;
-	s->bpdu.cost = 0;
-	memcpy(s->bpdu.root.id, local_bpdu->bridge.id, 8);	// initially we think we're the root
-	memcpy(s->bpdu.gateway.id, local_bpdu->bridge.id, 8);	// initially we think we're the root
+        s = malloc(sizeof(switch_t));
+        s->id = id++;
+        s->sun.sun_family = AF_UNIX;
+        strcpy(s->sun.sun_path, buf);
+        s->blocked = 0;
+        s->bpdu.cost = 0;
+        memcpy(s->bpdu.root.id, local_bpdu->bridge.id, 8);        // initially we think we're the root
+        memcpy(s->bpdu.gateway.id, local_bpdu->bridge.id, 8);        // initially we think we're the root
 
-	ms_list_insert(s);
+        ms_list_insert(s);
 
     }
 
@@ -353,13 +353,13 @@ void ms_broadcast (struct packet *local_pkt, int len, struct sockaddr *sa) {
 
     for (s = ms_list; s != NULL; s = s->next) {
 
-	if (!strcmp(sun->sun_path, s->sun.sun_path))
-	    continue;
+        if (!strcmp(sun->sun_path, s->sun.sun_path))
+            continue;
 
-	if (s->blocked)
-	    continue;
+        if (s->blocked)
+            continue;
 
-	sendto(ms_sock, local_pkt, len, 0, (struct sockaddr *) &(s->sun), sizeof(s->sun));
+        sendto(ms_sock, local_pkt, len, 0, (struct sockaddr *) &(s->sun), sizeof(s->sun));
 
     }
 
@@ -400,42 +400,42 @@ void ms_stp() {
 
     for (;;) {
 
-	// If we believe we're the root, send a configuration BPDU
-	if (memcmp(local_bpdu->root.id, local_bpdu->bridge.id, 8) == 0) {
-	    ms_broadcast_bpdu();
-	}
+        // If we believe we're the root, send a configuration BPDU
+        if (memcmp(local_bpdu->root.id, local_bpdu->bridge.id, 8) == 0) {
+            ms_broadcast_bpdu();
+        }
 
-	// Listen for a while
-	FD_ZERO(&set);
-	FD_SET(ms_sock, &set);
-	n = select(ms_sock+1, &set, NULL, NULL, &tv);
+        // Listen for a while
+        FD_ZERO(&set);
+        FD_SET(ms_sock, &set);
+        n = select(ms_sock+1, &set, NULL, NULL, &tv);
 
-	// If there's something to read, process it
-	if (FD_ISSET(ms_sock, &set)) {
-	    FD_CLR(ms_sock, &set);
-	    while (recvfrom(ms_sock, &pkt, sizeof(struct packet), MSG_DONTWAIT, (struct sockaddr *) &sun, &sunlen) >= 0) {
+        // If there's something to read, process it
+        if (FD_ISSET(ms_sock, &set)) {
+            FD_CLR(ms_sock, &set);
+            while (recvfrom(ms_sock, &pkt, sizeof(struct packet), MSG_DONTWAIT, (struct sockaddr *) &sun, &sunlen) >= 0) {
 
-		// Check the destination address
-		if (! IS_BRIDGE_GROUP_ADDR(pkt.header.dst))
-		    continue;
+                // Check the destination address
+                if (! IS_BRIDGE_GROUP_ADDR(pkt.header.dst))
+                    continue;
 
-		// Verify the configuration BPDU protocol, version, and type fields
-		if ((bpdu->protocol != 0) || (bpdu->version != 0) || (bpdu->type != 0))
-		    continue;
+                // Verify the configuration BPDU protocol, version, and type fields
+                if ((bpdu->protocol != 0) || (bpdu->version != 0) || (bpdu->type != 0))
+                    continue;
 
-		// Find the switch that sent this packet
-		if ((s = ms_list_find(&sun)) == NULL)
-		    continue;
+                // Find the switch that sent this packet
+                if ((s = ms_list_find(&sun)) == NULL)
+                    continue;
 
-		// Process the configuration BPDU
-		ms_receive_bpdu(s, bpdu);
+                // Process the configuration BPDU
+                ms_receive_bpdu(s, bpdu);
 
-	    }
-	}
+            }
+        }
 
-	// There has been nothing to read for a while; assume all switches have reached a consensus.
-	else
-	    break;
+        // There has been nothing to read for a while; assume all switches have reached a consensus.
+        else
+            break;
 
     }
 
