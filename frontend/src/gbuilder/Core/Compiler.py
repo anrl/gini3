@@ -26,7 +26,7 @@ class Compiler:
             if isinstance(device, Device):
                 self.compile_list[device.device_type].append(device)
 
-    def compile(self, server):
+    def compile(self):
         """
         Compile the topology into xml.
         """
@@ -56,7 +56,7 @@ class Compiler:
         if options["autogen"]:
             self.autogen_router()
             self.autogen_UML()
-            self.autogen_REALM(server)
+            self.autogen_REALM()
             self.autogen_mobile()
             self.autogen_switch()
             
@@ -369,7 +369,7 @@ class Compiler:
             self.output.write("</vm>\n\n")
 
 #********************************* REALM
-    def autogen_REALM(self, server):
+    def autogen_REALM(self):
         """
         Auto-generate properties for REALMs.
         """
@@ -386,7 +386,7 @@ class Compiler:
             hostname = realm.properties["Hosts"][realm.hostIndex]
             ip_addr =  realm.getProperty("ipv4")
             mac_addr = realm.getProperty("mac")
-            server.send(','.join(map(str, ("assign","start",hostname,ip_addr,mac_addr,"end"))))
+            #server.send(','.join(map(str, ("assign","start",hostname,ip_addr,mac_addr,"end"))))
 
 
     def compile_REALM(self):

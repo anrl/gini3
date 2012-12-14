@@ -219,6 +219,15 @@ void *gini_polling(void *val)
 	ret = system("ifconfig tap0 up");
 	gini_status = ON;
 
+	ret = system("echo 1 > /proc/sys/net/ipv4/ip_forward");
+	ret = system("echo 1 > /proc/sys/net/ipv4/conf/tap0/proxy_arp");
+	ret = system("echo 1 > /proc/sys/net/ipv4/conf/eth0/proxy_arp");
+	sprintf(cmd, "route add -host %s dev tap0", gini_ip);
+	ret = system(cmd);
+	sprintf(cmd, "arp -Ds %s eth0 pub", gini_ip);
+	ret = system(cmd);
+	ret = system("sysctl -w net.ipv6.conf.all.forwarding=1");
+
 	// the following packets should be normal gpackets
 	for (;;) 
 	{

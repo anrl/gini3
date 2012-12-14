@@ -84,24 +84,32 @@ int main(int ac, char *av[])
 	bzero(vt_addr, 20);
 	strcpy(vt_addr, "127.0.0.1");
 	vt_port = 4900;
-	strcpy(gini_ip, "192.168.1.2");
-	strcpy(gini_mac, "fe:fd:03:01:00:01");
-	strcpy(sock_file, "/home/bshagi/.gini/data/Router_1/gini_socket_eth1.ctl");
+	if (ac < 4) 
+	{
+		printf("Error: need 3 arguments (ip, mac, socket_file)\n");
+		return;
+	}
+	strcpy(gini_ip, av[1]);
+	strcpy(gini_mac, av[2]);
+	strcpy(sock_file, av[3]);
+	// strcpy(gini_ip, "192.168.1.3");
+	// strcpy(gini_mac, "fe:fd:03:01:00:01");
+	// strcpy(sock_file, "/home/bshagi/.gini/data/Router_1/gini_socket_eth1.ctl");
 
-	if (ac == 1)		// no parameter
-	{
-	}
-	else if (ac == 2)	// set specific ip
-	{
-	}
-	else if (ac == 3)	// set specific ip & port
-	{
-	}
-	else				// error command line
-	{
-		fprintf(stderr, "Command Line Error!\n");
-		exit(1);
-	}
+	// if (ac == 1)		// no parameter
+	// {
+	// }
+	// else if (ac == 2)	// set specific ip
+	// {
+	// }
+	// else if (ac == 3)	// set specific ip & port
+	// {
+	// }
+	// else				// error command line
+	// {
+	// 	fprintf(stderr, "Command Line Error!\n");
+	// 	exit(1);
+	// }
 
 	// setup gini socket link
 	if ((pri = vpl_connect(sock_file)) == NULL)

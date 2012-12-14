@@ -413,15 +413,22 @@ def createVRM(myGINI, options):
         ### ------- execute ---------- ###
         # go to the UML directory to execute the command
 
-        oldDir = os.getcwd()
-        os.chdir(subUMLDir)
-        startOut = open("startit.sh", "w")
-        startOut.write(command)
-        startOut.close()
-        os.chmod("startit.sh",0755)
-        system("./startit.sh")
-        print "[OK]"
-        os.chdir(oldDir)
+            oldDir = os.getcwd()
+            os.chdir(subUMLDir)
+            startOut = open("startit.sh", "w")
+            startOut.write(command)
+            startOut.close()
+            os.chmod("startit.sh",0755)
+            system("./startit.sh")
+            print "[OK]"
+            os.chdir(os.environ["GINI_SHARE"]+"/vgini")
+            vtap = "screen -d -m -S %s-vtap ./vtap" % realm.name
+            print vtap
+            system(vtap)
+            vtproxy = "screen -d -m -S %s-vtproxy ./vtproxy %s %s %s" % (realm.name, nwIf.ip, nwIf.mac, socketName)
+            print vtproxy
+            system(vtproxy)
+            os.chdir(oldDir)
     return True
 
 def makeDir(dirName):
@@ -772,6 +779,8 @@ def destroyVM(umls, umlDir, mode):
             print "Stopping UML %s..." % uml.name
         elif mode == 2:
             print "Stopping REALM %s..." % uml.name
+            system("screen -S " + uml.name + "-vtap -X quit")
+            system("screen -S " + uml.name + "-vtproxy -X quit")
         else:
             print "Stopping Mobile %s..." % uml.name
         command = "%s %s cad > /dev/null 2>&1" % (MCONSOLE_PROG_BIN, uml.name)      
@@ -803,7 +812,7 @@ def destroyVM(umls, umlDir, mode):
         if mode == 0:
             print "\tStopping UML %s...\t[OK]" % uml.name
         elif mode == 2:
-            print "\tStopping REAML %s...\t[OK]" % uml.name
+            print "\tStopping REALM %s...\t[OK]" % uml.name
         else:
             print "\tStopping Mobile %s...\t[OK]" % uml.name
             

@@ -209,7 +209,9 @@ class ReceiveDeviceStatusCommand(Command):
         name = device
         if device.find("WAP") == 0:
             name = "Wireless_access_point_" + device.split("_")[-1]
-        scene.findItem(name).setStatus(status)
+        item = scene.findItem(name)
+        if item is not None:
+            item.setStatus(status)
 
         tm.update(device, pid, status)
 
