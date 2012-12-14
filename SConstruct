@@ -343,7 +343,7 @@ filesystem_src = filesystem_dir + "/GiniLinux-fs-1.0q.tar.gz"
 
 # Unzip the gini UML fs into the root gini directory
 # TODO this is really bad
-env.Command(sharedir + '/filesystem/root_fs_beta2', filesystem_src, "cd " + filesystem_dir + ";tar -xzf GiniLinux-fs-1.0q.tar.gz --atime-preserve;cp -p GiniLinux-fs-1.0q ../../$TARGET;rm GiniLinux-fs-1.0q")
+env.Command(sharedir + '/filesystem/root_fs_beta2', filesystem_src, "pushd " + filesystem_dir + ";tar -xzf GiniLinux-fs-1.0q.tar.gz --atime-preserve;popd;cp -p " + filesystem_dir + "/GiniLinux-fs-1.0q $TARGET;rm " + filesystem_dir + "/GiniLinux-fs-1.0q")
 
 env.Alias('install-filesystem',sharedir + '/filesystem/root_fs_beta2')
 env.Alias('install','install-filesystem')
