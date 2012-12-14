@@ -1,0 +1,6 @@
+Three python files--server_v4, gini_v4 and real_v4 are included.
+
+server_v4 is responsible for collecting the ip address and port from the real machine, sending these information to the gini frontend.
+On the other hand, upon receiving the gini ip and mac from gini frontend, server_v4 delivers this to the real machine.
+
+gini_v4 and real_v4 are simple test programs which emulate gini frontend and real machine interfaces.
