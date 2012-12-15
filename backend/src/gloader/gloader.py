@@ -20,7 +20,7 @@ GR_PROG_BIN = GR_PROG
 GWR_PROG_BIN = GWR_PROG
 MCONSOLE_PROG_BIN = MCONSOLE_PROG
 SRC_FILENAME = "%s/gini_setup" % os.environ["GINI_HOME"] # setup file name
-UML_WAIT_DELAY = 1 # wait delay between checking alive UML
+UML_WAIT_DELAY = 0.2 # wait delay between checking alive UML
 GROUTER_WAIT = 2 # wait delay between starting routers
 GINI_TMP_FILE = ".gini_tmp_file" # tmp file used when checking alive UML
 nodes = []
@@ -420,14 +420,14 @@ def createVRM(myGINI, options):
             # startOut.close()
             # os.chmod("startit.sh",0755)
             # system("./startit.sh")
-            # print "[OK]"
             os.chdir(os.environ["GINI_SHARE"]+"/vgini")
             vtap = "screen -d -m -S %s-vtap ./vtap" % realm.name
-            # print vtap
+            #print vtap
             system(vtap)
             vtproxy = "screen -d -m -S %s-vtproxy ./vtproxy %s %s %s" % (realm.name, nwIf.ip, nwIf.mac, socketName)
-            # print vtproxy
+            #print vtproxy
             system(vtproxy)
+            print "[OK]"
             os.chdir(oldDir)
     return True
 
@@ -646,7 +646,7 @@ def destroyGINI(myGINI, options):
 
     print "\nTerminating REALMs..."
     try:
-        result = result and  destroyVM(myGINI.vrm, options.umlDir, 2)
+        result = result and  destroyRVM(myGINI.vrm, options.umlDir)
     except:
         pass
 
@@ -772,6 +772,34 @@ def getPIDFromFile(fileName):
     lines = fileIn.readlines()
     fileIn.close()
     return int(lines[0].strip())
+
+def destroyRVM(umls,umlDir):
+    for uml in umls:
+      print "\tStopping REALM %s...\t[OK]" % uml.name
+      system("screen -S " + uml.name + "-vtap -p 0 -X stuff \"quitt\n\"")
+      system("screen -S " + uml.name + "-vtproxy -X quit")
+      print "\tCleaning the directory...\t",
+      subUMLDir = "%s/%s" % (umlDir, uml.name)
+      if (os.access(subUMLDir, os.F_OK)):
+          for file in os.listdir(subUMLDir):
+              fileName = "%s/%s" % (subUMLDir, file)
+              if (fileName[len(fileName)-4:] != ".cow"):
+                  # don't delete the .cow files
+                  if (os.access(fileName, os.W_OK)):
+                      os.remove(fileName)
+                  else:
+                      print "\n\tCould not delete file %s" % (uml.name, fileName)
+                      print "\tCheck your directory"
+                      return False
+          ### we are not deleting the subdirecotry as we are
+          ### not deleting the .cow files
+          #if (os.access(subUMLDir, os.W_OK)):
+              # os.rmdir(subUMLDir)
+      print "[OK]"
+      for nwIf in uml.interfaces:
+          configFile = "%s/tmp/%s.sh" % (os.environ["GINI_HOME"],nwIf.mac.upper())
+          if (os.access(configFile, os.W_OK)):
+              os.remove(configFile)
 
 def destroyVM(umls, umlDir, mode):
     for uml in umls:
