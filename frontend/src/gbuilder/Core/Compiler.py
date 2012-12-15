@@ -382,12 +382,6 @@ class Compiler:
                         continue
                     realm.setInterfaceProperty("ipv4", "%s.%d" % (subnet, realm.getID()+1+len(self.compile_list["UML"])))
                     realm.setInterfaceProperty("mac", "fe:fd:02:00:01:%02x" % realm.getID()) 
-            # send info to sever
-            hostname = realm.properties["Hosts"][realm.hostIndex]
-            ip_addr =  realm.getProperty("ipv4")
-            mac_addr = realm.getProperty("mac")
-            #server.send(','.join(map(str, ("assign","start",hostname,ip_addr,mac_addr,"end"))))
-
 
     def compile_REALM(self):
         """
@@ -397,7 +391,6 @@ class Compiler:
             self.output.write("<vrm name=\"" + realm.getName() + "\">\n")
         self.output.write("\t<filesystem type=\"" + realm.getProperty("filetype") + "\">"
                               + realm.getProperty("filesystem") + "</filesystem>\n")
-        print realm.getName()
 
         interfaces = realm.getInterfaces()
         if len(interfaces) < 1:

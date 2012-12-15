@@ -254,7 +254,6 @@ class Canvas(View):
         """
         Handle a drop.
         """
-        print "droppin'"
         mime = event.mimeData()
         node = deviceTypes[str(mime.text())]
         try:
@@ -263,18 +262,12 @@ class Canvas(View):
             return
 
         scene = self.scene()
-        print "one"
         scene.addItem(node)
 
-        print "two"
         scenePos = self.mapToScene(event.pos())
-        print "three"
         node.setPos(scenePos.x(), scenePos.y())
-        print"four"
         self.setFocus()
-        print "five"
         scene.update()
-        print "balboa"
 
     def dragMoveEvent(self, event):
         pass
