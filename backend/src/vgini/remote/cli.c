@@ -366,12 +366,13 @@ void quitCmd()
 	int ret;
 	char* cmd;
 	cmd = malloc(512);
-
+	printf("ipfo %s\n parp? %s\n", buf_ipfo, buf_parp);
 	if (buf_ipfo != NULL)
 		sprintf(cmd, "echo %s > /proc/sys/net/ipv4/ip_forward", buf_ipfo);
 	else
 		sprintf(cmd, "rm -f /proc/sys/net/ipv4/ip_forward");
 	ret = system(cmd);
+	printf("ipfo:%s\n",cmd);
 	if (buf_parp != NULL)
 		sprintf(cmd, "echo %s > /proc/sys/net/ipv4/conf/%s/proxy_arp", buf_parp, buf_interface);
 	else
@@ -382,7 +383,7 @@ void quitCmd()
 		sprintf(cmd, "sysctl -w net.ipv6.conf.all.forwarding=%s", buf_sysc);
 		ret = system(cmd);
 	}
-	sprintf(cmd, "arp -d %s", gini_ip);
+	sprintf(cmd, "arp -i eth0 -d %s", gini_ip);
 	ret = system(cmd);
 
 	exit(0);

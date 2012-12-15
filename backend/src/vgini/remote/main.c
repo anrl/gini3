@@ -327,7 +327,7 @@ void *gini_polling(void *val)
 		for (i=0; c != EOF; i++)
 		{
 			c = fgetc(fp_ipfo);
-			if (c != EOF)
+			if (c != EOF && c != '\n')
 				buf_ipfo[i] = c;
 		}
 		fclose(fp_ipfo);
@@ -340,7 +340,7 @@ void *gini_polling(void *val)
 		for (i=0; c != EOF; i++)
 		{
 			c = fgetc(fp_parp);
-			if (c != EOF)
+			if (c != EOF && c != '\n')
 				buf_parp[i] = c;
 		}
 		fclose(fp_parp);
@@ -352,7 +352,7 @@ void *gini_polling(void *val)
 		for (i=0; c != EOF; i++)
 		{
 			c = fgetc(fp_sysc);
-			if (c != EOF)
+			if (c != EOF && c != '\n')
 				buf_sysc[i] = c;
 		}
 		pclose(fp_sysc);
