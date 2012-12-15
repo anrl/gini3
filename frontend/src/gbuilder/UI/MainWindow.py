@@ -1019,9 +1019,10 @@ class MainWindow(Systray):
         count = 0.0
         for item in self.canvas.scene().items():
             if isinstance(item, Interfaceable):
-                if alive and item.status in ("", "dead"):
-                    continue
-                count += 1.0
+                if item.device_type != "REALM":
+                    if alive and item.status in ("", "dead"):
+                        continue
+                    count += 1.0
 
         return count
 
