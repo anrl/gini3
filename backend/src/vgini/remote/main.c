@@ -32,6 +32,7 @@ int server_fd;
 int gini_fd;
 int gini_status;
 
+char buf_interface[256] = {0};
 char buf_ipfo[256] = {0};
 char buf_parp[256] = {0};
 char buf_sysc[256] = {0};
@@ -293,6 +294,17 @@ void *gini_polling(void *val)
 
 	char c;
 	c = 0;
+	FILE *fp_interface = popen("route | grep default | tr -s ' ' | cut -d ' ' -f 8", "r");
+	if (fp_interface != NULL)
+	{
+		for (i=0; c != EOF; i++)
+		{
+			c = fgetc(fp_interface);
+			if (c != EOF && c != '\n')
+				buf_interface[i] = c;
+		}
+		pclose(fp_interface);
+	}
 	FILE *fp_ipfo = fopen("/proc/sys/net/ipv4/ip_forward", "r");
 	if (fp_ipfo != NULL)
 	{
@@ -305,7 +317,8 @@ void *gini_polling(void *val)
 		fclose(fp_ipfo);
 	}
 	c = 0;
-	FILE *fp_parp = fopen("/proc/sys/net/ipv4/conf/eth0/proxy_arp", "r");
+	sprintf(cmd, "/proc/sys/net/ipv4/conf/%s/proxy_arp", buf_interface);
+	FILE *fp_parp = fopen(cmd, "r");
 	if (fp_parp != NULL)
 	{
 		for (i=0; c != EOF; i++)
@@ -330,10 +343,11 @@ void *gini_polling(void *val)
 	}
 	ret = system("echo 1 > /proc/sys/net/ipv4/ip_forward");
 	ret = system("echo 1 > /proc/sys/net/ipv4/conf/tap0/proxy_arp");
-	ret = system("echo 1 > /proc/sys/net/ipv4/conf/eth0/proxy_arp");
+  sprintf(cmd,"echo 1 > /proc/sys/net/ipv4/conf/%s/proxy_arp",buf_interface);
+	ret = system(cmd);
 	sprintf(cmd, "route add -host %s dev tap0", gini_ip);
 	ret = system(cmd);
-	sprintf(cmd, "arp -Ds %s eth0 pub", gini_ip);
+	sprintf(cmd, "arp -Ds %s %s pub", gini_ip,buf_interface);
 	ret = system(cmd);
 	ret = system("sysctl -w net.ipv6.conf.all.forwarding=1");
 

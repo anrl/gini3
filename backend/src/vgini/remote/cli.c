@@ -17,6 +17,7 @@ Map *cli_map;
 Mapper *cli_mapper;
 static char *cur_line = (char *)NULL;       // static variable for holding the line
 extern FILE *rl_instream;
+extern char buf_interface[256];
 extern char buf_ipfo[256];
 extern char buf_parp[256];
 extern char buf_sysc[256];
@@ -377,9 +378,9 @@ void quitCmd()
 		sprintf(cmd, "rm -f /proc/sys/net/ipv4/ip_forward");
 	ret = system(cmd);
 	if (buf_parp != NULL)
-		sprintf(cmd, "echo %s > /proc/sys/net/ipv4/conf/eth0/proxy_arp", buf_parp);
+		sprintf(cmd, "echo %s > /proc/sys/net/ipv4/conf/%s/proxy_arp", buf_parp, buf_interface);
 	else
-		sprintf(cmd, "rm -f /proc/sys/net/ipv4/conf/eth0/proxy_arp");
+		sprintf(cmd, "rm -f /proc/sys/net/ipv4/conf/%s/proxy_arp",buf_interface);
 	ret = system(cmd);
 	if (buf_sysc != NULL)
 	{
