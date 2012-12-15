@@ -798,6 +798,7 @@ def destroyRVM(umls,umlDir):
             configFile = "%s/tmp/%s.sh" % (os.environ["GINI_HOME"],nwIf.mac.upper())
             if (os.access(configFile, os.W_OK)):
                 os.remove(configFile)
+    return True
 
 def destroyVM(umls, umlDir, mode):
     for uml in umls:
@@ -805,9 +806,9 @@ def destroyVM(umls, umlDir, mode):
             print "Stopping UML %s..." % uml.name
         elif mode == 2:
             print "Stopping REALM %s..." % uml.name
-            system("screen -S " + uml.name + "-vtap -p 0 -X stuff \"quitt\n\"")
+            # system("screen -S " + uml.name + "-vtap -p 0 -X stuff \"quitt\n\"")
             # system("screen -S " + uml.name + "-vtap -X quit")
-            system("screen -S " + uml.name + "-vtproxy -X quit")
+            # system("screen -S " + uml.name + "-vtproxy -X quit")
         else:
             print "Stopping Mobile %s..." % uml.name
         command = "%s %s cad > /dev/null 2>&1" % (MCONSOLE_PROG_BIN, uml.name)      
@@ -838,8 +839,8 @@ def destroyVM(umls, umlDir, mode):
                 os.remove(configFile)
         if mode == 0:
             print "\tStopping UML %s...\t[OK]" % uml.name
-        elif mode == 2:
-            print "\tStopping REALM %s...\t[OK]" % uml.name
+        # elif mode == 2:
+        #     print "\tStopping REALM %s...\t[OK]" % uml.name
         else:
             print "\tStopping Mobile %s...\t[OK]" % uml.name
             
@@ -853,12 +854,12 @@ def destroyVM(umls, umlDir, mode):
             while checkProcAlive(VM_PROG_BIN):
                 time.sleep(UML_WAIT_DELAY)
 
-        elif mode == 2:
-            print "Waiting for REALMs to shutdown...",
-            sys.stdout.flush()
+        # elif mode == 2:
+        #     print "Waiting for REALMs to shutdown...",
+        #     sys.stdout.flush()
 
-            while checkProcAlive(VM_PROG_BIN):
-                time.sleep(UML_WAIT_DELAY)
+        #     while checkProcAlive(VM_PROG_BIN):
+        #         time.sleep(UML_WAIT_DELAY)
         else:
             print "Waiting for Mobiles to shutdown...",
         print "[OK]"
