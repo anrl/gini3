@@ -76,4 +76,9 @@ void setnmCmd();
 void showipCmd();
 void shownmCmd();
 
+char buf_interface[256];
+char buf_ipfo[256];
+char buf_parp[256];
+char buf_sysc[256];
+char gini_ip[20];
 #endif

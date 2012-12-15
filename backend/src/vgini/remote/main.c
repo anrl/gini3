@@ -19,6 +19,7 @@
 #include "packet.h"
 #include "tapdev.h"
 #include "utils.h"
+#include "cli.h"
 
 #define SERVER_PORT		(50007)
 #define SERVER_IP		{127,0,0,1}
@@ -32,11 +33,11 @@ int server_fd;
 int gini_fd;
 int gini_status;
 
-char buf_interface[256] = {0};
-char buf_ipfo[256] = {0};
-char buf_parp[256] = {0};
-char buf_sysc[256] = {0};
-char gini_ip[20];
+/* char buf_interface[256]; */
+/* char buf_ipfo[256]; */
+/* char buf_parp[256]; */
+/* char buf_sysc[256]; */
+/* char gini_ip[20]; */
 
 void *gini_polling(void *val);
 /*
@@ -74,6 +75,11 @@ int main(int ac, char *av[])
 	short server_port;
 	char server_req[100];
 	char local_name[20];
+  memset(buf_sysc,0,256);
+  memset(buf_parp,0,256);
+  memset(buf_ipfo,0,256);
+  memset(buf_interface,0,256);
+  memset(gini_ip,0,20);
 
 	struct sockaddr_in serverSockAddr;
 	struct sockaddr_in localSockAddr;
@@ -171,6 +177,7 @@ int main(int ac, char *av[])
 
 	//ret = system("ifconfig tap0 10.0.0.1 netmask 255.255.255.0");
 
+  printf("uid:%d\n",geteuid());
 	CLIInit(&cli_thread);
 	wait4thread(tap_thread);
 
@@ -195,10 +202,17 @@ void *gini_polling(void *val)
 
 	fromlen = sizeof(struct sockaddr_in);
 
+  /* printf("polling thread: connecting\n"); */
 	// receive the first packet from gini, set virtual address, set status=ON
 	recsize = recvfrom(gini_fd, (void *)tmpbuf, (size_t)2000, 0, (struct sockaddr *)giniSockAddr, &fromlen);
-	connect(gini_fd, (struct sockaddr *)giniSockAddr, fromlen);
+  if (recsize == -1) {
+    perror("initial proxy receive error");
+  }
+	if (connect(gini_fd, (struct sockaddr *)giniSockAddr, fromlen) != 0) {
+    perror("proxy connection error");
+  }
 
+  /* printf("polling thread: parsing initial input\n"); */
 	// Set address according to the content of tmpbuf
 	nexttok = strtok(tmpbuf, ",\0");
 	if (strcmp(nexttok, "start") != 0)
@@ -222,6 +236,7 @@ void *gini_polling(void *val)
 		exit (1);
 	}
 
+  /* printf("polling thread, starting validation\n"); */
 	// Verify the input for the IP is valid
 	numbers = 0;
 	pieces = 0;
@@ -283,6 +298,7 @@ void *gini_polling(void *val)
 			exit (1);
 		}
 	}
+  /* printf("polling thread: validation done\n"); */
 
 	ret = system("ifconfig tap0 down");
 	sprintf(cmd, "ifconfig tap0 hw ether %s", gini_mac);

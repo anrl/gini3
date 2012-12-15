@@ -17,11 +17,6 @@ Map *cli_map;
 Mapper *cli_mapper;
 static char *cur_line = (char *)NULL;       // static variable for holding the line
 extern FILE *rl_instream;
-extern char buf_interface[256];
-extern char buf_ipfo[256];
-extern char buf_parp[256];
-extern char buf_sysc[256];
-extern char gini_ip[20];
 
 /*
  * This is the main routine of the CLI. Everything starts here.
