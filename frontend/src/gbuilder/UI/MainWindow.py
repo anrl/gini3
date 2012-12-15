@@ -9,6 +9,8 @@ from Node import *
 from Edge import *
 from Configuration import *
 from Core.globals import *
+import thread
+import socket
 from ExportWindow import *
 from SendDirectoryWindow import *
 from Properties import *
@@ -19,13 +21,15 @@ from TabWidget import *
 from Tutorial import *
 from TaskManagerWindow import *
 import Core.globals
-    
+
+
 class MainWindow(Systray):
     
     def __init__(self, app):
         """
         Create a main window for the given application.
         """
+
         defaultOptions["palette"] = app.palette()
         Systray.__init__(self)
 
@@ -70,8 +74,8 @@ class MainWindow(Systray):
             self.loadLayout()
             self.defaultLayout = False
             
-        self.loadProject()        
-
+        self.loadProject()
+ 
     def center(self):
         """
         Center the window.
@@ -1015,9 +1019,10 @@ class MainWindow(Systray):
         count = 0.0
         for item in self.canvas.scene().items():
             if isinstance(item, Interfaceable):
-                if alive and item.status in ("", "dead"):
-                    continue
-                count += 1.0
+                if item.device_type != "REALM":
+                    if alive and item.status in ("", "dead"):
+                        continue
+                    count += 1.0
 
         return count
 

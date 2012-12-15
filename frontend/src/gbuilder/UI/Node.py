@@ -522,7 +522,7 @@ class Node(DropItem, Item):
         graphical = self.getName() + ":(%f,%f)\n" % (self.pos().x(), self.pos().y())
         logical = ""
         for prop, value in self.properties.iteritems():
-            logical += "\t" + prop + ":" + value + "\n"
+            logical += "\t" + prop + ":" + str(value) + "\n"
 
         return graphical + logical
     

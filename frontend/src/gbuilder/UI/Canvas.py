@@ -6,8 +6,9 @@ from Core.globals import options, mainWidgets
 from Core.Connection import *
 from Core.Wireless_Connection import *
 
+realMnumber=3
 deviceTypes = {"Bridge":Bridge, "Firewall":Firewall, "Hub":Hub, "Mobile":Mobile,
-               "Router":Router, "Subnet":Subnet, "Switch":Switch,
+               "Router":Router, "Subnet":Subnet, "Switch":Switch, "REALM":REALM,
                "UML":UML, "UML_FreeDOS":UML_FreeDOS, "UML_Android":UML_Android, "Wireless_access_point":Wireless_access_point}
 
 class View(QtGui.QGraphicsView):
@@ -188,6 +189,9 @@ class View(QtGui.QGraphicsView):
                         if dest.device_type == "UML":
                             if len(dest.edges()) == 1:
                                 return "UML cannot have more than one connection!"
+                        elif dest.device_type == "REALM":
+                            if len(dest.edges()) == 1:
+                                return "REALM cannot have more than one connection!"
                         elif dest.device_type == "Subnet":
                             if len(dest.edges()) == 2:
                                 return "Subnet cannot have more than two connections!"    
@@ -262,7 +266,6 @@ class Canvas(View):
 
         scenePos = self.mapToScene(event.pos())
         node.setPos(scenePos.x(), scenePos.y())
-
         self.setFocus()
         scene.update()
 
@@ -369,4 +372,7 @@ class Scene(QtGui.QGraphicsScene):
             if type(item) == "Router" or type(item) == "UML" or type(item) == "Mobile":
                 interfaces.display()
                 routes.display()
+            elif type(item) == "REALM":
+                interfaces.display()
+                routes.dispaly()
             break

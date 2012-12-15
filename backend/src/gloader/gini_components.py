@@ -62,6 +62,11 @@ class VM:
             item.printMe()
         print "end if]"
 
+class VRM(VM):
+    def __init__(self, vmName):
+        "Initialize the VRM class"
+        VM.__init__(self, vmName)
+
 class VMB(VM):
     location = None
     map = None

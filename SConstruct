@@ -371,6 +371,55 @@ env.Alias('install-filesystem',sharedir + '/filesystem/root_fs_beta2')
 env.Clean(sharedir + '/filesystem',sharedir + '/filesystem')
 env.Alias('install','install-filesystem')
 
+#########
+# Vgini #
+#########
+
+vgini_dir = backend_dir + "/src/vgini"
+vgini_build_dir = src_dir + "/build/release/vgini"
+
+VariantDir(vgini_build_dir+"/local",vgini_dir+"/local", duplicate=0)
+VariantDir(vgini_build_dir+"/remote",vgini_dir+"/remote", duplicate=0)
+
+vproxy_env = Environment(CPPPATH= vgini_dir + "/local")
+vproxy_env.Append(CFLAGS='-DHAVE_PTHREAD_RWLOCK=1')
+vproxy_env.Append(CFLAGS='-DHAVE_GETOPT_LONG')
+
+# some of the following library dependencies can be removed?
+# may be the termcap is not needed anymore..?
+# TODO: libslack should be removed.. required routines should be custom compiled
+vproxy_libs = Split ("""readline
+    slack
+    pthread""")
+
+vproxy = vproxy_env.Program(vgini_build_dir + "/local/vtproxy",Glob(vgini_build_dir + "/local/*.c"),LIBS=vproxy_libs)
+
+env.Install(sharedir + "/vgini/",vproxy)
+post_chmod(sharedir + "/vgini/vtproxy")
+env.PythonEnvFile(bindir + "/vtproxy",sharedir + "/vgini/vtproxy")
+post_chmod(bindir + "/vtproxy")
+
+vtap_env = Environment(CPPPATH= vgini_dir + "/remote")
+vtap_env.Append(CFLAGS='-DHAVE_PTHREAD_RWLOCK=1')
+vtap_env.Append(CFLAGS='-DHAVE_GETOPT_LONG')
+
+# some of the following library dependencies can be removed?
+# may be the termcap is not needed anymore..?
+# TODO: libslack should be removed.. required routines should be custom compiled
+vtap_libs = Split ("""readline
+    slack
+    pthread""")
+
+vtap = vtap_env.Program(vgini_build_dir + "/remote/vtap",Glob(vgini_build_dir + "/remote/*.c"),LIBS=vproxy_libs)
+
+env.Install(sharedir + "/vgini/",vtap)
+post_chmod(sharedir + "/vgini/vtap")
+env.PythonEnvFile(bindir + "/vtap",sharedir + "/vgini/vtap")
+post_chmod(bindir + "/vtap")
+
+env.Alias('install-vgini',bindir + '/vtap')
+env.Alias('install-vgini',bindir + '/vtproxy')
+env.Alias('install','install-vgini')
 ############
 # Frontend #
 ############

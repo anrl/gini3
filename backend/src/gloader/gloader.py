@@ -20,7 +20,7 @@ GR_PROG_BIN = GR_PROG
 GWR_PROG_BIN = GWR_PROG
 MCONSOLE_PROG_BIN = MCONSOLE_PROG
 SRC_FILENAME = "%s/gini_setup" % os.environ["GINI_HOME"] # setup file name
-UML_WAIT_DELAY = 1 # wait delay between checking alive UML
+UML_WAIT_DELAY = 0.2 # wait delay between checking alive UML
 GROUTER_WAIT = 2 # wait delay between starting routers
 GINI_TMP_FILE = ".gini_tmp_file" # tmp file used when checking alive UML
 nodes = []
@@ -48,6 +48,8 @@ def startGINI(myGINI, options):
     success = success and createVM(myGINI, options)
     print "\nStarting Wireless access points..."
     success = success and createVWR(myGINI, options)       
+    print "\nStarting REALMs..."
+    success = success and createVRM(myGINI, options)
 
     if (not success):
         print "Problem in creating GINI network"
@@ -292,6 +294,7 @@ def createVR(myGINI, options):
 def createVM(myGINI, options):
     "create UML config file, and start the UML"
     makeDir(options.umlDir)
+    print myGINI.vm
     for uml in myGINI.vm:
         print "Starting UML %s...\t" % uml.name,
         subUMLDir = "%s/%s" % (options.umlDir, uml.name)
@@ -380,6 +383,54 @@ def createVMB(myGINI, options):
         os.chdir(oldDir)
     return True
 
+def createVRM(myGINI, options):
+    "create REALM config file, and start the REALM"
+    makeDir(options.umlDir)
+    for realm in myGINI.vrm:
+        print "Starting REALM %s...\t" % realm.name,
+        subUMLDir = "%s/%s" % (options.umlDir, realm.name)
+        makeDir(subUMLDir)
+        # create command line
+        command = createUMLCmdLine(realm)
+        ### ---- process the UML interfaces ---- ###
+        # it creates one config for each interface in the /tmp/ directory
+        # and returns a string to be attached to the UML exec command line        
+        for nwIf in realm.interfaces:
+            # check whether it is connecting to a switch or router
+            socketName = getSocketName(nwIf, realm.name, myGINI, options);
+            if (socketName == "fail"):
+                print "REALM %s [interface %s]: Target not found" % (realm.name, nwIf.name)
+                return False
+            else:
+                # create the config file in /tmp and 
+                # return a line to be added in the command
+                outLine = getVMIFOutLine(nwIf, socketName, realm.name)
+            if (outLine):
+                command += "%s " % outLine
+            else:
+                print "[FAILED]"
+                return False
+        ### ------- execute ---------- ###
+        # go to the UML directory to execute the command
+
+            oldDir = os.getcwd()
+            # os.chdir(subUMLDir)
+            # startOut = open("startit.sh", "w")
+            # startOut.write(command)
+            # startOut.close()
+            # os.chmod("startit.sh",0755)
+            # system("./startit.sh")
+            # os.chdir(os.environ["GINI_SHARE"]+"/vgini")
+            vtap = "screen -d -m -S %s-vtap vtap" % realm.name
+            print vtap
+            system(vtap)
+            vtproxy = "screen -d -m -S %s-vtproxy vtproxy %s %s %s" % (realm.name, nwIf.ip, nwIf.mac, socketName)
+            print vtproxy
+            system(vtproxy)
+            print "[OK]"
+            os.chdir(oldDir)
+    return True
+
 def makeDir(dirName):
     "create a directory if not exists"
     if (not os.access(dirName, os.F_OK)):
@@ -399,7 +450,7 @@ def getSocketName(nwIf, name, myGINI, options):
             oldDir = os.getcwd()
             switch_sharing = False
             for i in range(len(nodes)):
-                if nodes[i].find("UML_") >= 0:
+                if (nodes[i].find("UML_")+nodes[i].find("REALM_")) >= 0:
                     switch_sharing = True
                     break
             nodes.append(name)
@@ -446,6 +497,13 @@ def getSocketName(nwIf, name, myGINI, options):
             targetDir = getFullyQualifiedDir(options.routerDir)
             return "%s/%s/%s_%s.ctl" % \
                    (targetDir, name, SOCKET_NAME, nwIf.name)
+
+    realms = myGINI.vrm
+    for realm in realms:
+        if (realm.name == nwIf.target):
+            targetDir = getFullyQualifiedDir(options.routerDir)
+            return "%s/%s/%s_%s.ctl" % \
+                       (targetDir, name, SOCKET_NAME, nwIf.name)
     return "fail"
 
 def getFullyQualifiedDir(dirName):
@@ -543,7 +601,7 @@ def createUMLCmdLine(uml):
     fileSystemName = getBaseName(uml.fileSystem.name)
     fsCOWName = os.environ["GINI_HOME"] + "/data/" + uml.name + "/" + fileSystemName + ".cow"
     if (uml.fileSystem.type.lower() == "cow"):
-        command += "ubd0=%s,%s " % (fsCOWName, uml.fileSystem.name)
+        command += "ubd0=%s,%s " % (fsCOWName, os.environ["GINI_SHARE"] + "/filesystem/" + fileSystemName)
     else:
         command += "ubd0=%s " % uml.fileSystem.name
     ## handle the mem option
@@ -583,6 +641,12 @@ def destroyGINI(myGINI, options):
     print "\nTerminating Mobiles..."
     try:
         result = result and  destroyVM(myGINI.vmb, options.umlDir, 1)
+    except:
+        pass
+
+    print "\nTerminating REALMs..."
+    try:
+        result = result and  destroyRVM(myGINI.vrm, options.umlDir)
     except:
         pass
 
@@ -709,10 +773,42 @@ def getPIDFromFile(fileName):
     fileIn.close()
     return int(lines[0].strip())
 
+def destroyRVM(umls,umlDir):
+    for uml in umls:
+        print "\tStopping REALM %s...\t[OK]" % uml.name
+        system("screen -S " + uml.name + "-vtap -p 0 -X stuff \"quitt\n\"")
+        system("screen -S " + uml.name + "-vtproxy -X quit")
+        print "\tCleaning the directory...\t",
+        subUMLDir = "%s/%s" % (umlDir, uml.name)
+
+        # TODO: Determine if we need any data in this folder.
+        if (os.access(subUMLDir, os.F_OK)):
+            for file in os.listdir(subUMLDir):
+                fileName = "%s/%s" % (subUMLDir, file)
+                if (os.access(fileName, os.W_OK)):
+                    os.remove(fileName)
+                else:
+                    print "\n\tCould not delete file %s" % (uml.name, fileName)
+                    print "\tCheck your directory"
+                    return False
+            if (os.access(subUMLDir, os.W_OK)):
+                 os.rmdir(subUMLDir)
+        print "[OK]"
+        for nwIf in uml.interfaces:
+            configFile = "%s/tmp/%s.sh" % (os.environ["GINI_HOME"],nwIf.mac.upper())
+            if (os.access(configFile, os.W_OK)):
+                os.remove(configFile)
+    return True
+
 def destroyVM(umls, umlDir, mode):
     for uml in umls:
         if mode == 0:        
             print "Stopping UML %s..." % uml.name
+        elif mode == 2:
+            print "Stopping REALM %s..." % uml.name
+            # system("screen -S " + uml.name + "-vtap -p 0 -X stuff \"quitt\n\"")
+            # system("screen -S " + uml.name + "-vtap -X quit")
+            # system("screen -S " + uml.name + "-vtproxy -X quit")
         else:
             print "Stopping Mobile %s..." % uml.name
         command = "%s %s cad > /dev/null 2>&1" % (MCONSOLE_PROG_BIN, uml.name)      
@@ -743,6 +839,8 @@ def destroyVM(umls, umlDir, mode):
                 os.remove(configFile)
         if mode == 0:
             print "\tStopping UML %s...\t[OK]" % uml.name
+        # elif mode == 2:
+        #     print "\tStopping REALM %s...\t[OK]" % uml.name
         else:
             print "\tStopping Mobile %s...\t[OK]" % uml.name
             
@@ -755,6 +853,13 @@ def destroyVM(umls, umlDir, mode):
 
             while checkProcAlive(VM_PROG_BIN):
                 time.sleep(UML_WAIT_DELAY)
+
+        # elif mode == 2:
+        #     print "Waiting for REALMs to shutdown...",
+        #     sys.stdout.flush()
+
+        #     while checkProcAlive(VM_PROG_BIN):
+        #         time.sleep(UML_WAIT_DELAY)
         else:
             print "Waiting for Mobiles to shutdown...",
         print "[OK]"
