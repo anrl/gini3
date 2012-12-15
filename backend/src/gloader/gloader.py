@@ -775,31 +775,29 @@ def getPIDFromFile(fileName):
 
 def destroyRVM(umls,umlDir):
     for uml in umls:
-      print "\tStopping REALM %s...\t[OK]" % uml.name
-      system("screen -S " + uml.name + "-vtap -p 0 -X stuff \"quitt\n\"")
-      system("screen -S " + uml.name + "-vtproxy -X quit")
-      print "\tCleaning the directory...\t",
-      subUMLDir = "%s/%s" % (umlDir, uml.name)
-      if (os.access(subUMLDir, os.F_OK)):
-          for file in os.listdir(subUMLDir):
-              fileName = "%s/%s" % (subUMLDir, file)
-              if (fileName[len(fileName)-4:] != ".cow"):
-                  # don't delete the .cow files
-                  if (os.access(fileName, os.W_OK)):
-                      os.remove(fileName)
-                  else:
-                      print "\n\tCould not delete file %s" % (uml.name, fileName)
-                      print "\tCheck your directory"
-                      return False
-          ### we are not deleting the subdirecotry as we are
-          ### not deleting the .cow files
-          #if (os.access(subUMLDir, os.W_OK)):
-              # os.rmdir(subUMLDir)
-      print "[OK]"
-      for nwIf in uml.interfaces:
-          configFile = "%s/tmp/%s.sh" % (os.environ["GINI_HOME"],nwIf.mac.upper())
-          if (os.access(configFile, os.W_OK)):
-              os.remove(configFile)
+        print "\tStopping REALM %s...\t[OK]" % uml.name
+        system("screen -S " + uml.name + "-vtap -p 0 -X stuff \"quitt\n\"")
+        system("screen -S " + uml.name + "-vtproxy -X quit")
+        print "\tCleaning the directory...\t",
+        subUMLDir = "%s/%s" % (umlDir, uml.name)
+
+        # TODO: Determine if we need any data in this folder.
+        if (os.access(subUMLDir, os.F_OK)):
+            for file in os.listdir(subUMLDir):
+                fileName = "%s/%s" % (subUMLDir, file)
+                if (os.access(fileName, os.W_OK)):
+                    os.remove(fileName)
+                else:
+                    print "\n\tCould not delete file %s" % (uml.name, fileName)
+                    print "\tCheck your directory"
+                    return False
+            if (os.access(subUMLDir, os.W_OK)):
+                 os.rmdir(subUMLDir)
+        print "[OK]"
+        for nwIf in uml.interfaces:
+            configFile = "%s/tmp/%s.sh" % (os.environ["GINI_HOME"],nwIf.mac.upper())
+            if (os.access(configFile, os.W_OK)):
+                os.remove(configFile)
 
 def destroyVM(umls, umlDir, mode):
     for uml in umls:
