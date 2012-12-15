@@ -387,7 +387,7 @@ vtap_libs = Split ("""readline
     slack
     pthread""")
 
-vtap = vproxy_env.Program(vgini_build_dir + "/remote/vtap",Glob(vgini_build_dir + "/remote/*.c"),LIBS=vproxy_libs)
+vtap = vtap_env.Program(vgini_build_dir + "/remote/vtap",Glob(vgini_build_dir + "/remote/*.c"),LIBS=vproxy_libs)
 
 env.Install(sharedir + "/vgini/",vtap)
 post_chmod(sharedir + "/vgini/vtap")
