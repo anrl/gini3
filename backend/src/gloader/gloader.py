@@ -420,12 +420,12 @@ def createVRM(myGINI, options):
             # startOut.close()
             # os.chmod("startit.sh",0755)
             # system("./startit.sh")
-            os.chdir(os.environ["GINI_SHARE"]+"/vgini")
-            vtap = "screen -d -m -S %s-vtap ./vtap" % realm.name
-            #print vtap
+            # os.chdir(os.environ["GINI_SHARE"]+"/vgini")
+            vtap = "screen -d -m -S %s-vtap vtap" % realm.name
+            print vtap
             system(vtap)
-            vtproxy = "screen -d -m -S %s-vtproxy ./vtproxy %s %s %s" % (realm.name, nwIf.ip, nwIf.mac, socketName)
-            #print vtproxy
+            vtproxy = "screen -d -m -S %s-vtproxy vtproxy %s %s %s" % (realm.name, nwIf.ip, nwIf.mac, socketName)
+            print vtproxy
             system(vtproxy)
             print "[OK]"
             os.chdir(oldDir)
