@@ -300,12 +300,12 @@ void *gini_polling(void *val)
 	}
   /* printf("polling thread: validation done\n"); */
 
-	ret = system("ifconfig tap0 down");
-	sprintf(cmd, "ifconfig tap0 hw ether %s", gini_mac);
+	ret = system("/sbin/ifconfig tap0 down");
+	sprintf(cmd, "/sbin/ifconfig tap0 hw ether %s", gini_mac);
 	ret = system(cmd);
-	sprintf(cmd, "ifconfig tap0 %s netmask 255.255.255.0", gini_ip);
+	sprintf(cmd, "/sbin/ifconfig tap0 %s netmask 255.255.255.0", gini_ip);
 	ret = system(cmd);
-	ret = system("ifconfig tap0 up");
+	ret = system("/sbin/ifconfig tap0 up");
 	gini_status = ON;
 
 	char c;
@@ -357,15 +357,15 @@ void *gini_polling(void *val)
 		}
 		pclose(fp_sysc);
 	}
-	ret = system("echo 1 > /proc/sys/net/ipv4/ip_forward");
-	ret = system("echo 1 > /proc/sys/net/ipv4/conf/tap0/proxy_arp");
-  sprintf(cmd,"echo 1 > /proc/sys/net/ipv4/conf/%s/proxy_arp",buf_interface);
+	ret = system("/bin/echo 1 > /proc/sys/net/ipv4/ip_forward");
+	ret = system("/bin/echo 1 > /proc/sys/net/ipv4/conf/tap0/proxy_arp");
+  sprintf(cmd,"/bin/echo 1 > /proc/sys/net/ipv4/conf/%s/proxy_arp",buf_interface);
 	ret = system(cmd);
 	sprintf(cmd, "route add -host %s dev tap0", gini_ip);
 	ret = system(cmd);
-	sprintf(cmd, "arp -Ds %s %s pub", gini_ip,buf_interface);
+	sprintf(cmd, "/usr/sbin/arp -Ds %s %s pub", gini_ip,buf_interface);
 	ret = system(cmd);
-	ret = system("sysctl -w net.ipv6.conf.all.forwarding=1");
+	ret = system("/sbin/sysctl -w net.ipv6.conf.all.forwarding=1");
 
 	// the following packets should be normal gpackets
 	for (;;) 

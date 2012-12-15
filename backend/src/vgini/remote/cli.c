@@ -339,7 +339,7 @@ void setipCmd()
 
 	IP2Dot(next_tok, ip_addr);
 
-	sprintf(tmpbuf, "ifconfig tap0 %s", next_tok);
+	sprintf(tmpbuf, "/sbin/ifconfig tap0 %s", next_tok);
 
 	ret = system(tmpbuf);
 
@@ -366,24 +366,22 @@ void quitCmd()
 	int ret;
 	char* cmd;
 	cmd = malloc(512);
-	printf("ipfo %s\n parp? %s\n", buf_ipfo, buf_parp);
 	if (buf_ipfo != NULL)
-		sprintf(cmd, "echo %s > /proc/sys/net/ipv4/ip_forward", buf_ipfo);
+		sprintf(cmd, "/bin/echo %s > /proc/sys/net/ipv4/ip_forward", buf_ipfo);
 	else
-		sprintf(cmd, "rm -f /proc/sys/net/ipv4/ip_forward");
+		sprintf(cmd, "/bin/rm -f /proc/sys/net/ipv4/ip_forward");
 	ret = system(cmd);
-	printf("ipfo:%s\n",cmd);
 	if (buf_parp != NULL)
-		sprintf(cmd, "echo %s > /proc/sys/net/ipv4/conf/%s/proxy_arp", buf_parp, buf_interface);
+		sprintf(cmd, "/bin/echo %s > /proc/sys/net/ipv4/conf/%s/proxy_arp", buf_parp, buf_interface);
 	else
-		sprintf(cmd, "rm -f /proc/sys/net/ipv4/conf/%s/proxy_arp",buf_interface);
+		sprintf(cmd, "/bin/rm -f /proc/sys/net/ipv4/conf/%s/proxy_arp",buf_interface);
 	ret = system(cmd);
 	if (buf_sysc != NULL)
 	{
-		sprintf(cmd, "sysctl -w net.ipv6.conf.all.forwarding=%s", buf_sysc);
+		sprintf(cmd, "/sbin/sysctl -w net.ipv6.conf.all.forwarding=%s", buf_sysc);
 		ret = system(cmd);
 	}
-	sprintf(cmd, "arp -i eth0 -d %s", gini_ip);
+	sprintf(cmd, "/usr/sbin/arp -i eth0 -d %s", gini_ip);
 	ret = system(cmd);
 
 	exit(0);
