@@ -104,6 +104,10 @@ class Compiler:
         self.output.write(value)
         self.output.write("</" + prop + ">\n")
         
+    def generateREALMError(self):
+        self.errors += 1
+        self.log.append("Error: there is more than one REALM")
+
     def generateError(self, device, prop, errorType, interface = None):
         """
         Generate a compile error.
@@ -415,6 +419,8 @@ class Compiler:
         """
         Compile all the REALMs.
         """
+        if len(self.compile_list["REALM"]) > 1:
+            self.generateREALMError()
         for realm in self.compile_list["REALM"]:
             self.output.write("<vrm name=\"" + realm.getName() + "\">\n")
             self.output.write("\t<filesystem type=\"" + realm.getProperty("filetype") + "\">"
