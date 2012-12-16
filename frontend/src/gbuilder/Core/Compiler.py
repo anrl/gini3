@@ -341,10 +341,12 @@ class Compiler:
                   has_subnet = True
 
           if has_subnet:
+              gateway = switch.getTarget(None).getInterface(switch)
               Q = [switch]
               switch_seen = set([switch])
               while Q:
                   t = Q.pop(0)
+                  t.gateway = gateway
                   self.pass_mask(t)
                   for edge in t.edges():
                       node = edge.getOtherDevice(t)

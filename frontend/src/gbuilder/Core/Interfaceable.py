@@ -284,8 +284,9 @@ class Interfaceable(Device):
                                   target)
                 else:
                     if target.device_type == "Switch":
-                        interfaceable = target.getTarget(self)
-                        gateway = interfaceable.getInterface(target)[QtCore.QString("ipv4")]
+                        # interfaceable = target.getTarget(self)
+                        # gateway = interfaceable.getInterface(target)[QtCore.QString("ipv4")]
+                        gateway = target.getGateway()
                     else:
                         gateway = target.getInterface(self)[QtCore.QString("ipv4")]
                     self.addEntry(interface[QtCore.QString("mask")],
