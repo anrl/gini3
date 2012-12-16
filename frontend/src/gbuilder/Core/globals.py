@@ -2,7 +2,7 @@
 import os
 
 PROG_NAME = "gBuilder"
-PROG_VERSION  = "2.0.1"
+PROG_VERSION  = "2.1.0"
 
 GINI_ROOT = os.environ["GINI_ROOT"]
 GINI_HOME = os.environ["GINI_HOME"]

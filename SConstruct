@@ -1,6 +1,6 @@
 # -*- python -*-
 #
-# GINI Version 2.0
+# GINI Version 2.2
 # (C) Copyright 2009, McGill University
 #
 # Scons compile script for creating GINI installation
