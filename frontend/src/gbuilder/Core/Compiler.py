@@ -45,9 +45,11 @@ class Compiler:
 
         if options["autogen"]:
             self.autogen_subnet()
+            self.autogen_switch()
 
         self.compile_subnet()
         self.compile_switch()
+        self.switch_pass_mask()
 
         if options["autogen"]:
             self.autogen_wireless_access_point()
@@ -58,7 +60,6 @@ class Compiler:
             self.autogen_UML()
             self.autogen_REALM()
             self.autogen_mobile()
-            self.autogen_switch()
             
         self.routing_table_clear()
         if options["autorouting"]:
@@ -328,7 +329,32 @@ class Compiler:
             if switch.getProperty("Hub mode") == "True":
                 self.output.write("\t<hub/>\n")
             self.output.write("</vs>\n\n")
-            self.pass_mask(switch)
+            # self.pass_mask(switch)
+
+    def switch_pass_mask(self):
+        for switch in self.compile_list["Switch"]:
+            
+          has_subnet = False
+          for edge in switch.edges():
+              node = edge.getOtherDevice(switch)
+              if node.device_type == "Subnet":
+                  has_subnet = True
+
+          if has_subnet:
+              Q = [switch]
+              switch_seen = set([switch])
+              while Q:
+                  t = Q.pop(0)
+                  self.pass_mask(t)
+                  for edge in t.edges():
+                      node = edge.getOtherDevice(t)
+                      if node.device_type == "Switch":
+                          # should look around for a subnet
+                          if node not in switch_seen:
+                              switch_seen.add(node)
+                              Q.append(node)
+
+      
 
     def autogen_UML(self):
         """
