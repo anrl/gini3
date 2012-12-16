@@ -983,7 +983,7 @@ void helpCmd()
 		{
 			if (strstr(n_clie->long_helpstr, ".hlp") != NULL)
 			{
-				sprintf(tmpbuf, "man %s/share/grouter/helpdefs/%s", rconfig.gini_home, n_clie->long_helpstr);
+				sprintf(tmpbuf, "man %s/grouter/helpdefs/%s", getenv("GINI_SHARE"), n_clie->long_helpstr);
 				system(tmpbuf);
 			} else
 			{
