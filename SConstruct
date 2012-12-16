@@ -33,7 +33,8 @@ build_dir = src_dir + "/build"
 
 etcdir = prefix + "/etc"
 bindir = prefix + "/bin"
-sharedir = prefix + "/share"
+libdir = prefix + "/lib/gini"
+sharedir = prefix + "/share/gini"
 
 #gini_src = os.getcwd()
 #Export('gini_src')
@@ -47,6 +48,7 @@ env = Environment()
 env.Clean(build_dir,build_dir)
 env.Clean(bindir,bindir)
 env.Clean(sharedir,sharedir)
+env.Clean(libdir,libdir)
 
 ##################
 # helper methods #
@@ -75,6 +77,7 @@ def gen_environment_file(target,source,env):
   output_file.write('os.chdir(os.path.dirname(os.path.realpath(__file__)))\n')
   output_file.write('os.environ["GINI_ROOT"] = os.path.realpath("%s")\n' % os.path.relpath(prefix,bindir))
   output_file.write('os.environ["GINI_SHARE"] = os.path.realpath("%s")\n' % os.path.relpath(sharedir,bindir))
+  output_file.write('os.environ["GINI_LIB"] = os.path.realpath("%s")\n' % os.path.relpath(libdir,bindir))
   output_file.write('os.environ["GINI_HOME"] = os.environ["HOME"] + "/.gini"\n') 
   output_file.write('if not os.path.exists(os.environ["GINI_HOME"] + "/etc"): os.makedirs(os.environ["GINI_HOME"] + "/etc")\n')
   output_file.write('if not os.path.exists(os.environ["GINI_HOME"] + "/sav"): os.makedirs(os.environ["GINI_HOME"] + "/sav")\n')
@@ -227,17 +230,17 @@ grouter_libs = Split ("""readline
 
 grouter = grouter_env.Program(grouter_build_dir + "/grouter", Glob(grouter_build_dir + "/*.c"), LIBS=grouter_libs)
 
-env.Install(sharedir + "/grouter/", grouter)
-post_chmod(sharedir + "/grouter/grouter")
-env.PythonEnvFile(bindir + "/grouter" ,sharedir + "/grouter/grouter")
+env.Install(libdir + "/grouter/", grouter)
+post_chmod(libdir + "/grouter/grouter")
+env.PythonEnvFile(bindir + "/grouter" ,libdir + "/grouter/grouter")
 post_chmod(bindir + "/grouter")
 
 env.Install(sharedir + '/grouter/helpdefs', Glob(grouter_include + '/helpdefs/*'))
 
 env.Alias('install-grouter',bindir + '/grouter')
 env.Alias('install-grouter',sharedir + '/grouter/helpdefs')
-env.Clean(bindir + "/grouter",sharedir + "/grouter/grouter")
-env.Clean("install-grouter",sharedir + "/grouter")
+env.Clean(bindir + "/grouter",libdir + "/grouter/grouter")
+env.Clean("install-grouter",libdir + "/grouter")
 env.Alias('install','install-grouter')
 
 ###########
@@ -254,13 +257,13 @@ uswitch_env = Environment(CPPPATH=uswitch_include)
 
 uswitch = uswitch_env.Program(uswitch_build_dir + "/uswitch", Glob(uswitch_build_dir + "/*.c"))
 
-env.Install(sharedir + "/uswitch/", uswitch)
-post_chmod(sharedir + "/uswitch/uswitch")
-env.PythonEnvFile(bindir + "/uswitch" ,sharedir + "/uswitch/uswitch")
+env.Install(libdir + "/uswitch/", uswitch)
+post_chmod(libdir + "/uswitch/uswitch")
+env.PythonEnvFile(bindir + "/uswitch" ,libdir + "/uswitch/uswitch")
 post_chmod(bindir + "/uswitch")
 
 env.Alias('install-uswitch',bindir + '/uswitch')
-env.Clean(sharedir + "/uswitch",sharedir + "/uswitch")
+env.Clean(libdir + "/uswitch",libdir + "/uswitch")
 env.Alias('install','install-uswitch')
 
 #########
@@ -289,18 +292,18 @@ wgini_libs = Split ("""readline
 
 gwcenter = wgini_env.Program(wgini_build_dir + "/gwcenter",Glob(wgini_build_dir + "/*.c"), LIBS=wgini_libs)
 
-env.Install(sharedir + "/wgini/", gwcenter)
-post_chmod(sharedir + "/wgini/gwcenter")
-env.PythonEnvFile(bindir + "/gwcenter" ,sharedir + "/wgini/gwcenter")
+env.Install(libdir + "/wgini/", gwcenter)
+post_chmod(libdir + "/wgini/gwcenter")
+env.PythonEnvFile(bindir + "/gwcenter" ,libdir + "/wgini/gwcenter")
 post_chmod(bindir + "/gwcenter")
 
-env.Install(sharedir + "/wgini/",wgini_dir + '/gwcenter.sh')
-post_chmod(sharedir + "/wgini/")
-env.PythonEnvFile(bindir + "/gwcenter.sh", sharedir + "/wgini/gwcenter.sh")
-post_chmod(sharedir + "/wgini/gwcenter.sh")
+env.Install(libdir + "/wgini/",wgini_dir + '/gwcenter.sh')
+post_chmod(libdir + "/wgini/")
+env.PythonEnvFile(bindir + "/gwcenter.sh", libdir + "/wgini/gwcenter.sh")
+post_chmod(libdir + "/wgini/gwcenter.sh")
 
 env.Alias('install-wgini',bindir + "/gwcenter")
-env.Clean(sharedir + "/wgini",sharedir + "/wgini")
+env.Clean(libdir + "/wgini",sharedir + "/wgini")
 env.Alias('install','install-wgini')
 
 ###########
@@ -309,23 +312,25 @@ env.Alias('install','install-wgini')
 
 gloader_dir = backend_dir + "/src/gloader" 
 gloader_conf = gloader_dir + "/gloader.dtd"
+gloader_lib_dir = libdir
 
 env.Install(sharedir + "/gloader/", gloader_conf)
 
-result = env.Install(sharedir + '/gloader', Glob(gloader_dir + "/*.py"))
+result = env.Install(gloader_lib_dir + '/gloader', Glob(gloader_dir + "/*.py"))
 
-for file in Glob(sharedir + '/gloader/*.py'):
+for file in Glob(gloader_lib_dir + '/gloader/*.py'):
   compile_python(env,file.abspath,"install-gloader")
-env.Clean(sharedir + "/gloader",sharedir + "/gloader")
-post_chmod(sharedir + "/gloader/gloader.py")
-post_chmod(sharedir + "/gloader/gserver.py")
+env.Clean(gloader_lib_dir + "/gloader",gloader_lib_dir + "/gloader")
+post_chmod(gloader_lib_dir + "/gloader/gloader.py")
+post_chmod(gloader_lib_dir + "/gloader/gserver.py")
 
-env.PythonEnvFile(bindir + '/gserver',sharedir + '/gloader/gserver.py')
+env.PythonEnvFile(bindir + '/gserver',gloader_lib_dir + '/gloader/gserver.py')
 post_chmod(bindir + '/gserver')
-env.PythonEnvFile(bindir + '/gloader',sharedir + "/gloader/gloader.py")
+env.PythonEnvFile(bindir + '/gloader',gloader_lib_dir + "/gloader/gloader.py")
 post_chmod(bindir + '/gloader')
 
 env.Alias('install-gloader', sharedir + '/gloader')
+env.Alias('install-gloader', gloader_lib_dir + '/gloader')
 env.Alias('install-gloader', bindir + '/gloader')
 env.Alias('install-gloader', bindir + '/gserver')
 env.Alias('install-gloader', etcdir + '/gloader.dtd')
@@ -340,19 +345,19 @@ kernel = kernel_dir + "/linux-2.6.26.1"
 alt_kernel = kernel_dir + "/linux-2.6.25.10" 
 
 # Copy kernel and glinux loader into bin and set executable
-env.Install(sharedir + '/kernel/',kernel_dir + '/glinux')
-post_chmod(sharedir + '/kernel/glinux')
-env.PythonEnvFile(bindir + '/glinux',sharedir + '/kernel/glinux')
+env.Install(libdir + '/kernel/',kernel_dir + '/glinux')
+post_chmod(libdir + '/kernel/glinux')
+env.PythonEnvFile(bindir + '/glinux',libdir + '/kernel/glinux')
 post_chmod(bindir + '/glinux')
 
-env.Install(sharedir + '/kernel/', kernel_dir + '/linux-2.6.26.1')
-post_chmod(sharedir + '/kernel/linux-2.6.26.1')
-env.PythonEnvFile(bindir + '/linux-2.6.26.1',sharedir + '/kernel/linux-2.6.26.1')
+env.Install(libdir + '/kernel/', kernel_dir + '/linux-2.6.26.1')
+post_chmod(libdir + '/kernel/linux-2.6.26.1')
+env.PythonEnvFile(bindir + '/linux-2.6.26.1',libdir + '/kernel/linux-2.6.26.1')
 post_chmod(bindir + '/linux-2.6.26.1')
 
 env.Alias('install-kernel', bindir + '/glinux')
 env.Alias('install-kernel', bindir + '/linux-2.6.26.1')
-env.Clean(sharedir + '/kernel/',sharedir + '/kernel/')
+env.Clean(libdir + '/kernel/',libdir + '/kernel/')
 env.Alias('install','install-kernel')
 
 ##############
@@ -394,9 +399,9 @@ vproxy_libs = Split ("""readline
 
 vproxy = vproxy_env.Program(vgini_build_dir + "/local/vtproxy",Glob(vgini_build_dir + "/local/*.c"),LIBS=vproxy_libs)
 
-env.Install(sharedir + "/vgini/",vproxy)
-post_chmod(sharedir + "/vgini/vtproxy")
-env.PythonEnvFile(bindir + "/vtproxy",sharedir + "/vgini/vtproxy")
+env.Install(libdir + "/vgini/",vproxy)
+post_chmod(libdir + "/vgini/vtproxy")
+env.PythonEnvFile(bindir + "/vtproxy",libdir + "/vgini/vtproxy")
 post_chmod(bindir + "/vtproxy")
 
 vtap_env = Environment(CPPPATH= vgini_dir + "/remote")
@@ -412,14 +417,14 @@ vtap_libs = Split ("""readline
 
 vtap = vtap_env.Program(vgini_build_dir + "/remote/vtap",Glob(vgini_build_dir + "/remote/*.c"),LIBS=vproxy_libs)
 
-env.Install(sharedir + "/vgini/",vtap)
-post_chmod(sharedir + "/vgini/vtap")
-env.PythonEnvFile(bindir + "/vtap",sharedir + "/vgini/vtap")
+env.Install(libdir + "/vgini/",vtap)
+post_chmod(libdir + "/vgini/vtap")
+env.PythonEnvFile(bindir + "/vtap",libdir + "/vgini/vtap")
 post_chmod(bindir + "/vtap")
 
 env.Alias('install-vgini',bindir + '/vtap')
 env.Alias('install-vgini',bindir + '/vtproxy')
-env.Alias('install','install-vgini')
+# env.Alias('install','install-vgini')
 ############
 # Frontend #
 ############
@@ -451,26 +456,28 @@ gbuilder_folders = Split("""
 
 gbuilder_images = gbuilder_dir + "/images/*"
 
-env.Install(sharedir + '/gbuilder', gbuilder_dir + '/gbuilder.py')
-compile_python(env,gbuilder_dir + '/gbuilder.py',"install-gbuilder")
+env.Install(libdir + '/gbuilder/', gbuilder_dir + '/gbuilder.py')
+compile_python(env,libdir + '/gbuilder/gbuilder.py',"install-gbuilder")
 
 # Install each of the gbuilder folders
 for x in gbuilder_folders:
-  env.Install(sharedir + '/gbuilder/' + x, Glob(gbuilder_dir + "/" + x + "/*.py"))
-  for file in Glob(sharedir + '/gbuilder/' + x + '/*.py'):
+  env.Install(libdir + '/gbuilder/' + x, Glob(gbuilder_dir + "/" + x + "/*.py"))
+  for file in Glob(libdir + '/gbuilder/' + x + '/*.py'):
     compile_python(env,file.abspath,"install-gbuilder")
-  env.Clean(sharedir + "/gbuilder",sharedir + "/gbuilder/" + x)
-post_chmod(sharedir + '/gbuilder/gbuilder.py')
+  env.Clean(libdir + "/gbuilder",libdir + "/gbuilder/" + x)
+post_chmod(libdir + '/gbuilder/gbuilder.py')
 # Install images
 env.Install(sharedir + '/gbuilder/images/', Glob(gbuilder_images))
 env.Clean(sharedir + '/gbuilder/images/',sharedir + '/gbuilder/images/')
 
 if env['PLATFORM'] != 'win32':
     #env.SymLink(bindir + '/gbuilder', sharedir + '/gbuilder/gbuilder.py')
-    env.PythonEnvFile(bindir + '/gbuilder', sharedir + '/gbuilder/gbuilder.py')
+    env.PythonEnvFile(bindir + '/gbuilder', libdir + '/gbuilder/gbuilder.py')
     env.AddPostAction(bindir + '/gbuilder', "chmod +x " + bindir + '/gbuilder')
     env.Alias('install-gbuilder', bindir + '/gbuilder')
     # Adding Path info to gbuilder
 env.Alias('install-gbuilder', sharedir + '/gbuilder')
+env.Alias('install-gbuilder', libdir + '/gbuilder')
 env.Clean(sharedir + '/gbuilder',sharedir + '/gbuilder')
+env.Clean(libdir + '/gbuilder',libdir + '/gbuilder')
 env.Alias('install', 'install-gbuilder')

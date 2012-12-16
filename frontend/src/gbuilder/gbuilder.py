@@ -34,7 +34,7 @@ if __name__ == "__main__":
     #demo(mainWindow.centralWidget())
     mainWindow.setWindowTitle(QtCore.QObject.tr(mainWindow, 
         "%s %s" % (Core.globals.PROG_NAME, Core.globals.PROG_VERSION)))
-    mainWindow.setWindowIcon(QtGui.QIcon(os.environ["GINI_HOME"] + "/share/gbuilder/images/giniLogo.png"))
+    mainWindow.setWindowIcon(QtGui.QIcon(os.environ["GINI_SHARE"] + "/gbuilder/images/giniLogo.png"))
     mainWindow.setMinimumSize(640, 480)
     mainWindow.resize(800, 600)
 
