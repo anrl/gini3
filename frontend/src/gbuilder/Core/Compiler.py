@@ -389,23 +389,23 @@ class Compiler:
         """
         for realm in self.compile_list["REALM"]:
             self.output.write("<vrm name=\"" + realm.getName() + "\">\n")
-        self.output.write("\t<filesystem type=\"" + realm.getProperty("filetype") + "\">"
-                              + realm.getProperty("filesystem") + "</filesystem>\n")
-
-        interfaces = realm.getInterfaces()
-        if len(interfaces) < 1:
-            self.generateConnectionWarning(realm, 1)
-
-        for interface in interfaces:
-
-            self.output.write("\t<if>\n")
-
-            mapping = {"subnet":"network", "mac":"mac", "ipv4":"ip"}
-            self.writeInterface(realm, interface, mapping)
-
-            self.output.write("\t</if>\n")
-
-        self.output.write("</vrm>\n\n")
+            self.output.write("\t<filesystem type=\"" + realm.getProperty("filetype") + "\">"
+                          + realm.getProperty("filesystem") + "</filesystem>\n")
+    
+            interfaces = realm.getInterfaces()
+            if len(interfaces) < 1:
+                self.generateConnectionWarning(realm, 1)
+    
+            for interface in interfaces:
+    
+                self.output.write("\t<if>\n")
+    
+                mapping = {"subnet":"network", "mac":"mac", "ipv4":"ip"}
+                self.writeInterface(realm, interface, mapping)
+    
+                self.output.write("\t</if>\n")
+    
+            self.output.write("</vrm>\n\n")
 #******************************FINISH REALM
 
     def autogen_mobile(self):
