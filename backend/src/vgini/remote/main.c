@@ -310,7 +310,7 @@ void *gini_polling(void *val)
 
 	char c;
 	c = 0;
-	FILE *fp_interface = popen("route | grep default | tr -s ' ' | cut -d ' ' -f 8", "r");
+	FILE *fp_interface = popen("/bin/bash \"route | grep default | tr -s ' ' | cut -d ' ' -f 8\"", "r");
 	if (fp_interface != NULL)
 	{
 		for (i=0; c != EOF; i++)
@@ -361,7 +361,7 @@ void *gini_polling(void *val)
 	ret = system("/bin/echo 1 > /proc/sys/net/ipv4/conf/tap0/proxy_arp");
   sprintf(cmd,"/bin/echo 1 > /proc/sys/net/ipv4/conf/%s/proxy_arp",buf_interface);
 	ret = system(cmd);
-	sprintf(cmd, "route add -host %s dev tap0", gini_ip);
+	sprintf(cmd, "/sbin/route add -host %s dev tap0", gini_ip);
 	ret = system(cmd);
 	sprintf(cmd, "/usr/sbin/arp -Ds %s %s pub", gini_ip,buf_interface);
 	ret = system(cmd);
