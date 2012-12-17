@@ -381,7 +381,7 @@ void quitCmd()
 		sprintf(cmd, "/sbin/sysctl -w net.ipv6.conf.all.forwarding=%s", buf_sysc);
 		ret = system(cmd);
 	}
-	sprintf(cmd, "/usr/sbin/arp -i eth0 -d %s", gini_ip);
+	sprintf(cmd, "/usr/sbin/arp -i %s -d %s", buf_interface, gini_ip);
 	ret = system(cmd);
 
 	exit(0);
