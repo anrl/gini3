@@ -48,7 +48,9 @@ env = Environment()
 env.Clean(build_dir,build_dir)
 env.Clean(bindir,bindir)
 env.Clean(sharedir,sharedir)
+env.Clean(sharedir,prefix + "/share")
 env.Clean(libdir,libdir)
+env.Clean(libdir,prefix + "/lib")
 
 ##################
 # helper methods #
