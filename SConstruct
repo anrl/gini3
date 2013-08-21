@@ -335,7 +335,7 @@ env.Alias('install-gloader', sharedir + '/gloader')
 env.Alias('install-gloader', gloader_lib_dir + '/gloader')
 env.Alias('install-gloader', bindir + '/gloader')
 env.Alias('install-gloader', bindir + '/gserver')
-env.Alias('install-gloader', etcdir + '/gloader.dtd')
+env.Alias('install-gloader', sharedir + '/gloader' + '/gloader.dtd')
 env.Alias('install','install-gloader')
 
 ##########
