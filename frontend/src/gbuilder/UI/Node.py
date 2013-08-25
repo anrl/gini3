@@ -151,7 +151,7 @@ class Node(DropItem, Item):
         if index > itemTypes[self.device_type]:
             itemTypes[self.device_type] = index
         name = self.device_type + "_%d" % index
-        self.setProperty("id", name)
+        self.setProperty("Name", name)
         self.setProperty("name", name)
         self.setToolTip(name)
         
