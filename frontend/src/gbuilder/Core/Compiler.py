@@ -345,7 +345,8 @@ class Compiler:
                   has_subnet = True
 
           if has_subnet:
-              gateway = switch.getTarget(None).getInterface(switch)
+              target = switch.getTarget(None) 
+              gateway = target.getInterface(switch) if target is not None else None 
               Q = [switch]
               switch_seen = set([switch])
               while Q:
