@@ -21,7 +21,7 @@ GWR_PROG_BIN = GWR_PROG
 MCONSOLE_PROG_BIN = MCONSOLE_PROG
 SRC_FILENAME = "%s/gini_setup" % os.environ["GINI_HOME"] # setup file name
 UML_WAIT_DELAY = 0.2 # wait delay between checking alive UML
-GROUTER_WAIT = 2 # wait delay between starting routers
+GROUTER_WAIT = 5 # wait delay between starting routers
 GINI_TMP_FILE = ".gini_tmp_file" # tmp file used when checking alive UML
 nodes = []
 
@@ -248,9 +248,6 @@ def createVR(myGINI, options):
     for router in myGINI.vr:
         print "Starting Router %s...\t" % router.name,
         sys.stdout.flush()
-        # for the 2nd and other routers wait a bit before starting
-        if (router != myGINI.vr[0]):
-            time.sleep(GROUTER_WAIT)
         ### ------ config ---------- ###
         # name the config file
         subRouterDir = "%s/%s" % (routerDir, router.name)
@@ -289,6 +286,8 @@ def createVR(myGINI, options):
         system("./startit.sh")
         print "[OK]"
         os.chdir(oldDir)
+        # Wait after starting router so they have time to create sockets
+        time.sleep(GROUTER_WAIT)
     return True
 
 def createVM(myGINI, options):
