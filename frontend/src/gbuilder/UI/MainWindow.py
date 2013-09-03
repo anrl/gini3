@@ -11,6 +11,7 @@ from Configuration import *
 from Core.globals import *
 import thread
 import socket
+import atexit
 from ExportWindow import *
 from SendDirectoryWindow import *
 from Properties import *
@@ -75,6 +76,7 @@ class MainWindow(Systray):
             self.defaultLayout = False
             
         self.loadProject()
+        atexit.register(self.cleanup)
  
     def center(self):
         """
@@ -424,7 +426,7 @@ class MainWindow(Systray):
         else:
             command += "xterm -T \"" + gserver + "\" -e " + base + tunnel + " \" " + server + "\""
 
-        self.server = subprocess.Popen(str(command), shell=True)
+        self.server = subprocess.Popen(str(command), shell=True,preexec_fn=os.setpgrp)
 
     def startClient(self):
         """
@@ -1134,6 +1136,10 @@ class MainWindow(Systray):
                 dock.setFloating(not dock.isFloating())
         elif key == QtCore.Qt.Key_F10:
             self.debugWindow.show()
+
+    def cleanup(self):
+      if self.server != None:
+        self.server.kill()
 
         
 class DebugWindow(QtGui.QWidget):
