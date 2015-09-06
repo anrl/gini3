@@ -364,6 +364,7 @@ void *packetProcessor(void *pc)
 		default:
 			verbose(1, "[packetProcessor]:: Packet discarded: Unknown protocol protocol");
 			// TODO: should we generate ICMP errors here.. check router RFCs
+			free(in_pkt);
 			break;
 		}
 	}

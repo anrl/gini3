@@ -346,7 +346,7 @@ interface_t *GNETMakeEthInterface(char *vsock_name, char *device,
 		device, MAC2Colon(tmpbuf, mac_addr), IP2Dot((tmpbuf+20), nw_addr));
 
 	iface_id = gAtoi(device);
-	vi = (vplinfo_t *)malloc(sizeof(vplinfo_t));
+	
 	if (findInterface(iface_id) != NULL)
 	{
 		verbose(1, "[GNETMakeEthInterface]:: device %s already defined.. ", device);
@@ -383,6 +383,7 @@ interface_t *GNETMakeEthInterface(char *vsock_name, char *device,
 				return NULL;
 			}
 
+			vi = (vplinfo_t *)malloc(sizeof(vplinfo_t));
 			iface->mode = IFACE_SERVER_MODE;
 			vi->vdata = vcon;
 			vi->iface = iface;
