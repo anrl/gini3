@@ -349,6 +349,7 @@ int getDevType(char *str)
  * Handler for the interface configuration command:
  * ifconfig add eth1 -socket socketfile -addr IP_addr  -hwaddr MAC [-gateway GW] [-mtu N]
  * ifconfig add tap0 -device dev_location -addr IP_addr -hwaddr MAC
+ * ifconfig add tun0 -dstip dst_ip -dstport portnum -addr IP_addr -hwaddr MAC
  * ifconfig del eth0|tap0
  * ifconfig show [brief|verbose]
  * ifconfig up eth0|tap0
@@ -360,8 +361,9 @@ void ifconfigCmd()
 	char *next_tok;
 	interface_t *iface;
 	char dev_name[MAX_DNAME_LEN], con_sock[MAX_NAME_LEN], dev_type[MAX_NAME_LEN];
-	uchar mac_addr[6], ip_addr[4], gw_addr[4];
+	uchar mac_addr[6], ip_addr[4], gw_addr[4], dst_ip[4];
 	int mtu, interface, mode;
+	short int dst_port;
 
 	// set default values for optional parameters
 	bzero(gw_addr, 4);
@@ -378,7 +380,15 @@ void ifconfigCmd()
 	}
 	if (!strcmp(next_tok, "add"))
 	{
-		GET_THIS_OR_THIS_PARAMETER("eth", "tap", "ifconfig:: missing interface spec ..");
+
+		next_tok = strtok(NULL, " \n");
+        
+		if ( (next_tok == NULL) || (findDeviceDriver(next_tok) == NULL) ) 
+		{
+			printf("ifconfig:: missing or invalid interface spec ..\n");
+			return;
+		}		
+
 		strcpy(dev_name, next_tok);
 		sscanf(dev_name, "%[a-z]", dev_type);
 		interface = gAtoi(dev_name);
@@ -393,6 +403,12 @@ void ifconfigCmd()
 		{
 			GET_NEXT_PARAMETER("-socket", "ifconfig:: missing -socket spec ..");
 			strcpy(con_sock, next_tok);
+		} else if(strcmp(dev_type, "tun") == 0)
+		{
+			GET_NEXT_PARAMETER("-dstip", "ifconfig:: missing -dstip spec ..");
+			Dot2IP(next_tok, dst_ip);  
+			GET_NEXT_PARAMETER("-dstport", "ifconfig:: missing -dstport spec ..");
+			dst_port = (short int)atoi(next_tok);
 		}
 
 		GET_NEXT_PARAMETER("-addr", "ifconfig:: missing -addr spec ..");
@@ -414,8 +430,14 @@ void ifconfigCmd()
 
 		if (strcmp(dev_type, "eth") == 0)
 			iface = GNETMakeEthInterface(con_sock, dev_name, mac_addr, ip_addr, mtu, 0);
-		else
+		else if (strcmp(dev_type, "tap") == 0)
 			iface = GNETMakeTapInterface(dev_name, mac_addr, ip_addr);
+		else if (strcmp(dev_type, "tun") == 0)
+			iface = GNETMakeTunInterface(dev_name, mac_addr, ip_addr, dst_ip, dst_port);
+		else {
+			printf("[ifconfigCmd]:: Unkown device type %s\n", dev_type);
+			return;
+		}
 
 		if (iface != NULL)
 		{
