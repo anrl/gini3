@@ -16,6 +16,7 @@
 #include "message.h"
 #include "ethernet.h"
 #include "tap.h"
+#include "tun.h"
 #include "tapio.h"
 #include "protocols.h"
 #include <slack/err.h>
@@ -23,7 +24,11 @@
 #include <netinet/in.h>
 #include "routetable.h"
 
+#define MAX_MTU 1500
+#define BASEPORTNUM 60000
+
 extern route_entry_t route_tbl[MAX_ROUTES];
+extern router_config rconfig;
 
 interface_array_t netarray;
 devicearray_t devarray;
@@ -341,7 +346,7 @@ interface_t *GNETMakeEthInterface(char *vsock_name, char *device,
 		device, MAC2Colon(tmpbuf, mac_addr), IP2Dot((tmpbuf+20), nw_addr));
 
 	iface_id = gAtoi(device);
-	vi = (vplinfo_t *)malloc(sizeof(vplinfo_t));
+	
 	if (findInterface(iface_id) != NULL)
 	{
 		verbose(1, "[GNETMakeEthInterface]:: device %s already defined.. ", device);
@@ -378,6 +383,7 @@ interface_t *GNETMakeEthInterface(char *vsock_name, char *device,
 				return NULL;
 			}
 
+			vi = (vplinfo_t *)malloc(sizeof(vplinfo_t));
 			iface->mode = IFACE_SERVER_MODE;
 			vi->vdata = vcon;
 			vi->iface = iface;
@@ -452,8 +458,53 @@ interface_t *GNETMakeTapInterface(char *device, uchar *mac_addr, uchar *nw_addr)
 		return iface;
 	}
 }
+/*
+ * ARGUMENTS: device:  e.g. tun2
+ * 			  mac_addr: hardware address of the interface
+ * 			  nw_addr: network address of the interface (IPv4 by default)
+ * 			  dst_ip: physical IP address of destination mesh station on the MBSS
+ *				  dst_port: interface number of the destination interface on the destination yRouter
+ * RETURNS: a pointer to the interface on success and NULL on failure
+ */
+interface_t *GNETMakeTunInterface(char *device, uchar *mac_addr, uchar *nw_addr,
+                                  uchar* dst_ip, short int dst_port)
+{
+    vpl_data_t *vcon;
+    interface_t *iface;
+    int iface_id;
+    char tmpbuf[MAX_TMPBUF_LEN];
 
+    verbose(2, "[GNETMakeTunInterface]:: making Interface for [%s] with MAC %s and IP %s",
+	device, MAC2Colon(tmpbuf, mac_addr), IP2Dot((tmpbuf+20), nw_addr));
 
+    iface_id = gAtoi(device);
+        
+    if (findInterface(iface_id) != NULL)
+    {
+	verbose(1, "[GNETMakeTunInterface]:: device %s already defined.. ", device);
+	return NULL;
+    }
+    
+    // setup the interface..
+    iface = newInterfaceStructure(device, device,
+                                  mac_addr, nw_addr, MAX_MTU);
+    
+    verbose(2, "[GNETMakeTunInterface]:: trying to connect to %s..", device);
+    
+    vcon = tun_connect((short int)(BASEPORTNUM+iface_id+gAtoi(rconfig.router_name)*100), NULL, (short int)(BASEPORTNUM+dst_port+gAtoi(rconfig.router_name)*100), dst_ip); 
+    
+    if(vcon == NULL)
+    {
+        verbose(1, "[GNETMakeTunInterface]:: unable to connect to %s", device);
+        return NULL;
+    }
+
+    iface->iface_fd = vcon->data;
+    iface->vpl_data = vcon;
+    
+    upThisInterface(iface);
+    return iface;
+}
 
 void *delayedServerCall(void *arg)
 {

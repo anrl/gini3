@@ -93,8 +93,7 @@ vpl_data_t *vpl_connect(char *vsock_name)
 	} name;
 
 	verbose(2, "[vpl_connect]:: starting connection.. ");
-	vpl_data_t *pri = (vpl_data_t *)malloc(sizeof(vpl_data_t));
-	bzero(pri, sizeof(sizeof(vpl_data_t)));
+	vpl_data_t *pri = (vpl_data_t *)calloc(1, sizeof(vpl_data_t));
 	pri->sock_type = "unix";
 	pri->ctl_sock = strdup(vsock_name);
 	pri->ctl_addr = new_addr(pri->ctl_sock,
