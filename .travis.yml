@@ -1,0 +1,9 @@
+sudo: required
+language: c
+compiler:
+  - clang
+  - gcc
+
+install: .test-scripts/install-deps.sh
+
+script: scons
