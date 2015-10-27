@@ -11,6 +11,7 @@ class Router(Interfaceable):
         Interfaceable.__init__(self)
         self.menu.addAction("Wireshark", self.wireshark)
         self.menu.addAction("Graph", self.graph)
+        self.setProperty("openflow", "False")
         self.tail = None
         self.wshark = None
         self.rstatsWindow = None
