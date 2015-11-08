@@ -4,6 +4,7 @@
 #include "tcp.h"
 #include "udp.h"
 #include "arp.h"
+#include "icmp.h"
 #include "grouter.h"
 #include "protocols.h"
 
@@ -137,7 +138,9 @@ uint8_t flowtable_match_packet(openflow_flowtable_match_type *match,
 
 		// TCP packet
 		if (ip_packet->ip_prot == TCP_PROTOCOL) {
-			tcp_packet_type *tcp_packet = (tcp_packet_type *) ip_packet + 1;
+			int iphdrlen = ip_packet->ip_hdr_len * 4;
+			tcp_packet_type *tcp_packet = (tcp_packet_type *)
+				((uint8_t *) ip_packet + iphdrlen);
 			// TCP source port
 			if ((match->wildcards & OFPFW_TP_SRC != OFPFW_TP_SRC) &&
 				(tcp_packet->src_port != match->tp_src))
@@ -158,7 +161,9 @@ uint8_t flowtable_match_packet(openflow_flowtable_match_type *match,
 
 		// UDP packet
 		if (ip_packet->ip_prot == UDP_PROTOCOL) {
-			udp_packet_type *udp_packet = (udp_packet_type *) ip_packet + 1;
+			int iphdrlen = ip_packet->ip_hdr_len * 4;
+			udp_packet_type *udp_packet = (udp_packet_type *)
+				((uint8_t *) ip_packet + iphdrlen);
 			// UDP source port
 			if ((match->wildcards & OFPFW_TP_SRC != OFPFW_TP_SRC) &&
 				(udp_packet->src_port != match->tp_src))
@@ -170,6 +175,29 @@ uint8_t flowtable_match_packet(openflow_flowtable_match_type *match,
 			// UDP destination port
 			if ((match->wildcards & OFPFW_TP_DST != OFPFW_TP_DST) &&
 				(udp_packet->dst_port != match->tp_dst))
+			{
+				verbose(2, "[flowtable_match_packet]:: Packet not matched (UDP"
+						   " destination port)");
+				return 0;
+			}
+		}
+
+		// ICMP packet
+		if (ip_packet->ip_prot == ICMP_PROTOCOL) {
+			int iphdrlen = ip_packet->ip_hdr_len * 4;
+			icmphdr_t *icmp_packet = (icmphdr_t *)
+				((uint8_t *) ip_packet + iphdrlen);
+			// ICMP type
+			if ((match->wildcards & OFPFW_TP_SRC != OFPFW_TP_SRC) &&
+				(icmp_packet->type != match->tp_src))
+			{
+				verbose(2, "[flowtable_match_packet]:: Packet not matched (UDP"
+						   " source port)");
+				return 0;
+			}
+			// ICMP code
+			if ((match->wildcards & OFPFW_TP_DST != OFPFW_TP_DST) &&
+				(icmp_packet->code != match->tp_dst))
 			{
 				verbose(2, "[flowtable_match_packet]:: Packet not matched (UDP"
 						   " destination port)");
@@ -227,6 +255,13 @@ openflow_flowtable_entry_type *flowtable_get_match_packet(gpacket_t *packet)
 	return current_entry;
 }
 
+void flowtable_perform_action(openflow_flowtable_action_type *action,
+							  gpacket_t *packet)
+{
+	// TODO: Add action processing
+  	free(packet);
+}
+
 void flowtable_init(void)
 {
 	flowtable = malloc(sizeof(openflow_flowtable_type));
@@ -234,6 +269,32 @@ void flowtable_init(void)
 
 void flowtable_handle_packet(gpacket_t *packet)
 {
-	verbose(2, "[flowtable_handle_packet]:: Received packet, dropping...");
-	free(in_pkt);
+	int i;
+	verbose(2, "[flowtable_handle_packet]:: Received packet.");
+	openflow_flowtable_entry_type *matching_entry =
+		flowtable_get_match_packet(packet);
+
+	if (matching_entry != NULL)
+	{
+		verbose(2, "[flowtable_handle_packet]:: Found matching entry.");
+		uint8_t actions_performed = 0;
+		for (i = 0; i < OPENFLOW_MAX_ACTIONS; i++)
+		{
+			if (matching_entry->actions[i].active)
+			{
+				flowtable_perform_action(&matching_entry->actions[i], packet);
+				actions_performed = 1;
+			}
+		}
+		if (!actions_performed)
+		{
+			free(packet);
+		}
+	}
+	else
+	{
+		verbose(2, "[flowtable_handle_packet]:: No matching entry found.");
+		// TODO: Forward to controller when no match is found
+		free(packet);
+	}
 }

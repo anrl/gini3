@@ -379,7 +379,7 @@ void *openflowPacketProcessor(void *pc) {
 		verbose(2, "[openflowPacketProcessor]:: Got a packet for further"
 		           " processing..");
 
-		flowtable_handle_pkt(in_pkt);
+		flowtable_handle_packet(in_pkt);
 	}
 }
 
