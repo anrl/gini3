@@ -11,6 +11,7 @@
 
 #include <sys/types.h>
 #include "grouter.h"
+#include <stdint.h>
 
 
 #define MAX_IPREVLENGTH_ICMP            50       // maximum previous header sent back
@@ -32,8 +33,24 @@ typedef struct _pkt_data_t
 		ushort prot;                // protocol field
 	} header;
 	uchar data[DEFAULT_MTU];             // payload (limited to maximum MTU)
+	uint8_t pad[4];					// VLAN padding
 } pkt_data_t;
 
+/**
+ * Ethernet frame with VLAN (802.1Q) support
+ */
+typedef struct
+{
+	struct
+	{
+		uint8_t dst[6];
+		uint8_t src[6];
+		uint16_t tpid;
+		uint16_t tci;
+		uint16_t prot;
+	} header;
+	uint8_t data[DEFAULT_MTU];
+} pkt_data_vlan_t;
 
 // frame wrapping every packet... GINI specific (GINI metadata)
 typedef struct _pkt_frame_t

@@ -16,10 +16,10 @@
 #include "classifier.h"
 #include "filter.h"
 #include <pthread.h>
-#include "flowtable.h"
+#include "of_flowtable.h"
 
 router_config rconfig = {
-	.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL, 
+	.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL,
 	.config_dir=NULL, .openflow=1, .ghandler=0, .clihandler= 0, .scheduler=0,
 	.worker=0, .classicalWorker=0, .schedcycle=10000
 };
@@ -91,7 +91,7 @@ int main(int ac, char *av[])
 	filter = createFilter(classifier, 0);
 
 	if (rconfig.openflow) {
-		flowtable_init();
+		flowtable_init(classicalWorkQ);
 	}
 
 	pcore = createPacketCore(rconfig.router_name, outputQ, workQ,
