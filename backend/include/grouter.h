@@ -86,10 +86,12 @@ typedef struct _router_config
 	int cli_flag;
 	char *config_file;
 	char *config_dir;
+	int openflow;
 	pthread_t ghandler;
 	pthread_t clihandler;
 	pthread_t scheduler;
 	pthread_t worker;
+	pthread_t classicalWorker;
 	int schedcycle;
 } router_config;
 

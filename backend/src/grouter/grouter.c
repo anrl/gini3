@@ -16,8 +16,13 @@
 #include "classifier.h"
 #include "filter.h"
 #include <pthread.h>
+#include "flowtable.h"
 
-router_config rconfig = {.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL, .config_dir=NULL, .ghandler=0, .clihandler= 0, .scheduler=0, .worker=0, .schedcycle=10000};
+router_config rconfig = {
+	.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL, 
+	.config_dir=NULL, .openflow=1, .ghandler=0, .clihandler= 0, .scheduler=0,
+	.worker=0, .classicalWorker=0, .schedcycle=10000
+};
 pktcore_t *pcore;
 classlist_t *classifier;
 filtertab_t *filter;
@@ -38,6 +43,10 @@ Option grouter_optab[] =
 		required_argument, OPT_STRING, OPT_VARIABLE, &(rconfig.config_dir)
 	},
 	{
+		"openflow", 'o', "0 or 1", "When enabled, grouter functions as an OpenFlow 1.0 switch",
+		optional_argument, OPT_INTEGER, OPT_VARIABLE, &(rconfig.openflow)
+	},
+	{
 		NULL, '\0', NULL, NULL, 0, 0, 0, NULL
 	}
 };
@@ -55,7 +64,7 @@ int main(int ac, char *av[])
 {
 	char rpath[MAX_NAME_LEN];
 	int status, *jstatus;
-	simplequeue_t *outputQ, *workQ, *qtoa;
+	simplequeue_t *outputQ, *workQ, *classicalWorkQ, *qtoa;
 
 	// setup the program properties
 	setupProgram(ac, av);
@@ -67,6 +76,12 @@ int main(int ac, char *av[])
 
 	outputQ = createSimpleQueue("outputQueue", INFINITE_Q_SIZE, 0, 1);
 	workQ = createSimpleQueue("work Queue", INFINITE_Q_SIZE, 0, 1);
+	if (rconfig.openflow) {
+		classicalWorkQ = createSimpleQueue("Work queue for classical"
+										   " routing when OpenFlow is"
+										   " enabled", INFINITE_Q_SIZE,
+										   0, 1);
+	}
 
 	GNETInit(&(rconfig.ghandler), rconfig.config_dir, rconfig.router_name, outputQ);
 	ARPInit();
@@ -75,13 +90,21 @@ int main(int ac, char *av[])
 	classifier = createClassifier();
 	filter = createFilter(classifier, 0);
 
-	pcore = createPacketCore(rconfig.router_name, outputQ, workQ);
+	if (rconfig.openflow) {
+		flowtable_init();
+	}
+
+	pcore = createPacketCore(rconfig.router_name, outputQ, workQ,
+							 classicalWorkQ);
 
 	// add a default Queue.. the createClassifier has already added a rule with "default" tag
 	// char *qname, char *dqisc, double qweight, double delay_us, int nslots);
 	addPktCoreQueue(pcore, "default", "taildrop", 1.0, 2.0, 0);
 	rconfig.scheduler = PktCoreSchedulerInit(pcore);
 	rconfig.worker = PktCoreWorkerInit(pcore);
+	if (rconfig.openflow) {
+		rconfig.classicalWorker = PktCoreClassicalWorkerInit(pcore);
+	}
 
 	infoInit(rconfig.config_dir, rconfig.router_name);
 	addTarget("Output Queue", outputQ);
@@ -94,9 +117,11 @@ int main(int ac, char *av[])
 	// start the CLI..
 	CLIInit(&(rconfig));
 
-
 	wait4thread(rconfig.scheduler);
 	wait4thread(rconfig.worker);
+	if (rconfig.openflow) {
+		wait4thread(rconfig.classicalWorker);
+	}
 	wait4thread(rconfig.ghandler);
 }
 
@@ -116,6 +141,9 @@ void shutdownRouter()
 	verbose(1, "[main]:: shutting down the packet core... "); fflush(stdout);
 	pthread_cancel(rconfig.scheduler);
 	pthread_cancel(rconfig.worker);
+	if (rconfig.openflow) {
+		pthread_cancel(rconfig.classicalWorker);
+	}
 	verbose(1, "[main]:: shutting down the CLI handler.. ");
 	pthread_cancel(rconfig.clihandler);
 
@@ -139,7 +167,7 @@ void setupProgram(int ac, char *av[])
 	prog_set_url("http://www.cs.mcgill.ca/~anrl/gini/");
 	prog_set_desc("GINI router provides a user-space IP router for teaching and learning purposes.");
 
-	prog_set_verbosity_level(1);
+	prog_set_verbosity_level(2);
 
 	indx = prog_opt_process(ac, av);
 
@@ -223,5 +251,3 @@ int isPIDAlive(int pid)
 	}
 	return TRUE;
 }
-
-

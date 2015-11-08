@@ -26,8 +26,10 @@
 #include "message.h"
 #include "classifier.h"
 #include "grouter.h"
+#include "flowtable.h"
 
 extern classlist_t *classifier;
+extern router_config rconfig;
 
 /*
  * Packet core Cname Cache functions are here.
@@ -79,13 +81,15 @@ int deleteCnameCache(pktcorecnamecache_t *pcache, char *cname)
 
 
 
-pktcore_t *createPacketCore(char *rname, simplequeue_t *outQ, simplequeue_t *workQ)
+pktcore_t *createPacketCore(char *rname, simplequeue_t *outQ,
+	                        simplequeue_t *workQ, simplequeue_t *classicalWorkQ)
 {
 	pktcore_t *pcore;
 
 	if ((pcore = (pktcore_t *) malloc(sizeof(pktcore_t))) == NULL)
 	{
-		fatal("[createPktCore]:: Could not allocate memory for packet core structure");
+		fatal("[createPktCore]:: Could not allocate memory for packet core"
+		      " structure");
 		return NULL;
 	}
 
@@ -100,6 +104,9 @@ pktcore_t *createPacketCore(char *rname, simplequeue_t *outQ, simplequeue_t *wor
 	pcore->packetcnt = 0;
 	pcore->outputQ = outQ;
 	pcore->workQ = workQ;
+	if (rconfig.openflow) {
+		pcore->classicalWorkQ = classicalWorkQ;
+	}
 	pcore->maxqsize = MAX_QUEUE_SIZE;
 	pcore->qdiscs = initQDiscTable();
 	addSimplePolicy(pcore->qdiscs, "taildrop");
@@ -319,23 +326,65 @@ pthread_t PktCoreSchedulerInit(pktcore_t *pcore)
 	return threadid;
 }
 
-
 int PktCoreWorkerInit(pktcore_t *pcore)
 {
 	int threadstat, threadid;
 
-	threadstat = pthread_create((pthread_t *)&threadid, NULL, (void *)packetProcessor, (void *)pcore);
+	if (rconfig.openflow) {
+		threadstat = pthread_create((pthread_t *)&threadid, NULL,
+		                            (void *)openflowPacketProcessor,
+									(void *)pcore);
+	} else {
+		threadstat = pthread_create((pthread_t *)&threadid, NULL,
+		                            (void *)classicalPacketProcessor,
+									(void *)pcore);
+	}
+
 	if (threadstat != 0)
 	{
-		verbose(1, "[PKTCoreWorkerInit]:: unable to create thread.. ");
+		verbose(1, "[PktCoreWorkerInit]:: unable to create thread.. ");
 		return -1;
 	}
 
 	return threadid;
 }
 
+int PktCoreClassicalWorkerInit(pktcore_t *pcore)
+{
+	int threadstat, threadid;
 
-void *packetProcessor(void *pc)
+	threadstat = pthread_create((pthread_t *)&threadid, NULL,
+	                            (void *)classicalPacketProcessor,
+								(void *)pcore);
+	if (threadstat != 0)
+	{
+		verbose(1, "[PktCoreClassicalWorkerInit]:: unable to create thread.. ");
+		return -1;
+	}
+
+	return threadid;
+}
+
+void *openflowPacketProcessor(void *pc) {
+	pktcore_t *pcore = (pktcore_t *)pc;
+	gpacket_t *in_pkt;
+	int pktsize;
+
+	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+	while (1)
+	{
+		verbose(2, "[openflowPacketProcessor]:: Waiting for a packet...");
+		readQueue(pcore->workQ, (void **)&in_pkt, &pktsize);
+		pthread_testcancel();
+		verbose(2, "[openflowPacketProcessor]:: Got a packet for further"
+		           " processing..");
+
+		flowtable_handle_pkt(in_pkt);
+	}
+}
+
+
+void *classicalPacketProcessor(void *pc)
 {
 	pktcore_t *pcore = (pktcore_t *)pc;
 	gpacket_t *in_pkt;
@@ -344,25 +393,33 @@ void *packetProcessor(void *pc)
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 	while (1)
 	{
-		verbose(2, "[packetProcessor]:: Waiting for a packet...");
-		readQueue(pcore->workQ, (void **)&in_pkt, &pktsize);
+		verbose(2, "[classicalPacketProcessor]:: Waiting for a packet...");
+		if (rconfig.openflow) {
+			readQueue(pcore->classicalWorkQ, (void **)&in_pkt, &pktsize);
+		} else {
+			readQueue(pcore->workQ, (void **)&in_pkt, &pktsize);
+		}
 		pthread_testcancel();
-		verbose(2, "[packetProcessor]:: Got a packet for further processing..");
+		verbose(2, "[classicalPacketProcessor]:: Got a packet for further"
+		           " processing..");
 
 		// get the protocol field within the packet... and switch it accordingly
 		switch (ntohs(in_pkt->data.header.prot))
 		{
 		case IP_PROTOCOL:
-			verbose(2, "[packetProcessor]:: Packet sent to IP routine for further processing.. ");
+			verbose(2, "[classicalPacketProcessor]:: Packet sent to IP routine"
+			           " for further processing.. ");
 
 			IPIncomingPacket(in_pkt);
 			break;
 		case ARP_PROTOCOL:
-			verbose(2, "[packetProcessor]:: Packet sent to ARP module for further processing.. ");
+			verbose(2, "[classicalPacketProcessor]:: Packet sent to ARP module"
+			           " for further processing.. ");
 			ARPProcess(in_pkt);
 			break;
 		default:
-			verbose(1, "[packetProcessor]:: Packet discarded: Unknown protocol protocol");
+			verbose(1, "[classicalPacketProcessor]:: Packet discarded: Unknown"
+			           " protocol protocol");
 			// TODO: should we generate ICMP errors here.. check router RFCs
 			free(in_pkt);
 			break;
@@ -510,5 +567,3 @@ int redDiscard(simplequeue_t *thisq, gpacket_t *ipkt)
 
 	return discarded;
 }
-
-

@@ -1,6 +1,7 @@
 *.pyc
 *~
 *.o
+.tags*
 config.log
 backend/build
 bin/
