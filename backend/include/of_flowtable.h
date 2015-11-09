@@ -11,12 +11,18 @@
 #define OPENFLOW_MAX_FLOWTABLE_ENTRIES     ((uint8_t) 10)
 #define OPENFLOW_MAX_ACTIONS               ((uint8_t) 10)
 
-typedef struct ofp_table_stats    openflow_flowtable_stats_type;
-typedef struct ofp_flow_stats     openflow_flowtable_entry_stats_type;
-typedef struct ofp_match          openflow_flowtable_match_type;
-typedef struct ofp_action_header  openflow_flowtable_action_header_type;
-typedef enum ofp_flow_wildcards   openflow_flowtable_wildcards;
-typedef struct ofp_action_output  openflow_flowtable_action_output_type;
+typedef struct ofp_table_stats      openflow_flowtable_stats_type;
+typedef struct ofp_flow_stats       openflow_flowtable_entry_stats_type;
+typedef struct ofp_match            openflow_flowtable_match_type;
+typedef struct ofp_action_header    openflow_flowtable_action_header_type;
+
+typedef struct ofp_action_output    openflow_flowtable_action_output_type;
+typedef struct ofp_action_vlan_vid  openflow_flowtable_action_vlan_vid;
+typedef struct ofp_action_vlan_pcp  openflow_flowtable_action_vlan_pcp;
+typedef struct ofp_action_dl_addr   openflow_flowtable_action_dl_addr;
+typedef struct ofp_action_nw_addr   openflow_flowtable_action_nw_addr;
+typedef struct ofp_action_tp_port   openflow_flowtable_action_tp_port;
+typedef struct ofp_action_nw_tos    openflow_flowtable_action_nw_tos;
 
 typedef struct {
     openflow_flowtable_action_header_type header;

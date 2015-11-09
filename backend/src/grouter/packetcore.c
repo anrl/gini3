@@ -470,7 +470,7 @@ char *tagPacket(pktcore_t *pcore, gpacket_t *in_pkt)
 }
 
 
-void enqueuePacket(pktcore_t *pcore, gpacket_t *in_pkt, int pktsize)
+int enqueuePacket(pktcore_t *pcore, gpacket_t *in_pkt, int pktsize)
 {
 	char *qkey;
 	simplequeue_t *thisq;

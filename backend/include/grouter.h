@@ -23,6 +23,7 @@
 #include <limits.h>
 #include <sys/time.h>
 #include <pthread.h>
+#include <string.h>
 
 /*
  * global definitions.... this is stuff that could not be

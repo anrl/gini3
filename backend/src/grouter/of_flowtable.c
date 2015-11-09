@@ -4,6 +4,7 @@
 #include "message.h"
 #include "icmp.h"
 #include "ip.h"
+#include "of_controller.h"
 #include "openflow.h"
 #include "protocols.h"
 #include "simplequeue.h"
@@ -56,14 +57,49 @@ static uint8_t flowtable_match_packet(openflow_flowtable_match_type *match,
 		return 1;
 	}
 
+	// Set headers for IEEE 802.13 Ethernet frame
+	if (ntohs(packet->data.header.prot) < ETHERTYPE_MIN)
+	{
+		if (packet->data.data[0] == 0xAA)
+		{
+			// SNAP
+			if (packet->data.data[2] & 0x03 == 0x03) {
+				// 8-bit control field
+				// TODO: Finish implementation
+			}
+			else
+			{
+				// 16-bit control field
+				// TODO: Finish implementation
+			}
+		}
+		else
+		{
+			if (packet->data.data[2] & 0x03 == 0x03) {
+				// 8-bit control field
+				// TODO: Finish implementation
+			}
+			else
+			{
+				// 16-bit control field
+				// TODO: Finish implementation
+			}
+		}
+	}
+
 	// Set headers for IEEE 802.1Q Ethernet frame
-	if (packet->data.header.prot == IEEE_8021Q_ETHERTYPE) {
+	if (ntohs(packet->data.header.prot) == IEEE_8021Q_ETHERTYPE)
+	{
 		verbose(2, "[flowtable_match_packet]:: Setting headers for IEEE 802.1Q"
 				   " Ethernet frame.");
 		pkt_data_vlan_t *vlan_data = (pkt_data_vlan_t *) &packet->data;
 		dl_vlan = vlan_data->header.tci & 0xFFF;
 		dl_vlan_pcp = vlan_data->header.tci >> 13;
 		dl_type = vlan_data->header.prot;
+	}
+	else
+	{
+		dl_vlan = OFP_VLAN_NONE;
 	}
 
 	// ARP packet
@@ -158,7 +194,8 @@ static uint8_t flowtable_match_packet(openflow_flowtable_match_type *match,
 		return 0;
 	}
 	// Match VLAN priority
-	if ((match->wildcards & OFPFW_DL_VLAN_PCP != OFPFW_DL_VLAN_PCP) &&
+	if ((match->wildcards & OFPFW_DL_VLAN != OFPFW_DL_VLAN) &&
+		(match->wildcards & OFPFW_DL_VLAN_PCP != OFPFW_DL_VLAN_PCP) &&
 		(dl_vlan_pcp != match->dl_vlan_pcp))
 	{
 		verbose(2, "[flowtable_match_packet]:: Packet not matched (VLAN"
@@ -245,8 +282,10 @@ static openflow_flowtable_entry_type *flowtable_get_entry_for_packet(
 	openflow_flowtable_entry_type *entry;
 	openflow_flowtable_match_type *match;
 
-	for (i = 0; i < OPENFLOW_MAX_FLOWTABLES; i++) {
-		if (flowtables[i] != NULL && flowtables[i]->active) {
+	for (i = 0; i < OPENFLOW_MAX_FLOWTABLES; i++)
+	{
+		if (flowtables[i] != NULL && flowtables[i]->active)
+		{
 			flowtable = flowtables[i];
 			for (j = 0; j < OPENFLOW_MAX_FLOWTABLE_ENTRIES; j++)
 			{
@@ -284,13 +323,73 @@ static openflow_flowtable_entry_type *flowtable_get_entry_for_packet(
  * @param packet The packet to insert into the queue.
  * @param output_queue The queue to insert the packet into.
  */
-void send_packet_to_queue(gpacket_t *packet, simplequeue_t *queue)
+static void send_packet_to_queue(gpacket_t *packet, simplequeue_t *queue)
 {
 	gpacket_t *new_packet = malloc(sizeof(gpacket_t));
 	memcpy(new_packet, packet, sizeof(gpacket_t));
 	writeQueue(queue, new_packet, sizeof(gpacket_t));
 }
 
+static gpacket_t *add_vlan_header_to_packet(gpacket_t *packet)
+{
+	gpacket_t *new_packet = malloc(sizeof(gpacket_t));
+	new_packet->frame = packet->frame;
+	pkt_data_vlan_t vlan_data;
+	COPY_MAC(&vlan_data.header.src, &packet->data.header.src);
+	COPY_MAC(&vlan_data.header.dst, &packet->data.header.dst);
+	vlan_data.header.tpid = IEEE_8021Q_ETHERTYPE;
+	vlan_data.header.tci = 0;
+	vlan_data.header.prot = packet->data.header.prot;
+	memcpy(&vlan_data.data, &packet->data.data, DEFAULT_MTU);
+	memcpy(&new_packet->data, &vlan_data, sizeof(vlan_data));
+	free(packet);
+	return new_packet;
+}
+
+static gpacket_t *remove_vlan_header_from_packet(gpacket_t *packet)
+{
+	gpacket_t *new_packet = malloc(sizeof(gpacket_t));
+	new_packet->frame = packet->frame;
+	pkt_data_vlan_t *vlan_data = (pkt_data_vlan_t *) &packet->data;
+	COPY_MAC(&new_packet->data.header.src, &vlan_data->header.src);
+	COPY_MAC(&new_packet->data.header.dst, &vlan_data->header.dst);
+	new_packet->data.header.prot = vlan_data->header.prot;
+	memcpy(&new_packet->data.data, &vlan_data->data, DEFAULT_MTU);
+	free(packet);
+	return new_packet;
+}
+
+static void update_checksums(ip_packet_t *ip_packet) {
+	// IP packet
+	ip_packet->ip_cksum = 0;
+	ip_packet->ip_cksum = htons(checksum((void *)ip_packet,
+										 ip_packet->ip_hdr_len * 2));
+
+	if (ip_packet->ip_prot == TCP_PROTOCOL)
+	{
+		// TCP packet
+		uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
+		tcp_packet_type *tcp_packet = (tcp_packet_type *)
+			((uint8_t *) ip_packet + ip_header_length);
+		tcp_packet->th_sum = tcp_checksum(ip_packet);
+	}
+	else if (ip_packet->ip_prot == UDP_PROTOCOL)
+	{
+		// UDP packet
+		uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
+		udp_packet_type *udp_packet = (udp_packet_type *)
+			((uint8_t *) ip_packet + ip_header_length);
+		udp_packet->checksum = udp_checksum(ip_packet);
+	}
+}
+
+/**
+ * Performs the specified action on the specified packet.
+ *
+ * @param action       The specified action.
+ * @param packet       The specified packet.
+ * @param output_queue THe packet core output queue.
+ */
 static void flowtable_perform_action(openflow_flowtable_action_type *action,
 									 gpacket_t *packet,
 									 simplequeue_t *output_queue)
@@ -314,8 +413,8 @@ static void flowtable_perform_action(openflow_flowtable_action_type *action,
 		}
 		else if (output_action->port == OFPP_TABLE)
 		{
-			// TODO: Figure out what this output port means; isn't the packet
-			// already being parsed by the OpenFlow pipeline at this point?
+			// Do nothing; the packet is already being processed by the
+			// OpenFlow pipeline
 		}
 		else if (output_action->port == OFPP_NORMAL)
 		{
@@ -326,6 +425,7 @@ static void flowtable_perform_action(openflow_flowtable_action_type *action,
 		}
 		else if (output_action->port == OFPP_FLOOD)
 		{
+			// Forward packet to all interfaces
 			for (i = 0; i < MAX_INTERFACES; i++)
 			{
 				if (findInterface(i) != NULL) {
@@ -336,6 +436,7 @@ static void flowtable_perform_action(openflow_flowtable_action_type *action,
 		}
 		else if (output_action->port == OFPP_ALL)
 		{
+			// Forward packet to all interfaces except source interface
 			for (i = 0; i < MAX_INTERFACES; i++)
 			{
 				if (findInterface(i) != NULL && i !=
@@ -348,18 +449,21 @@ static void flowtable_perform_action(openflow_flowtable_action_type *action,
 		}
 		else if (output_action->port == OFPP_CONTROLLER)
 		{
-			// TODO: Send to controller
+			// Forward packet to controller
+			openflow_send_packet_to_controller(packet);
 		}
 		else if (output_action->port == OFPP_LOCAL)
 		{
-			// TODO: Send to local controller message processing
+			// Forward packet to controller packet processing
+			openflow_parse_packet_from_controller(packet);
 		}
 		else if (output_action->port >= 1 &&
 				 output_action->port <= MAX_INTERFACES &&
 				  output_action->port <= OFPP_MAX)
 		{
 			// Send to specified interface
-			if (findInterface(output_action->port - 1) != NULL) {
+			if (findInterface(output_action->port - 1) != NULL)
+			{
 				packet->frame.dst_interface = output_action->port - 1;
 				send_packet_to_queue(packet, output_queue);
 			}
@@ -367,47 +471,179 @@ static void flowtable_perform_action(openflow_flowtable_action_type *action,
 	}
 	else if (action->action.header.type == OFPAT_SET_VLAN_VID)
 	{
-		// TODO: Add VLAN support to GNET
+		// Modify VLAN ID
+		verbose(2, "[flowtable_perform_action]:: Action is"
+				   " OFPAT_SET_VLAN_VID.");
+		openflow_flowtable_action_vlan_vid *vlan_vid_action =
+			(openflow_flowtable_action_vlan_vid *) &action->action;
+		if (ntohs(packet->data.header.prot) == IEEE_8021Q_ETHERTYPE)
+		{
+			// Existing VLAN header
+			pkt_data_vlan_t *vlan_data = (pkt_data_vlan_t *) &packet->data;
+			vlan_data->header.tci = vlan_vid_action->vlan_vid;
+		}
+		else
+		{
+			// No VLAN header
+			packet = add_vlan_header_to_packet(packet);
+			pkt_data_vlan_t *vlan_data = (pkt_data_vlan_t *) &packet->data;
+			vlan_data->header.tci = vlan_vid_action->vlan_vid;
+		}
 	}
 	else if (action->action.header.type == OFPAT_SET_VLAN_PCP)
 	{
-		// TODO: Add VLAN support to GNET
+		// Modify VLAN priority
+		verbose(2, "[flowtable_perform_action]:: Action is"
+				   " OFPAT_SET_VLAN_PCP.");
+		openflow_flowtable_action_vlan_pcp *vlan_pcp_action =
+			(openflow_flowtable_action_vlan_pcp *) &action->action;
+		if (ntohs(packet->data.header.prot) == IEEE_8021Q_ETHERTYPE)
+		{
+			// Existing VLAN header
+			pkt_data_vlan_t *vlan_data = (pkt_data_vlan_t *) &packet->data;
+			vlan_data->header.tci &= 0x1fff;
+			vlan_data->header.tci = (vlan_pcp_action->vlan_pcp << 13) |
+				vlan_data->header.prot;
+		}
+		else
+		{
+			// No VLAN header
+			packet = add_vlan_header_to_packet(packet);
+			pkt_data_vlan_t *vlan_data = (pkt_data_vlan_t *) &packet->data;
+			vlan_data->header.tci = vlan_pcp_action->vlan_pcp << 13;
+		}
 	}
 	else if (action->action.header.type == OFPAT_STRIP_VLAN)
 	{
-		// TODO: Add VLAN support to GNET
+		// Remove VLAN header
+		verbose(2, "[flowtable_perform_action]:: Action is"
+				   " OFPAT_STRIP_VLAN.");
+		if (ntohs(packet->data.header.prot) == IEEE_8021Q_ETHERTYPE)
+		{
+			packet = remove_vlan_header_from_packet(packet);
+		}
 	}
 	else if (action->action.header.type == OFPAT_SET_DL_SRC)
 	{
 		// Modify Ethernet source MAC address
+		verbose(2, "[flowtable_perform_action]:: Action is"
+				   " OFPAT_SET_DL_SRC.");
+		openflow_flowtable_action_dl_addr *dl_addr_action =
+			(openflow_flowtable_action_dl_addr *) &action->action;
+		COPY_MAC(&packet->data.header.dst, &dl_addr_action->dl_addr);
 	}
-	else if (action->action.header.type == OFPAT_SET_DL_SRC)
+	else if (action->action.header.type == OFPAT_SET_DL_DST)
 	{
 		// Modify Ethernet destination MAC address
+		verbose(2, "[flowtable_perform_action]:: Action is"
+				   " OFPAT_SET_DL_DST.");
+		openflow_flowtable_action_dl_addr *dl_addr_action =
+			(openflow_flowtable_action_dl_addr *) &action->action;
+		COPY_MAC(&packet->data.header.dst, &dl_addr_action->dl_addr);
 	}
 	else if (action->action.header.type == OFPAT_SET_NW_SRC)
 	{
 		// Modify IP source address
+		verbose(2, "[flowtable_perform_action]:: Action is"
+				   " OFPAT_SET_NW_SRC.");
+		openflow_flowtable_action_nw_addr *nw_addr_action =
+			(openflow_flowtable_action_nw_addr *) &action->action;
+		if (ntohs(packet->data.header.prot) == IP_PROTOCOL)
+		{
+			ip_packet_t *ip_packet = (ip_packet_t *) &packet->data.data;
+			COPY_IP(&ip_packet->ip_src, &nw_addr_action->nw_addr);
+			update_checksums(ip_packet);
+		}
 	}
 	else if (action->action.header.type == OFPAT_SET_NW_DST)
 	{
 		// Modify IP destination address
+		verbose(2, "[flowtable_perform_action]:: Action is"
+				   " OFPAT_SET_NW_DST.");
+		openflow_flowtable_action_nw_addr *nw_addr_action =
+			(openflow_flowtable_action_nw_addr *) &action->action;
+		if (ntohs(packet->data.header.prot) == IP_PROTOCOL)
+		{
+			ip_packet_t *ip_packet = (ip_packet_t *) &packet->data.data;
+			COPY_IP(&ip_packet->ip_dst, &nw_addr_action->nw_addr);
+			update_checksums(ip_packet);
+		}
 	}
 	else if (action->action.header.type == OFPAT_SET_NW_TOS)
 	{
 		// Modify IP type of service
+		verbose(2, "[flowtable_perform_action]:: Action is"
+				   " OFPAT_SET_NW_TOS.");
+		openflow_flowtable_action_nw_tos *nw_tos_action =
+			(openflow_flowtable_action_nw_tos *) &action->action;
+		if (ntohs(packet->data.header.prot) == IP_PROTOCOL)
+		{
+			ip_packet_t *ip_packet = (ip_packet_t *) &packet->data.data;
+			ip_packet->ip_tos = nw_tos_action->nw_tos;
+			update_checksums(ip_packet);
+		}
 	}
 	else if (action->action.header.type == OFPAT_SET_TP_SRC)
 	{
 		// Modify TCP/UDP source port
+		verbose(2, "[flowtable_perform_action]:: Action is"
+				   " OFPAT_SET_TP_SRC.");
+		openflow_flowtable_action_tp_port *tp_port_action =
+			(openflow_flowtable_action_tp_port *) &action->action;
+		if (ntohs(packet->data.header.prot) == IP_PROTOCOL)
+		{
+			ip_packet_t *ip_packet = (ip_packet_t *) &packet->data.data;
+			if (ip_packet->ip_prot == TCP_PROTOCOL)
+			{
+				uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
+				tcp_packet_type *tcp_packet = (tcp_packet_type *)
+					((uint8_t *) ip_packet + ip_header_length);
+				tcp_packet->src_port = tp_port_action->tp_port;
+				update_checksums(ip_packet);
+			}
+			else if (ip_packet->ip_prot == UDP_PROTOCOL)
+			{
+				uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
+				udp_packet_type *udp_packet = (udp_packet_type *)
+				((uint8_t *) ip_packet + ip_header_length);
+				udp_packet->src_port = tp_port_action->tp_port;
+				update_checksums(ip_packet);
+			}
+		}
 	}
 	else if (action->action.header.type == OFPAT_SET_TP_DST)
 	{
 		// Modify TCP/UDP destination port
+		verbose(2, "[flowtable_perform_action]:: Action is"
+				   " OFPAT_SET_TP_DST.");
+		openflow_flowtable_action_tp_port *tp_port_action =
+			(openflow_flowtable_action_tp_port *) &action->action;
+		if (ntohs(packet->data.header.prot) == IP_PROTOCOL)
+		{
+			ip_packet_t *ip_packet = (ip_packet_t *) &packet->data.data;
+			if (ip_packet->ip_prot == TCP_PROTOCOL)
+			{
+				uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
+				tcp_packet_type *tcp_packet = (tcp_packet_type *)
+					((uint8_t *) ip_packet + ip_header_length);
+				tcp_packet->dst_port = tp_port_action->tp_port;
+				update_checksums(ip_packet);
+			}
+			else if (ip_packet->ip_prot == UDP_PROTOCOL)
+			{
+				uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
+				udp_packet_type *udp_packet = (udp_packet_type *)
+				((uint8_t *) ip_packet + ip_header_length);
+				udp_packet->dst_port = tp_port_action->tp_port;
+				update_checksums(ip_packet);
+			}
+		}
 	}
 	else if (action->action.header.type == OFPAT_ENQUEUE)
 	{
 		// TODO: Add queueing support
+		verbose(2, "[flowtable_perform_action]:: Action is"
+				   " OFPAT_ENQUEUE.");
 	}
 }
 
@@ -417,6 +653,7 @@ void flowtable_init(simplequeue_t *classicalWorkQ)
 
 	// Default flowtable entry (send all packets to normal router processing)
 	flowtables[0] = malloc(sizeof(openflow_flowtable_type));
+	flowtables[0]->active = 1;
 	flowtables[0]->entries[0].active = 1;
 	flowtables[0]->entries[0].match.wildcards = OFPFW_ALL;
 	flowtables[0]->entries[0].priority = 1;
@@ -457,8 +694,9 @@ void flowtable_handle_packet(gpacket_t *packet, simplequeue_t *output_queue)
 	}
 	else
 	{
-		verbose(2, "[flowtable_handle_packet]:: No matching entry found.");
-		// TODO: Forward to controller when no match is found
+		verbose(2, "[flowtable_handle_packet]:: No matching entry found."
+				   " Forwarding to controller.");
+		openflow_send_packet_to_controller(packet);
 	}
 
 	free(packet);
