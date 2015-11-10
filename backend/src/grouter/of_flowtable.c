@@ -57,7 +57,7 @@ static uint8_t flowtable_match_packet(openflow_flowtable_match_type *match,
 		return 1;
 	}
 
-	// Set headers for IEEE 802.13 Ethernet frame
+	// Set headers for IEEE 802.3 Ethernet frame
 	if (ntohs(packet->data.header.prot) < ETHERTYPE_MIN)
 	{
 		if (packet->data.data[0] == 0xAA)
@@ -65,25 +65,41 @@ static uint8_t flowtable_match_packet(openflow_flowtable_match_type *match,
 			// SNAP
 			if (packet->data.data[2] & 0x03 == 0x03) {
 				// 8-bit control field
-				// TODO: Finish implementation
+				uint32_t oui;
+				memcpy(&oui, &packet->data.data[3], sizeof(uint8_t) * 3);
+				oui = ntohl(oui);
+				if (oui == 0)
+				{
+					memcpy(&dl_type, &packet->data.data[6], sizeof(uint8_t) * 2);
+					dl_type = ntohs(dl_type);
+				}
+				else
+				{
+					dl_type = 0x05FF;
+				}
+
 			}
 			else
 			{
 				// 16-bit control field
-				// TODO: Finish implementation
+				uint32_t oui;
+				memcpy(&oui, &packet->data.data[4], sizeof(uint8_t) * 3);
+				oui = ntohl(oui);
+				if (oui == 0)
+				{
+					memcpy(&dl_type, &packet->data.data[7], sizeof(uint8_t) * 2);
+					dl_type = ntohs(dl_type);
+				}
+				else
+				{
+					dl_type = 0x05FF;
+				}
 			}
 		}
 		else
 		{
-			if (packet->data.data[2] & 0x03 == 0x03) {
-				// 8-bit control field
-				// TODO: Finish implementation
-			}
-			else
-			{
-				// 16-bit control field
-				// TODO: Finish implementation
-			}
+			// No SNAP
+			dl_type = 0x05FF;
 		}
 	}
 
@@ -371,7 +387,7 @@ static void update_checksums(ip_packet_t *ip_packet) {
 		uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
 		tcp_packet_type *tcp_packet = (tcp_packet_type *)
 			((uint8_t *) ip_packet + ip_header_length);
-		tcp_packet->th_sum = tcp_checksum(ip_packet);
+		tcp_packet->checksum = tcp_checksum(ip_packet);
 	}
 	else if (ip_packet->ip_prot == UDP_PROTOCOL)
 	{
@@ -647,10 +663,7 @@ static void flowtable_perform_action(openflow_flowtable_action_type *action,
 	}
 }
 
-void flowtable_init(simplequeue_t *classicalWorkQ)
-{
-	classical_work_queue = classicalWorkQ;
-
+void flowtable_set_defaults() {
 	// Default flowtable entry (send all packets to normal router processing)
 	flowtables[0] = malloc(sizeof(openflow_flowtable_type));
 	flowtables[0]->active = 1;
@@ -666,6 +679,18 @@ void flowtable_init(simplequeue_t *classicalWorkQ)
 		   sizeof(openflow_flowtable_action_output_type));
 }
 
+void flowtable_init(simplequeue_t *classical_work_queue)
+{
+	classical_work_queue = classical_work_queue;
+	flowtable_set_defaults();
+}
+
+/**
+ * Processes the specified packet using the OpenFlow pipeline.
+ *
+ * @param packet       The packet to be handled.
+ * @param output_queue The output queue of the packet core.
+ */
 void flowtable_handle_packet(gpacket_t *packet, simplequeue_t *output_queue)
 {
 	int i;
@@ -700,4 +725,77 @@ void flowtable_handle_packet(gpacket_t *packet, simplequeue_t *output_queue)
 	}
 
 	free(packet);
+}
+
+static openflow_error_type flowtable_add(
+	ofp_flow_mod* modify_info)
+{
+
+}
+
+static openflow_error_type flowtable_edit(
+	ofp_flow_mod* modify_info)
+{
+
+}
+
+static openflow_error_type flowtable_edit_strict(
+	ofp_flow_mod* modify_info)
+{
+
+}
+
+static openflow_error_type flowtable_delete(
+	ofp_flow_mod* modify_info)
+{
+
+}
+
+static openflow_error_type flowtable_delete_strict(
+	ofp_flow_mod* modify_info)
+{
+
+}
+
+/**
+ * Applies the specified modification to the flowtables.
+ *
+ * @param modify_info The modification to apply to the flowtables.
+ *
+ * @return
+ */
+void flowtable_modify(ofp_flow_mod* modify_info, ofp_error_msg* error_msg)
+{
+	if (modify_info->command == OFPFC_ADD)
+	{
+		verbose(2, "[flowtable_modify]:: Modify command is OFPFC_ADD.");
+		return flowtable_add(modify_info);
+	}
+	else if (modify_info->command == OFPFC_MODIFY)
+	{
+		verbose(2, "[flowtable_modify]:: Modify command is OFPFC_MODIFY.");
+		return flowtable_edit(modify_info);
+	}
+	else if (modify_info->command == OFPFC_MODIFY_STRICT)
+	{
+		verbose(2, "[flowtable_modify]:: Modify command is"
+				   " OFPFC_MODIFY_STRICT.");
+		return flowtable_edit_strict(modify_info);
+	}
+	else if (modify_info->command == OFPFC_DELETE)
+	{
+		verbose(2, "[flowtable_modify]:: Modify command is OFPFC_DELETE.");
+		return flowtable_delete(modify_info);
+	}
+	else if (modify_info->command == OFPFC_DELETE_STRICT)
+	{
+		verbose(2, "[flowtable_modify]:: Modify command is"
+				   " OFPFC_DELETE_STRICT.");
+		return flowtable_delete_strict(modify_info);
+	}
+	else
+	{
+		verbose(2, "[flowtable_modify]:: Modify command not recognized.");
+		return OFPET_FLOW_MOD_FAILED;
+	}
 }
