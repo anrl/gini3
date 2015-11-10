@@ -36,6 +36,7 @@ typedef struct _pktcore_t
 	pthread_mutex_t wqlock;               // lock for work queue
 	simplequeue_t *outputQ;
 	simplequeue_t *workQ;
+	simplequeue_t *openflowWorkQ;
 	Map *queues;
 	int lastqid;
 	int packetcnt;
@@ -48,7 +49,7 @@ typedef struct _pktcore_t
 
 // Function prototypes
 
-pktcore_t *createPacketCore(char *rname, simplequeue_t *outQ, simplequeue_t *workQ);
+pktcore_t *createPacketCore(char *rname, simplequeue_t *outQ, simplequeue_t *workQ, simplequeue_t *openflowWorkQ);
 int addPktCoreQueue(pktcore_t *pcore, char *qname, char *dqisc, double qweight, double delay_us, int nslots);
 simplequeue_t *getCoreQueue(pktcore_t *pcore, char *qname);
 void printAllQueues(pktcore_t *pcore);
@@ -60,8 +61,11 @@ int delPktCoreQueue(pktcore_t *pcore, char *qname);
 
 pthread_t PktCoreSchedulerInit(pktcore_t *pcore);
 int PktCoreWorkerInit(pktcore_t *pcore);
+int PktCoreOpenflowWorkerInit(pktcore_t *pcore);
+void *openflowPacketProcessor(void *pc);
 void *packetProcessor(void *pc);
 
+int enqueuePacket(pktcore_t *pcore, gpacket_t *in_pkt, int pktsize, uint8_t openflow);
 
 // Function prototypes from roundrobin.c and wfq.c??
 void *weightedFairScheduler(void *pc);

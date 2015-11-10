@@ -825,8 +825,8 @@ void filterCmd()
 void versionCmd()
 {
 	printf("\nGINI Router Version: %s \n\n", prog_version());
-	if (rconfig.openflow_flag) {
-		printf("\nOpenFlow Mode");
+	if (rconfig.openflow) {
+		printf("\nOpenFlow 1.0 mode");
 	}
 	printf("\n\n");
 }

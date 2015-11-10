@@ -23,6 +23,7 @@
 #include <limits.h>
 #include <sys/time.h>
 #include <pthread.h>
+#include <string.h>
 
 /*
  * global definitions.... this is stuff that could not be
@@ -84,13 +85,14 @@ typedef struct _router_config
 	char *router_name;
 	char *gini_home;
 	int cli_flag;
-	int openflow_flag;
 	char *config_file;
 	char *config_dir;
+	int openflow;
 	pthread_t ghandler;
 	pthread_t clihandler;
 	pthread_t scheduler;
 	pthread_t worker;
+	pthread_t openflowWorker;
 	int schedcycle;
 } router_config;
 

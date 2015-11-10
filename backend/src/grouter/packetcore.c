@@ -26,8 +26,10 @@
 #include "message.h"
 #include "classifier.h"
 #include "grouter.h"
+#include "openflow_flowtable.h"
 
 extern classlist_t *classifier;
+extern router_config rconfig;
 
 /*
  * Packet core Cname Cache functions are here.
@@ -79,13 +81,15 @@ int deleteCnameCache(pktcorecnamecache_t *pcache, char *cname)
 
 
 
-pktcore_t *createPacketCore(char *rname, simplequeue_t *outQ, simplequeue_t *workQ)
+pktcore_t *createPacketCore(char *rname, simplequeue_t *outQ,
+	                        simplequeue_t *workQ, simplequeue_t *openflowWorkQ)
 {
 	pktcore_t *pcore;
 
 	if ((pcore = (pktcore_t *) malloc(sizeof(pktcore_t))) == NULL)
 	{
-		fatal("[createPktCore]:: Could not allocate memory for packet core structure");
+		fatal("[createPktCore]:: Could not allocate memory for packet core"
+		      " structure");
 		return NULL;
 	}
 
@@ -100,6 +104,9 @@ pktcore_t *createPacketCore(char *rname, simplequeue_t *outQ, simplequeue_t *wor
 	pcore->packetcnt = 0;
 	pcore->outputQ = outQ;
 	pcore->workQ = workQ;
+	if (rconfig.openflow) {
+		pcore->openflowWorkQ = openflowWorkQ;
+	}
 	pcore->maxqsize = MAX_QUEUE_SIZE;
 	pcore->qdiscs = initQDiscTable();
 	addSimplePolicy(pcore->qdiscs, "taildrop");
@@ -319,21 +326,22 @@ pthread_t PktCoreSchedulerInit(pktcore_t *pcore)
 	return threadid;
 }
 
-
 int PktCoreWorkerInit(pktcore_t *pcore)
 {
 	int threadstat, threadid;
 
-	threadstat = pthread_create((pthread_t *)&threadid, NULL, (void *)packetProcessor, (void *)pcore);
+	threadstat = pthread_create((pthread_t *)&threadid, NULL,
+								(void *)packetProcessor,
+								(void *)pcore);
+
 	if (threadstat != 0)
 	{
-		verbose(1, "[PKTCoreWorkerInit]:: unable to create thread.. ");
+		verbose(1, "[PktCoreWorkerInit]:: unable to create thread.. ");
 		return -1;
 	}
 
 	return threadid;
 }
-
 
 void *packetProcessor(void *pc)
 {
@@ -347,22 +355,26 @@ void *packetProcessor(void *pc)
 		verbose(2, "[packetProcessor]:: Waiting for a packet...");
 		readQueue(pcore->workQ, (void **)&in_pkt, &pktsize);
 		pthread_testcancel();
-		verbose(2, "[packetProcessor]:: Got a packet for further processing..");
+		verbose(2, "[packetProcessor]:: Got a packet for further"
+			" processing..");
 
 		// get the protocol field within the packet... and switch it accordingly
 		switch (ntohs(in_pkt->data.header.prot))
 		{
 		case IP_PROTOCOL:
-			verbose(2, "[packetProcessor]:: Packet sent to IP routine for further processing.. ");
+			verbose(2, "[packetProcessor]:: Packet sent to IP routine"
+				" for further processing.. ");
 
 			IPIncomingPacket(in_pkt);
 			break;
 		case ARP_PROTOCOL:
-			verbose(2, "[packetProcessor]:: Packet sent to ARP module for further processing.. ");
+			verbose(2, "[packetProcessor]:: Packet sent to ARP module"
+				" for further processing.. ");
 			ARPProcess(in_pkt);
 			break;
 		default:
-			verbose(1, "[packetProcessor]:: Packet discarded: Unknown protocol protocol");
+			verbose(1, "[packetProcessor]:: Packet discarded: Unknown"
+				" protocol protocol");
 			// TODO: should we generate ICMP errors here.. check router RFCs
 			free(in_pkt);
 			break;
@@ -370,7 +382,39 @@ void *packetProcessor(void *pc)
 	}
 }
 
+int PktCoreOpenflowWorkerInit(pktcore_t *pcore)
+{
+	int threadstat, threadid;
 
+	threadstat = pthread_create((pthread_t *)&threadid, NULL,
+	                            (void *)openflowPacketProcessor,
+								(void *)pcore);
+	if (threadstat != 0)
+	{
+		verbose(1, "[PktCoreOpenflowWorkerInit]:: unable to create thread.. ");
+		return -1;
+	}
+
+	return threadid;
+}
+
+void *openflowPacketProcessor(void *pc) {
+	pktcore_t *pcore = (pktcore_t *)pc;
+	gpacket_t *in_pkt;
+	int pktsize;
+
+	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+	while (1)
+	{
+		verbose(2, "[openflowPacketProcessor]:: Waiting for a packet...");
+		readQueue(pcore->openflowWorkQ, (void **)&in_pkt, &pktsize);
+		pthread_testcancel();
+		verbose(2, "[openflowPacketProcessor]:: Got a packet for further"
+			" processing..");
+
+		openflow_flowtable_handle_packet(in_pkt, pcore);
+	}
+}
 
 /*
  * Checks if a given packets matches any of the classifier definitions
@@ -413,57 +457,65 @@ char *tagPacket(pktcore_t *pcore, gpacket_t *in_pkt)
 }
 
 
-void enqueuePacket(pktcore_t *pcore, gpacket_t *in_pkt, int pktsize)
+int enqueuePacket(pktcore_t *pcore, gpacket_t *in_pkt, int pktsize,
+	uint8_t openflow)
 {
-	char *qkey;
-	simplequeue_t *thisq;
-
-	/*
-	 * invoke the packet classifier to get the packet tag at the very minimum,
-	 * we get the "default" tag!
-	 */
-	qkey = tagPacket(pcore, in_pkt);
-
-	verbose(2, "[enqueuePacket]:: simple packet queuer ..");
-	if (prog_verbosity_level() >= 3)
-		printGPacket(in_pkt, 6, "QUEUER");
-
-	pthread_mutex_lock(&(pcore->qlock));
-
-	thisq = map_get(pcore->queues, qkey);
-	if (thisq == NULL)
+	if (openflow)
 	{
-		fatal("[enqueuePacket]:: Invalid %s key presented for queue retrieval", qkey);
-		pthread_mutex_unlock(&(pcore->qlock));
-		free(in_pkt);
-		return EXIT_FAILURE;             // packet dropped..
+		writeQueue(pcore->openflowWorkQ, in_pkt, pktsize);
 	}
-
-	// with queue size full.. we should drop the packet for taildrop or red
-	// TODO: Need to change if we include other buffer management policies (e.g., dropfront)
-	if (thisq->cursize >= thisq->maxsize)
+	else
 	{
-		verbose(2, "[enqueuePacket]:: Packet dropped.. Queue for [%s] is full.. cursize %d..  ", qkey, thisq->cursize);
-		free(in_pkt);
-		pthread_mutex_unlock(&(pcore->qlock));
-		return EXIT_FAILURE;
-	}
+		char *qkey;
+		simplequeue_t *thisq;
 
-	if ( (!strcmp(thisq->qdisc, "red")) && (redDiscard(thisq, in_pkt)) )
-	{
-		verbose(2, "[enqueuePacket]:: RED Discarded Packet .. ");
-		free(in_pkt);
-		pthread_mutex_unlock(&(pcore->qlock));
-		return EXIT_FAILURE;
-	}
+		/*
+		 * invoke the packet classifier to get the packet tag at the very minimum,
+		 * we get the "default" tag!
+		 */
+		qkey = tagPacket(pcore, in_pkt);
 
-	pcore->packetcnt++;
-	if (pcore->packetcnt == 1)
-		pthread_cond_signal(&(pcore->schwaiting)); // wake up scheduler if it was waiting..
-	pthread_mutex_unlock(&(pcore->qlock));
-	verbose(2, "[enqueuePacket]:: Adding packet.. ");
-	writeQueue(thisq, in_pkt, pktsize);
-	return EXIT_SUCCESS;
+		verbose(2, "[enqueuePacket]:: simple packet queuer ..");
+		if (prog_verbosity_level() >= 3)
+			printGPacket(in_pkt, 6, "QUEUER");
+
+		pthread_mutex_lock(&(pcore->qlock));
+
+		thisq = map_get(pcore->queues, qkey);
+		if (thisq == NULL)
+		{
+			fatal("[enqueuePacket]:: Invalid %s key presented for queue retrieval", qkey);
+			pthread_mutex_unlock(&(pcore->qlock));
+			free(in_pkt);
+			return EXIT_FAILURE;             // packet dropped..
+		}
+
+		// with queue size full.. we should drop the packet for taildrop or red
+		// TODO: Need to change if we include other buffer management policies (e.g., dropfront)
+		if (thisq->cursize >= thisq->maxsize)
+		{
+			verbose(2, "[enqueuePacket]:: Packet dropped.. Queue for [%s] is full.. cursize %d..  ", qkey, thisq->cursize);
+			free(in_pkt);
+			pthread_mutex_unlock(&(pcore->qlock));
+			return EXIT_FAILURE;
+		}
+
+		if ( (!strcmp(thisq->qdisc, "red")) && (redDiscard(thisq, in_pkt)) )
+		{
+			verbose(2, "[enqueuePacket]:: RED Discarded Packet .. ");
+			free(in_pkt);
+			pthread_mutex_unlock(&(pcore->qlock));
+			return EXIT_FAILURE;
+		}
+
+		pcore->packetcnt++;
+		if (pcore->packetcnt == 1)
+			pthread_cond_signal(&(pcore->schwaiting)); // wake up scheduler if it was waiting..
+		pthread_mutex_unlock(&(pcore->qlock));
+		verbose(2, "[enqueuePacket]:: Adding packet.. ");
+		writeQueue(thisq, in_pkt, pktsize);
+		return EXIT_SUCCESS;
+	}
 }
 
 
@@ -510,5 +562,3 @@ int redDiscard(simplequeue_t *thisq, gpacket_t *ipkt)
 
 	return discarded;
 }
-
-
