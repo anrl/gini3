@@ -20,7 +20,7 @@ class GINI_NW:
         self.getVMBs(docDOM.getElementsByTagName("vmb"))
         self.getVRs(docDOM.getElementsByTagName("vr"))
 	self.getVWRs(docDOM.getElementsByTagName("vwr"))
-    
+
     def getSwitches(self, elements):
         "get the switch configuration"
         for switch in elements:
@@ -41,7 +41,7 @@ class GINI_NW:
                         newSwitch.hub = True
             self.switches.append(newSwitch)
         return True
-        
+
     def getVMs(self, elements):
         "get virtual machine configurations"
         for vm in elements:
@@ -63,7 +63,7 @@ class GINI_NW:
                         newVM.addInterface(newIF)
             self.vm.append(newVM)
         return True
-                                
+
     def getVRMs(self, elements):
         "get remote machine configurations"
         for vrm in elements:
@@ -117,13 +117,15 @@ class GINI_NW:
                 if (para.nodeType == para.ELEMENT_NODE):
                     if (para.tagName.lower() == "cli"):
                         newVR.cli = True
+                    if (para.tagName.lower() == "openflow"):
+                        newVR.openflow = True
                     if (para.tagName.lower() == "netif"):
                         newIF = self.getVRIF(para, len(newVR.netIF)+1)
                         newVR.addNetIF(newIF)
             self.vr.append(newVR)
         return True
-                                
-            
+
+
     def getVWRs(self, elements):
         "Get wireless router specification"
         for router in elements:
@@ -136,12 +138,12 @@ class GINI_NW:
                         newIF = self.getVRIF(para, len(newVWR.netIF))
                         newVWR.addNetIF(newIF)
                     if (para.tagName.lower() == "netif_wireless"):
-                        newWIF = self.getVWRIF(para, len(newVWR.netIFWireless))                        
+                        newWIF = self.getVWRIF(para, len(newVWR.netIFWireless))
                         newVWR.addWirelessIF(newWIF)
             self.vwr.append(newVWR)
         return True
-                                
-            
+
+
     def getTextPart(self,elem):
         "Extract the text within the element"
         for textPart in elem.childNodes:
@@ -177,7 +179,7 @@ class GINI_NW:
                     newRoute = self.getVMRoute(para)
                     myIF.addRoute(newRoute)
         return myIF
-        
+
 
     def getVMRoute(self, elem):
         "Extract VM route entries"
@@ -211,7 +213,7 @@ class GINI_NW:
                     newRoute = self.getVRRoute(para)
                     myIF.addRoute(newRoute)
         return myIF
-        
+
     def getVWRIF(self, elem, index):
         "get virtual wireless router network interface"
         ifName =  "eth%d" % index
@@ -228,7 +230,7 @@ class GINI_NW:
                     newRoute = self.getVRRoute(para)
                     myWIF.addRoute(newRoute)
                 if (para.tagName.lower() == "wireless_card"):
-                    newWcard = self.getWcard(para)                    
+                    newWcard = self.getWcard(para)
                     myWIF.wireless_card = newWcard
                 if (para.tagName.lower() == "energy"):
                     newEnergy = self.getEnergy(para)
@@ -240,9 +242,9 @@ class GINI_NW:
                     newAntenna = self.getAntenna(para)
                     myWIF.antenna = newAntenna
                 if (para.tagName.lower() == "mobility"):
-                    newMobility = self.getMobility(para)                
+                    newMobility = self.getMobility(para)
                     myWIF.mobility = newMobility
-        return myWIF  
+        return myWIF
 
     def getWcard(self, elem):
         newWcard = WirelessCard()
@@ -275,28 +277,28 @@ class GINI_NW:
                 if (para.tagName.lower() == "module"):
                     newWcard.module = self.getTextPart(para)
         return newWcard
-    
+
     def getEnergy(self, elem):
         newEnergy = Energy()
         for para in elem.childNodes:
             if (para.nodeType == para.ELEMENT_NODE):
                 if (para.tagName.lower() == "power"):
-                    newEnergy.power = self.getTextPart(para)        
+                    newEnergy.power = self.getTextPart(para)
                 if (para.tagName.lower() == "psm"):
                     newEnergy.psm = self.getTextPart(para)
                 if (para.tagName.lower() == "energy_amount"):
                     newEnergy.energyAmount = self.getTextPart(para)
-        return newEnergy    
+        return newEnergy
 
     def getMlayer(self, elem):
         newMlayer = MacLayer()
         for para in elem.childNodes:
             if (para.nodeType == para.ELEMENT_NODE):
                 if (para.tagName.lower() == "mac_type"):
-                    newMlayer.macType = self.getTextPart(para) 
+                    newMlayer.macType = self.getTextPart(para)
                 if (para.tagName.lower() == "trans"):
                     newMlayer.trans = self.getTextPart(para)
-        return newMlayer    
+        return newMlayer
 
     def getAntenna(self, elem):
         newAntenna = Antenna()
@@ -333,4 +335,3 @@ class GINI_NW:
         newRoute.nexthop = elem.getAttribute("nexthop")
         newRoute.dest = self.getTextPart(elem)
         return newRoute
-

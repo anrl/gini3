@@ -18,7 +18,7 @@ class Switch:
         self.targets = []
         self.priority = ""
         self.mac = ""
-      
+
     def addTarget(self, newTarget):
         self.targets.append(newTarget)
 
@@ -133,7 +133,7 @@ class Location:
 
     def __init__(self):
         "Initialize the Location class"
-    
+
 
 class Map:
     map_x = ""
@@ -142,7 +142,7 @@ class Map:
 
     def __init__(self):
         "Initialize the MAP class"
-    
+
 class MacLayer:
     macType = ""
     trans = ""
@@ -153,7 +153,7 @@ class MacLayer:
     def printMe(self):
         print "[macType: " + self.macType + "]",
         print "[trans: " + self.trans + "]",
-    
+
 class Antenna:
     aType = ""
     ant_h = ""
@@ -229,11 +229,12 @@ class Energy:
         print "[power: " + self.power + "]",
         print "[psm: " + self.psm + "]",
         print "[energyAmount: " + self.energyAmount + "]",
-     
+
 class VR:
     name = ""
     netIF = None
     cli = False
+    openflow = False
 
     def __init__(self, vrName):
         "Initialize the VR class"
@@ -245,12 +246,13 @@ class VR:
 
     def printMe(self):
         print "[Name: " + self.name + "]",
-        print "[CLI: " + str(self.cli) + "]"
+        print "[CLI: " + str(self.cli) + "]",
+        print "[Openflow: " + str(self.openflow) + "]"
         print "[NetIF: "
         for item in self.netIF:
             item.printMe()
         print "]"
-        
+
 class VWR(VR):
     netIFWireless = []
 
@@ -272,6 +274,7 @@ class VRInterface:
     gw = ""
     mtu = ""
     routes = None
+
 
     def __init__(self, ifName):
         "Initialize the VRInterface class"
@@ -310,12 +313,12 @@ class VWRInterface(VRInterface):
     def printMe(self):
         print "[name: " + self.name + "]",
         print "[wirelessChannel: ",
-        print self.wirelessChannel, 
+        print self.wirelessChannel,
         print "]",
         print "[routes: ",
         for route in self.routes:
             route.printMe()
-        print "]",        
+        print "]",
         print "[mac_layer: ",
         self.mac_layer.printMe(),
         print "]",
@@ -357,7 +360,7 @@ class WirelessChannel:
 
     def __init__(self):
         "Initialize the WirelessChannel class"
-    
+
     def printMe(self):
         print "[pathloss: " + self.pathloss + "]",
         print "[deviation: " + self.deviation + "]",
