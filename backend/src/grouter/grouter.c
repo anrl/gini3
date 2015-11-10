@@ -17,7 +17,7 @@
 #include "filter.h"
 #include <pthread.h>
 
-router_config rconfig = {.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL, .config_dir=NULL, .ghandler=0, .clihandler= 0, .scheduler=0, .worker=0, .schedcycle=10000};
+router_config rconfig = {.router_name=NULL, .gini_home=NULL, .cli_flag=0, .openflow_flag=0, .config_file=NULL, .config_dir=NULL, .ghandler=0, .clihandler= 0, .scheduler=0, .worker=0, .schedcycle=10000};
 pktcore_t *pcore;
 classlist_t *classifier;
 filtertab_t *filter;
@@ -28,6 +28,10 @@ Option grouter_optab[] =
 	{
 		"interactive", 'i', "0 or 1", "CLI on for interactive mode (daemon otherwise)",
 		required_argument, OPT_INTEGER, OPT_VARIABLE, &(rconfig.cli_flag)
+	},
+	{
+		"openflow", 'o', "0 or 1", "Run grouter in OpenFlow Switch Mode (traditional router otherwise)",
+		optional_argument, OPT_INTEGER, OPT_VARIABLE, &(rconfig.openflow_flag)
 	},
 	{
 		"config", 'c', "path", "Specify the configuration file",
@@ -223,5 +227,3 @@ int isPIDAlive(int pid)
 	}
 	return TRUE;
 }
-
-

@@ -84,6 +84,7 @@ typedef struct _router_config
 	char *router_name;
 	char *gini_home;
 	int cli_flag;
+	int openflow_flag;
 	char *config_file;
 	char *config_dir;
 	pthread_t ghandler;

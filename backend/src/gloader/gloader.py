@@ -41,13 +41,13 @@ def startGINI(myGINI, options):
     print "\nStarting uml switches..."
     success = createVS(myGINI.switches, options.switchDir)
     print "\nStarting Mobiles..."
-    success = success and createVMB(myGINI, options)  
+    success = success and createVMB(myGINI, options)
     print "\nStarting GINI routers..."
-    success = success and createVR(myGINI, options)  
+    success = success and createVR(myGINI, options)
     print "\nStarting UMLs..."
     success = success and createVM(myGINI, options)
     print "\nStarting Wireless access points..."
-    success = success and createVWR(myGINI, options)       
+    success = success and createVWR(myGINI, options)
     print "\nStarting REALMs..."
     success = success and createVRM(myGINI, options)
 
@@ -62,7 +62,7 @@ def createVS(switches, switchDir):
     # create the main switch directory
     makeDir(switchDir)
     switchCount = 0
- 
+
     for switch in switches:
         print "Starting Switch %s...\t" % switch.name,
         ### ------ config ---------- ###
@@ -106,7 +106,7 @@ def createVS(switches, switchDir):
         print "[OK]"
 
     time.sleep(0.5)
-        
+
     return True
 
 def createVWR(myGINI, options):
@@ -121,8 +121,8 @@ def createVWR(myGINI, options):
         configFile = "%s/wrouter.conf" % subRouterDir
         configOut = open(configFile, "w")
         configOut.write("ch set prop mode F\n")
-        
-        if not independent:        
+
+        if not independent:
             canvasIn = open("%s/mobile_data/canvas.data" % routerDir, "r")
             line = canvasIn.readline()
             canvasIn.close()
@@ -139,7 +139,7 @@ def createVWR(myGINI, options):
             configOut.write("sys set map size 100 100 0\n")
 
         for mobile in myGINI.vmb:
-            node = nodes.index(mobile.name) + 1         
+            node = nodes.index(mobile.name) + 1
             configOut.write("mov set node %d switch off\n" % node)
             if not independent:
                 nodeIn = open("%s/mobile_data/%s.data" % (routerDir,mobile.name), "r")
@@ -153,8 +153,8 @@ def createVWR(myGINI, options):
 
         for netWIF in wrouter.netIFWireless:
             #netWIF.printMe()
-            configOut.write(get_IF_properties(netWIF, len(myGINI.vmb)))        
-      
+            configOut.write(get_IF_properties(netWIF, len(myGINI.vmb)))
+
         index = len(nodes)-1
         if nodes and nodes[index].find("UML_") >= 0:
             configOut.write("mov set node %d switch off\n" % (index + 1))
@@ -167,15 +167,15 @@ def createVWR(myGINI, options):
 
         ### ------- execute ---------- ###
         # go to the router directory to execute the command
-        os.chdir(os.environ["GINI_HOME"]+"/data")        
+        os.chdir(os.environ["GINI_HOME"]+"/data")
         cmd = "%s -i 1 -c %s -n %d -d uml_virtual_switch" % (GWR_PROG_BIN, configFile, len(nodes))
         #print "running cmd %s" % cmd
         wrouter.num = wrouter.name.split("Wireless_access_point_")[-1]
         command = "screen -d -m -L -S WAP_%s %s" % (wrouter.num, cmd)
         print "Waiting for Mobiles to finish starting up...\t",
         sys.stdout.flush()
-        i = 0        
-        ready = False        
+        i = 0
+        ready = False
         while not ready:
             if i > 5:
                 print "There was an error in waiting for the mobiles to start up"
@@ -186,12 +186,12 @@ def createVWR(myGINI, options):
                 nwIf = mobile.interfaces[0]
                 configFile = "/tmp/%s.sh" % nwIf.mac.upper()
                 if os.access(configFile, os.F_OK):
-                    ready = False                    
+                    ready = False
                     break
                 else:
                     ready = True
-            i += 1                           
-        
+            i += 1
+
         scriptOut = open("WAP%s_start.sh" % wrouter.num, "w")
         scriptOut.write(command)
         scriptOut.close()
@@ -201,26 +201,26 @@ def createVWR(myGINI, options):
         os.chdir(oldDir)
         print "[OK]"
     return True
-           
-def get_IF_properties(netWIF, num_nodes):    
+
+def get_IF_properties(netWIF, num_nodes):
     wcard = netWIF.wireless_card
     #energy = netWIF.energy     not implemented by GWCenter
     mobility = netWIF.mobility
     antenna = netWIF.antenna
     mlayer = netWIF.mac_layer
-    
+
     prop = ""
     prop += "wcard set node 1 freq %f\n" % (float(wcard.freq)/1000000)
     prop += "wcard set node 1 bandwidth %f\n" % (float(wcard.bandwidth)/1000000)
     prop += "wcard set node 1 csthreshold %f\n" % (float(wcard.cs) * 1e8)
-    prop += "wcard set node 1 rxthreshold %f\n" % (float(wcard.rx) * 1e8)    
+    prop += "wcard set node 1 rxthreshold %f\n" % (float(wcard.rx) * 1e8)
     prop += "wcard set node 1 cpthreshold %s\n" % wcard.cp
     prop += "wcard set node 1 pt %s\n" % wcard.pt
     prop += "wcard set node 1 ptx %s\n" % wcard.ptC
     prop += "wcard set node 1 prx %s\n" % wcard.prC
     prop += "wcard set node 1 pidle %s\n" % wcard.pIdle
-    prop += "wcard set node 1 psleep %s\n" % wcard.pSleep    
-    prop += "wcard set node 1 poff %s\n" % wcard.pOff 
+    prop += "wcard set node 1 psleep %s\n" % wcard.pSleep
+    prop += "wcard set node 1 poff %s\n" % wcard.pOff
     prop += "wcard set node 1 modtype %s\n" % wcard.module[0]
     for i in range(num_nodes):
         prop += "ant set node %d height %s\n" % (i+1, antenna.ant_h)
@@ -236,8 +236,8 @@ def get_IF_properties(netWIF, num_nodes):
             prop += "mac set node %d mode D11\n" % (i+1)
         else:
             prop += "mac set node %d mode %s\n" % (i+1, mlayer.macType[0])
-            prop += "mac set node %d txprob %s\n" % (i+1, mlayer.trans)   
-    return prop   
+            prop += "mac set node %d txprob %s\n" % (i+1, mlayer.trans)
+    return prop
 
 def createVR(myGINI, options):
     "create router config file, and start the router"
@@ -252,7 +252,7 @@ def createVR(myGINI, options):
         # name the config file
         subRouterDir = "%s/%s" % (routerDir, router.name)
         makeDir(subRouterDir)
-        configFile = "%s/%s.conf" % (subRouterDir, GR_PROG)  
+        configFile = "%s/%s.conf" % (subRouterDir, GR_PROG)
         # delete confFile if already exists
         if (os.access(configFile, os.F_OK)):
             os.remove(configFile)
@@ -277,6 +277,8 @@ def createVR(myGINI, options):
         command += "--config=%s.conf " % GR_PROG
         command += "--confpath=" + os.environ["GINI_HOME"] + "/data/" + router.name + " "
         command += "--interactive=1 "
+        if (router.openflow):
+            command += "--openflow=1 "
         command += "%s" % router.name
         #print command
         startOut = open("startit.sh", "w")
@@ -302,7 +304,7 @@ def createVM(myGINI, options):
         command = createUMLCmdLine(uml)
         ### ---- process the UML interfaces ---- ###
         # it creates one config for each interface in the /tmp/ directory
-        # and returns a string to be attached to the UML exec command line        
+        # and returns a string to be attached to the UML exec command line
         for nwIf in uml.interfaces:
             # check whether it is connecting to a switch or router
             socketName = getSocketName(nwIf, uml.name, myGINI, options);
@@ -310,7 +312,7 @@ def createVM(myGINI, options):
                 print "UML %s [interface %s]: Target not found" % (uml.name, nwIf.name)
                 return False
             else:
-                # create the config file in /tmp and 
+                # create the config file in /tmp and
                 # return a line to be added in the command
                 outLine = getVMIFOutLine(nwIf, socketName, uml.name)
             if (outLine):
@@ -320,7 +322,7 @@ def createVM(myGINI, options):
                 return False
         ### ------- execute ---------- ###
         # go to the UML directory to execute the command
-        
+
         oldDir = os.getcwd()
         os.chdir(subUMLDir)
         startOut = open("startit.sh", "w")
@@ -328,8 +330,8 @@ def createVM(myGINI, options):
         startOut.close()
         os.chmod("startit.sh",0755)
         system("./startit.sh")
-        print "[OK]"      
-  
+        print "[OK]"
+
         os.chdir(oldDir)
     return True
 
@@ -339,7 +341,7 @@ def createVMB(myGINI, options):
     makeDir(baseDir)
     makeDir(options.umlDir)
     oldDir = os.getcwd()
-    del nodes[:]    
+    del nodes[:]
     for mobile in myGINI.vmb:
         print "Starting virtual Switch for Mobile %s...\t" % mobile.name,
         #print nodes
@@ -352,15 +354,15 @@ def createVMB(myGINI, options):
 #        vsconf.write("logfile uswitch.log\npidfile uswitch.pid\nsocket gw_socket.ctl\nfork\n")
 #        vsconf.close()
         popen("%s -s gw_socket.ctl -l uswitch.log -p uswitch.pid&" % VS_PROG)
-        print "[OK]" 
-        
-        print "Starting Mobile %s...\t" % mobile.name,     
+        print "[OK]"
+
+        print "Starting Mobile %s...\t" % mobile.name,
         # create command line
         command = createUMLCmdLine(mobile)
-            
-        for nwIf in mobile.interfaces:                 
+
+        for nwIf in mobile.interfaces:
             socketName = subUMLDir + "/gw_socket.ctl"
-            # create the config file in /tmp and 
+            # create the config file in /tmp and
             # return a line to be added in the command
             outLine = getVMIFOutLine(nwIf, socketName, mobile.name)
             if (outLine):
@@ -393,7 +395,7 @@ def createVRM(myGINI, options):
         command = createUMLCmdLine(realm)
         ### ---- process the UML interfaces ---- ###
         # it creates one config for each interface in the /tmp/ directory
-        # and returns a string to be attached to the UML exec command line        
+        # and returns a string to be attached to the UML exec command line
         for nwIf in realm.interfaces:
             # check whether it is connecting to a switch or router
             socketName = getSocketName(nwIf, realm.name, myGINI, options);
@@ -401,7 +403,7 @@ def createVRM(myGINI, options):
                 print "REALM %s [interface %s]: Target not found" % (realm.name, nwIf.name)
                 return False
             else:
-                # create the config file in /tmp and 
+                # create the config file in /tmp and
                 # return a line to be added in the command
                 outLine = getVMIFOutLine(nwIf, socketName, realm.name)
             if (outLine):
@@ -456,7 +458,7 @@ def getSocketName(nwIf, name, myGINI, options):
             if switch_sharing:
                 newDir = os.environ["GINI_HOME"] + "/data/uml_virtual_switch/VS_%d" % (i+1)
             else:
-                newDir = os.environ["GINI_HOME"] + "/data/uml_virtual_switch/VS_%d" % len(nodes)                  
+                newDir = os.environ["GINI_HOME"] + "/data/uml_virtual_switch/VS_%d" % len(nodes)
                 system("mkdir %s" % newDir)
                 os.chdir(newDir)
                 configOut = open("uswitch.conf", "w")
@@ -629,13 +631,13 @@ def destroyGINI(myGINI, options):
         result = result and destroyVR(myGINI.vr, options.routerDir)
     except:
         pass
-    
+
     time.sleep(5)
-    print "\nTerminating wireless access points..."   
+    print "\nTerminating wireless access points..."
     try:
         result = result and destroyVWR(myGINI.vwr, options.routerDir)
     except:
-        pass    
+        pass
 
     print "\nTerminating Mobiles..."
     try:
@@ -690,27 +692,27 @@ def destroyVWR(wrouters, routerDir):
     for wrouter in wrouters:
         print "Stopping Router %s..." % wrouter.name
         subRouterDir = "%s/%s" % (routerDir, wrouter.name)
-        wrouter.num = wrouter.name.split("Wireless_access_point_")[-1]        
+        wrouter.num = wrouter.name.split("Wireless_access_point_")[-1]
         system("screen -S %s -X eval quit" % ("WAP_%s" % wrouter.num))
         system("screen -S %s -X eval quit" % ("VWAP_%s" % wrouter.num))
         print "\tCleaning the directory...\t",
         try:
-            os.remove(subRouterDir+"/wrouter.conf")            
+            os.remove(subRouterDir+"/wrouter.conf")
             #os.remove(subRouterDir+"/startit.sh")
             while os.access(subRouterDir+"/wrouter.conf", os.F_OK):
-                pass            
+                pass
             os.rmdir(subRouterDir)
-            print "[OK]"        
+            print "[OK]"
         except:
-            
+
             print "failed"
-            return False    
-    
+            return False
+
         oldDir = os.getcwd()
         switchDir = "%s/data/uml_virtual_switch" % os.environ["GINI_HOME"]
         os.chdir(switchDir)
         for filename in os.listdir(switchDir):
-            pidfile = filename+"/uswitch.pid"            
+            pidfile = filename+"/uswitch.pid"
             if os.access(pidfile, os.F_OK):
                 pidIn = open(pidfile)
                 line = pidIn.readline().strip()
@@ -720,9 +722,9 @@ def destroyVWR(wrouters, routerDir):
                 time.sleep(0.5)
             system("rm -rf %s" % filename)
 
-        os.chdir(oldDir)        
-    return True    
-        
+        os.chdir(oldDir)
+    return True
+
 def destroyVR(routers, routerDir):
     for router in routers:
         print "Stopping Router %s..." % router.name
@@ -801,7 +803,7 @@ def destroyRVM(umls,umlDir):
 
 def destroyVM(umls, umlDir, mode):
     for uml in umls:
-        if mode == 0:        
+        if mode == 0:
             print "Stopping UML %s..." % uml.name
         elif mode == 2:
             print "Stopping REALM %s..." % uml.name
@@ -810,7 +812,7 @@ def destroyVM(umls, umlDir, mode):
             # system("screen -S " + uml.name + "-vtproxy -X quit")
         else:
             print "Stopping Mobile %s..." % uml.name
-        command = "%s %s cad > /dev/null 2>&1" % (MCONSOLE_PROG_BIN, uml.name)      
+        command = "%s %s cad > /dev/null 2>&1" % (MCONSOLE_PROG_BIN, uml.name)
         system(command)
         # clean up the directory
         print "\tCleaning the directory...\t",
@@ -842,11 +844,11 @@ def destroyVM(umls, umlDir, mode):
         #     print "\tStopping REALM %s...\t[OK]" % uml.name
         else:
             print "\tStopping Mobile %s...\t[OK]" % uml.name
-            
+
     # wait until all UMLs are terminated
 
     if umls:
-        if mode == 0:    
+        if mode == 0:
             print "Waiting for UMLs to shutdown...",
             sys.stdout.flush()
 
@@ -874,7 +876,7 @@ def checkProcAlive(procName):
     if not line:
         return False
     else:
-        procs = line.split() 
+        procs = line.split()
 
     for proc in procs:
         system("ps aux | grep %s > %s" % (proc, GINI_TMP_FILE))
@@ -886,7 +888,7 @@ def checkProcAlive(procName):
                 continue
             if line.find(os.getenv("USER")) >= 0:
                 return True
-        
+
     os.remove(GINI_TMP_FILE)
     return alive
 
@@ -980,7 +982,7 @@ if (myProg.destroyOpt):
     print "Terminating GINI network..."
     success = destroyGINI(myGINI, options)
     if (success):
-        print "\nGINI network is terminated!!\n"  
+        print "\nGINI network is terminated!!\n"
     else:
         print "\nThere are errors in GINI network termination\n"
         sys.exit(1)
