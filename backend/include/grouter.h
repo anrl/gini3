@@ -92,7 +92,7 @@ typedef struct _router_config
 	pthread_t clihandler;
 	pthread_t scheduler;
 	pthread_t worker;
-	pthread_t classicalWorker;
+	pthread_t openflowWorker;
 	int schedcycle;
 } router_config;
 

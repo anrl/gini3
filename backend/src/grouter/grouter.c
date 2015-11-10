@@ -21,7 +21,7 @@
 router_config rconfig = {
 	.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL,
 	.config_dir=NULL, .openflow=1, .ghandler=0, .clihandler= 0, .scheduler=0,
-	.worker=0, .classicalWorker=0, .schedcycle=10000
+	.worker=0, .openflowWorker=0, .schedcycle=10000
 };
 pktcore_t *pcore;
 classlist_t *classifier;
@@ -64,7 +64,7 @@ int main(int ac, char *av[])
 {
 	char rpath[MAX_NAME_LEN];
 	int status, *jstatus;
-	simplequeue_t *outputQ, *workQ, *classicalWorkQ, *qtoa;
+	simplequeue_t *outputQ, *workQ, *openflowWorkQ, *qtoa;
 
 	// setup the program properties
 	setupProgram(ac, av);
@@ -77,10 +77,8 @@ int main(int ac, char *av[])
 	outputQ = createSimpleQueue("outputQueue", INFINITE_Q_SIZE, 0, 1);
 	workQ = createSimpleQueue("work Queue", INFINITE_Q_SIZE, 0, 1);
 	if (rconfig.openflow) {
-		classicalWorkQ = createSimpleQueue("Work queue for classical"
-										   " routing when OpenFlow is"
-										   " enabled", INFINITE_Q_SIZE,
-										   0, 1);
+		openflowWorkQ = createSimpleQueue("Work queue for OpenFlow",
+			INFINITE_Q_SIZE, 0, 1);
 	}
 
 	GNETInit(&(rconfig.ghandler), rconfig.config_dir, rconfig.router_name, outputQ);
@@ -91,11 +89,11 @@ int main(int ac, char *av[])
 	filter = createFilter(classifier, 0);
 
 	if (rconfig.openflow) {
-		openflow_flowtable_init(classicalWorkQ);
+		openflow_flowtable_init();
 	}
 
 	pcore = createPacketCore(rconfig.router_name, outputQ, workQ,
-							 classicalWorkQ);
+							 openflowWorkQ);
 
 	// add a default Queue.. the createClassifier has already added a rule with "default" tag
 	// char *qname, char *dqisc, double qweight, double delay_us, int nslots);
@@ -103,7 +101,7 @@ int main(int ac, char *av[])
 	rconfig.scheduler = PktCoreSchedulerInit(pcore);
 	rconfig.worker = PktCoreWorkerInit(pcore);
 	if (rconfig.openflow) {
-		rconfig.classicalWorker = PktCoreClassicalWorkerInit(pcore);
+		rconfig.openflowWorker = PktCoreOpenflowWorkerInit(pcore);
 	}
 
 	infoInit(rconfig.config_dir, rconfig.router_name);
@@ -120,7 +118,7 @@ int main(int ac, char *av[])
 	wait4thread(rconfig.scheduler);
 	wait4thread(rconfig.worker);
 	if (rconfig.openflow) {
-		wait4thread(rconfig.classicalWorker);
+		wait4thread(rconfig.openflowWorker);
 	}
 	wait4thread(rconfig.ghandler);
 }
@@ -142,7 +140,7 @@ void shutdownRouter()
 	pthread_cancel(rconfig.scheduler);
 	pthread_cancel(rconfig.worker);
 	if (rconfig.openflow) {
-		pthread_cancel(rconfig.classicalWorker);
+		pthread_cancel(rconfig.openflowWorker);
 	}
 	verbose(1, "[main]:: shutting down the CLI handler.. ");
 	pthread_cancel(rconfig.clihandler);
