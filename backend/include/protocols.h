@@ -19,7 +19,6 @@
 #define TCP_PROTOCOL 		    6
 #define UDP_PROTOCOL 		    17
 
-#define ETHERTYPE_MIN           0x0600
 #define IEEE_8021Q_ETHERTYPE    0x8100
 
 
