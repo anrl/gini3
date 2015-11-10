@@ -16,7 +16,7 @@
 #include "classifier.h"
 #include "filter.h"
 #include <pthread.h>
-#include "of_flowtable.h"
+#include "openflow_flowtable.h"
 
 router_config rconfig = {
 	.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL,
@@ -91,7 +91,7 @@ int main(int ac, char *av[])
 	filter = createFilter(classifier, 0);
 
 	if (rconfig.openflow) {
-		flowtable_init(classicalWorkQ);
+		openflow_flowtable_init(classicalWorkQ);
 	}
 
 	pcore = createPacketCore(rconfig.router_name, outputQ, workQ,

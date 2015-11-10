@@ -291,40 +291,33 @@ static uint8_t flowtable_match_packet(ofp_match *match,
 static openflow_flowtable_entry_type *flowtable_get_entry_for_packet(
 	gpacket_t *packet)
 {
-	uint32_t i, j, current_priority = 0;
+	uint32_t i, current_priority = 0;
 	uint8_t is_match;
 	openflow_flowtable_entry_type *current_entry = NULL;
 	openflow_flowtable_type *flowtable;
 	openflow_flowtable_entry_type *entry;
 	ofp_match *match;
 
-	for (i = 0; i < OPENFLOW_MAX_FLOWTABLES; i++)
+	for (i = 0; i < OPENFLOW_MAX_FLOWTABLE_ENTRIES; i++)
 	{
-		if (flowtables[i] != NULL && flowtables[i]->active)
+		if (flowtable->entries[i].active)
 		{
-			flowtable = flowtables[i];
-			for (j = 0; j < OPENFLOW_MAX_FLOWTABLE_ENTRIES; j++)
+			entry = &flowtable->entries[i];
+			match = &entry->match;
+			is_match = flowtable_match_packet(match, packet);
+			if (is_match)
 			{
-				if (flowtable->entries[j].active)
+				// Exact match
+				if (match->wildcards == 0)
 				{
-					entry = &flowtable->entries[j];
-					match = &entry->match;
-					is_match = flowtable_match_packet(match, packet);
-					if (is_match)
-					{
-						// Exact match
-						if (match->wildcards == 0)
-						{
-							return entry;
-						}
-						// Possible wildcard match, but wait to see if there
-						// are any other wildcard matches with higher priority
-						else if (entry->priority >= current_priority)
-						{
-							current_entry = entry;
-							current_priority = entry->priority;
-						}
-					}
+					return entry;
+				}
+				// Possible wildcard match, but wait to see if there
+				// are any other wildcard matches with higher priority
+				else if (entry->priority >= current_priority)
+				{
+					current_entry = entry;
+					current_priority = entry->priority;
 				}
 			}
 		}
@@ -746,10 +739,10 @@ void openflow_flowtable_handle_packet(gpacket_t *packet,
  * @return 1 if a match is found, 0 otherwise.
  */
 uint8_t openflow_flowtable_find_overlapping_entry(ofp_flow_mod *flow_mod,
-	uint32_t &index)
+	uint32_t *index)
 {
 	uint32_t i;
-	for (i = 0; i < MAX_FLOWTABLE_ENTRIES; i++)
+	for (i = 0; i < OPENFLOW_MAX_FLOWTABLE_ENTRIES; i++)
 	{
 		// Check if the entries' priorities are the same and whether they share
 		// any wildcards
@@ -777,15 +770,16 @@ uint8_t openflow_flowtable_find_overlapping_entry(ofp_flow_mod *flow_mod,
  * @return 1 if a match is found, 0 otherwise.
  */
 uint8_t openflow_flowtable_find_identical_entry(ofp_flow_mod* flow_mod,
-	uint32_t &index)
+	uint32_t *index)
 {
 	uint32_t i;
-	for (i = 0; i < MAX_FLOWTABLE_ENTRIES; i++)
+	for (i = 0; i < OPENFLOW_MAX_FLOWTABLE_ENTRIES; i++)
 	{
 		// Check if the entries' priorities are the same and whether their
 		// header fields are identical (i.e. they have identical matches)
 		if (flowtable->entries[i].priority == flow_mod->priority &&
-			flowtable->entries[i].match == flow_mod->match)
+			!memcmp(&flowtable->entries[i].match, &flow_mod->match, 
+				sizeof(ofp_match)))
 		{
 			*index = i;
 			return 1;
@@ -815,15 +809,14 @@ static uint8_t openflow_flowtable_modify_entry_at_index(ofp_flow_mod *flow_mod,
 		return -1;
 	}
 
-
-	mod_len = flow_mod->header.length - (&flow_mod - &flow_mod->actions);
-	mod_index = &flow_mod - &flow_mod->actions;
+	mod_len = flow_mod->header.length - sizeof(ofp_flow_mod);
+	mod_index = sizeof(ofp_flow_mod);
 	actions_index = 0;
 	while (mod_len > 0)
 	{
-		action_header = (ofp_action_header *) flow_mod[mod_index];
+		action_header = (ofp_action_header *) &flow_mod[mod_index];
 		memcpy(&actions[actions_index], action_header, action_header->len);
-		if (actions[action_index]->type > OFPAT_ENQUEUE)
+		if (actions[actions_index].header.type > OFPAT_ENQUEUE)
 		{
 			verbose(2, "[openflow_flowtable_add]:: Unrecognized action.");
 			error_msg->type = htonl(OFPET_BAD_ACTION);
@@ -871,7 +864,7 @@ static uint8_t openflow_flowtable_add(ofp_flow_mod* flow_mod,
 	if (flags & OFPFF_CHECK_OVERLAP == OFPFF_CHECK_OVERLAP)
 	{
 		verbose(2, "[openflow_flowtable_add]:: OFPFF_CHECK_OVERLAP flag set.");
-		if (openflow_flowtable_find_overlapping_entry(flow_mod, &index))
+		if (openflow_flowtable_find_overlapping_entry(flow_mod, &i))
 		{
 			verbose(2, "[openflow_flowtable_add]:: Overlapping entry found.");
 			error_msg->type = htonl(OFPET_FLOW_MOD_FAILED);
@@ -957,31 +950,31 @@ uint8_t openflow_flowtable_modify(ofp_flow_mod *flow_mod,
 	{
 		verbose(2, "[openflow_flowtable_modify]:: Modify command is"
 			" OFPFC_ADD.");
-		return flowtable_add(flow_mod, error_msg);
+		return openflow_flowtable_add(flow_mod, error_msg);
 	}
 	else if (command == OFPFC_MODIFY)
 	{
 		verbose(2, "[openflow_flowtable_modify]:: Modify command is"
 			" OFPFC_MODIFY.");
-		return flowtable_edit(flow_mod, error_msg);
+		return openflow_flowtable_edit(flow_mod, error_msg);
 	}
 	else if (command == OFPFC_MODIFY_STRICT)
 	{
 		verbose(2, "[openflow_flowtable_modify]:: Modify command is"
 			" OFPFC_MODIFY_STRICT.");
-		return flowtable_edit_strict(flow_mod, error_msg);
+		return openflow_flowtable_edit_strict(flow_mod, error_msg);
 	}
 	else if (command == OFPFC_DELETE)
 	{
 		verbose(2, "[openflow_flowtable_modify]:: Modify command is"
 			" OFPFC_DELETE.");
-		return flowtable_delete(flow_mod, error_msg);
+		return openflow_flowtable_delete(flow_mod, error_msg);
 	}
 	else if (command == OFPFC_DELETE_STRICT)
 	{
 		verbose(2, "[openflow_flowtable_modify]:: Modify command is"
 			" OFPFC_DELETE_STRICT.");
-		return flowtable_delete_strict(flow_mod, error_msg);
+		return openflow_flowtable_delete_strict(flow_mod, error_msg);
 	}
 	else
 	{

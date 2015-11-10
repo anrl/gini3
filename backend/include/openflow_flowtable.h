@@ -8,7 +8,6 @@
 #include "message.h"
 #include "simplequeue.h"
 
-#define OPENFLOW_MAX_FLOWTABLES            ((uint32_t) 10)
 #define OPENFLOW_MAX_FLOWTABLE_ENTRIES     ((uint32_t) 10)
 #define OPENFLOW_MAX_ACTIONS               ((uint32_t) 10)
 
@@ -41,7 +40,7 @@ typedef struct
 typedef struct
 {
 	uint8_t							active;
-	openflow_flowtable_match_type	match;
+	ofp_match						match;
 	time_t							last_matched;
 	time_t							last_modified;
 	uint16_t						idle_timeout;
@@ -76,7 +75,7 @@ void openflow_flowtable_init(simplequeue_t *classical_work_queue);
  * @param output_queue The output queue of the packet core.
  */
 void openflow_flowtable_handle_packet(gpacket_t *packet,
-	simplequeue_t *output_queue)
+	simplequeue_t *output_queue);
 
 /**
 * Applies the specified modification to the flowtables.
@@ -88,6 +87,6 @@ void openflow_flowtable_handle_packet(gpacket_t *packet,
 * @return 0 if no error occurred, -1 otherwise.
 */
 uint8_t openflow_flowtable_modify(ofp_flow_mod* flow_mod,
-	ofp_error_msg* error_msg)
+	ofp_error_msg* error_msg);
 
 #endif // ifndef __FLOWTABLE_H_

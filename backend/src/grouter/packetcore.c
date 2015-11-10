@@ -26,7 +26,7 @@
 #include "message.h"
 #include "classifier.h"
 #include "grouter.h"
-#include "of_flowtable.h"
+#include "openflow_flowtable.h"
 
 extern classlist_t *classifier;
 extern router_config rconfig;
@@ -379,7 +379,7 @@ void *openflowPacketProcessor(void *pc) {
 		verbose(2, "[openflowPacketProcessor]:: Got a packet for further"
 		           " processing..");
 
-		flowtable_handle_packet(in_pkt, pcore->outputQ);
+		openflow_flowtable_handle_packet(in_pkt, pcore->outputQ);
 	}
 }
 
