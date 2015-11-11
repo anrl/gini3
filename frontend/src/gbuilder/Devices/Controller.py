@@ -1,8 +1,8 @@
 from Core.Device import *
 
 class Switch(Device):
-    device_type = "Openflow Controller"
-    
+    device_type = "OpenFlow Controller"
+
     def __init__(self):
         Device.__init__(self)
 
@@ -19,4 +19,3 @@ class Switch(Device):
         node = edge.getOtherDevice(self)
         if node.device_type == "Router":
             node.removeInterface(self)
-

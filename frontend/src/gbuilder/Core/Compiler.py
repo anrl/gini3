@@ -178,7 +178,7 @@ class Compiler:
         """
         for router in self.compile_list["Router"]:
             self.output.write("<vr name=\"" + router.getName() + "\">\n")
-            if router.getProperty("Openflow") == "True":
+            if router.getProperty("openflow") == "True":
                 self.output.write("\t<openflow/>\n")
             edges = router.edges()
             if len(edges) < 2:

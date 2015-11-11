@@ -15,6 +15,7 @@
                 nexthop CDATA #REQUIRED>
 <!ELEMENT mtu (#PCDATA)>
 <!ELEMENT cli EMPTY>
+<!ELEMENT openflow EMPTY>
 
 
 <!-- Virtual wireless router -->
@@ -92,4 +93,3 @@
 <!-- real remote machine definition -->
 <!ELEMENT vrm (filesystem, mem?, kernel?, boot?, if*)>
 <!ATTLIST vrm name CDATA #REQUIRED>
-
