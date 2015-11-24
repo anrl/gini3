@@ -5,7 +5,7 @@
 #include "packetcore.h"
 #include "gnet.h"
 
-static ofp_phy_port openflow_ports[MAX_INTERFACES];
+static ofp_phy_port openflow_ports[OPENFLOW_MAX_PHYSICAL_PORTS];
 
 /**
  * Makes a copy of the specified packet and inserts it into the specified queue.
@@ -45,8 +45,7 @@ void openflow_forward_packet_to_port(gpacket_t *packet,
 	}
 
 	uint32_t config = ntohl(port->config);
-	if ((config & OFPPC_PORT_DOWN == OFPPC_PORT_DOWN) ||
-		(flood && config & OFPPC_NO_FLOOD == OFPPC_NO_FLOOD))
+	if ((config & OFPPC_PORT_DOWN) || (flood && (config & OFPPC_NO_FLOOD)))
 	{
 		// Port is administratively down or packet is a flood packet but
 		// flooding is disabled for this port
@@ -54,7 +53,7 @@ void openflow_forward_packet_to_port(gpacket_t *packet,
 	}
 
 	uint32_t state = ntohl(port->state);
-	if (state & OFPPS_LINK_DOWN == OFPPS_LINK_DOWN)
+	if (state & OFPPS_LINK_DOWN)
 	{
 		// Port is physically down
 		return;

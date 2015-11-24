@@ -14,7 +14,7 @@
 #define OPENFLOW_NUM_TABLES					((uint32_t) 1)
 #define OPENFLOW_MAX_FLOWTABLE_ENTRIES		((uint32_t) 10)
 #define OPENFLOW_MAX_ACTIONS				((uint32_t) 10)
-#define OPENFLOW_MAX_ACTION_SIZE			((uint32_t) 8)
+#define OPENFLOW_MAX_ACTION_SIZE			((uint32_t) 16)
 
 // Ethernet constants not used anywhere else
 #define IEEE_802_2_DSAP_SNAP	0xAA
@@ -43,10 +43,10 @@ typedef struct ofp_error_msg		ofp_error_msg;
 typedef struct
 {
 	// Action header
-	ofp_action_header	header;
+	ofp_action_header header;
 	// The rest of the OpenFLow action; this wrapper struct should be cast
 	// to something else to get at this data
-	uint8_t				action[OPENFLOW_MAX_ACTION_SIZE];
+	uint8_t	action[OPENFLOW_MAX_ACTION_SIZE - sizeof(ofp_action_header)];
 } openflow_flowtable_action_wrapper_type;
 
 /**
@@ -66,30 +66,30 @@ typedef struct
 typedef struct
 {
 	// 1 if this entry is active (i.e. not empty), 0 otherwise
-	uint8_t							active;
-	// Cookie (opaque data) from controller
-	uint16_t						cookie;
+	uint8_t active;
 	// Match headers
-	ofp_match						match;
+	ofp_match match;
+	// Cookie (opaque data) from controller
+	uint64_t cookie;
 	// The last time this entry was matched against a packet
-	time_t							last_matched;
+	time_t last_matched;
+	// The last time this entry was modified by the controller
+	time_t last_modified;
 	// Number of seconds since last match before expiration of this entry;
 	// stored in network byte format
-	uint16_t						idle_timeout;
-	// The last time this entry was modified by the controller
-	time_t							last_modified;
+	uint16_t idle_timeout;
 	// Number of seconds since last modification before expiration of this
 	// entry; stored in network byte format
-	uint16_t						hard_timeout;
+	uint16_t hard_timeout;
 	// Entry priority (only relevant for wildcards); stored in network byte
 	// format
-	uint32_t						priority;
+	uint32_t priority;
 	// Entry flags (see ofp_flow_mod_flags); stored in network byte format
-	uint16_t						flags;
+	uint16_t flags;
 	// Entry actions
-	openflow_flowtable_action_type	actions[OPENFLOW_MAX_ACTIONS];
+	openflow_flowtable_action_type actions[OPENFLOW_MAX_ACTIONS];
 	// Entry stats
-	ofp_flow_stats					stats;
+	ofp_flow_stats stats;
 } openflow_flowtable_entry_type;
 
 /**
