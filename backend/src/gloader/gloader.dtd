@@ -1,5 +1,5 @@
 <!-- GLOADERT DTD -->
-<!ELEMENT gloader (vs*, vr*, vwr*, vm*, vmb*, vrm*)>
+<!ELEMENT gloader (vs*, vr*, vwr*, vm*, vmb*, vrm*, vofc*)>
 
 
 <!-- wired router definition -->
@@ -93,3 +93,7 @@
 <!-- real remote machine definition -->
 <!ELEMENT vrm (filesystem, mem?, kernel?, boot?, if*)>
 <!ATTLIST vrm name CDATA #REQUIRED>
+
+<!-- OpenFlow controller definition -->
+<!ELEMENT vofc (if*)>
+<!ATTLIST vofc name CDATA #REQUIRED>

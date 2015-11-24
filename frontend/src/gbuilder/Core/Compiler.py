@@ -58,6 +58,7 @@ class Compiler:
         if options["autogen"]:
             self.autogen_router()
             self.autogen_UML()
+            self.autogen_OpenFlow_Controller()
             self.autogen_REALM()
             self.autogen_mobile()
 
@@ -67,10 +68,12 @@ class Compiler:
             #self.routing_table_wireless_access_point()
             self.routing_table_entry()
             self.routing_table_uml()
+            self.routing_table_OpenFlow_Controller()
             #self.routing_table_mobile()
 
         self.compile_router()
         self.compile_UML()
+        self.compile_OpenFlow_Controller()
         self.compile_REALM()
         self.compile_mobile()
 
@@ -402,6 +405,42 @@ class Compiler:
 
             self.output.write("</vm>\n\n")
 
+    def autogen_OpenFlow_Controller(self):
+        """
+        Auto-generate properties for OpenFlow controllers.
+        """
+        for controller in self.compile_list["OpenFlow_Controller"]:
+            for interface in controller.getInterfaces():
+                if options["autogen"]:
+                    try:
+                        subnet = str(controller.getInterfaceProperty("subnet")).rsplit(".", 1)[0]
+                    except:
+                        continue
+                    controller.setInterfaceProperty("ipv4", "%s.%d" % (subnet, controller.getID()+1))
+                    controller.setInterfaceProperty("mac", "fe:fd:02:00:00:%02x" % controller.getID())
+
+    def compile_OpenFlow_Controller(self):
+        """
+        Compile all the OpenFlow controllers.
+        """
+        for controller in self.compile_list["OpenFlow_Controller"]:
+            self.output.write("<vofc name=\"" + controller.getName() + "\">\n")
+
+            interfaces = controller.getInterfaces()
+            if len(interfaces) < 1:
+                self.generateConnectionWarning(controller, 1)
+
+            for interface in interfaces:
+
+                self.output.write("\t<if>\n")
+
+                mapping = {"subnet":"network", "mac":"mac", "ipv4":"ip"}
+                self.writeInterface(controller, interface, mapping)
+
+                self.output.write("\t</if>\n")
+
+            self.output.write("</vofc>\n\n")
+
 #********************************* REALM
     def autogen_REALM(self):
         """
@@ -497,7 +536,7 @@ class Compiler:
 
         for con in node.edges():
             otherDevice = con.getOtherDevice(node)
-            if otherDevice.device_type in ["Router", "UML", "REALM", "Mobile"]:
+            if otherDevice.device_type in ["Router", "UML", "OpenFlow_Controller", "REALM", "Mobile"]:
                 target = node
                 if node.device_type == "Subnet":
                     target = node.getTarget(otherDevice)
@@ -518,6 +557,10 @@ class Compiler:
             interfaceable.emptyRouteTable()
 
         for interfaceable in self.compile_list["UML"]:
+            interfaceable.emptyAdjacentLists()
+            interfaceable.emptyRouteTable()
+
+        for interfaceable in self.compile_list["OpenFlow_Controller"]:
             interfaceable.emptyAdjacentLists()
             interfaceable.emptyRouteTable()
 
@@ -542,6 +585,17 @@ class Compiler:
         self.routing_table_interfaceable("UML")
 
         for uml in self.compile_list["UML"]:
+            for subnet in self.compile_list["Subnet"]:
+                if not uml.hasSubnet(subnet.getProperty("subnet")):
+                    uml.addRoutingEntry(subnet.getProperty("subnet"))
+
+    def routing_table_OpenFlow_Controller(self):
+        """
+        Compute route tables of OpenFlow controllers.
+        """
+        self.routing_table_interfaceable("OpenFlow_Controller")
+
+        for uml in self.compile_list["OpenFlow_Controller"]:
             for subnet in self.compile_list["Subnet"]:
                 if not uml.hasSubnet(subnet.getProperty("subnet")):
                     uml.addRoutingEntry(subnet.getProperty("subnet"))
@@ -615,7 +669,7 @@ class Compiler:
 
         if otherDevice.device_type in ["Router", "Wireless_access_point"]:
             myself.addAdjacentRouter(otherDevice, interface)
-        elif otherDevice.device_type in ["UML", "Mobile", "REALM"]:
+        elif otherDevice.device_type in ["UML", "Mobile", "REALM", "OpenFlow_Controller"]:
             pass
         else:
             for c in otherDevice.edges():
@@ -637,7 +691,7 @@ class Compiler:
         """
         Format the routes in xml.
         """
-        if devType == "UML" or devType == "REALM":
+        if devType == "UML" or devType == "REALM" or devType == "OpenFlow_Controller":
             header = "\t\t<route type=\"net\" "
             gateway = "\" gw=\""
             footer = "</route>\n"

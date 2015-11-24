@@ -62,6 +62,26 @@ class VM:
             item.printMe()
         print "end if]"
 
+class VOFC:
+    name = ""
+    interfaces = None
+
+    def __init__(self, vofcName):
+        "Initialize the VOFC class"
+        self.name = vofcName
+        self.interfaces = []
+
+    def addInterface(self, newIF):
+        self.interfaces.append(newIF)
+
+    def printMe(self):
+        print "[Name: " + self.name + "]",
+        print ""
+        print "[Interfaces: %d" % len(self.interfaces),
+        for item in self.interfaces:
+            item.printMe()
+        print "end if]"
+
 class VRM(VM):
     def __init__(self, vmName):
         "Initialize the VRM class"

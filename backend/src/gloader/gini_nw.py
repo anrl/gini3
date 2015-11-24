@@ -11,6 +11,7 @@ class GINI_NW:
     vmb = []
     vr = []
     vwr = []
+    vofc = []
 
     def __init__(self, docDOM):
         "Initialize the GINI_NW class"
@@ -19,7 +20,8 @@ class GINI_NW:
         self.getVRMs(docDOM.getElementsByTagName('vrm'))
         self.getVMBs(docDOM.getElementsByTagName("vmb"))
         self.getVRs(docDOM.getElementsByTagName("vr"))
-	self.getVWRs(docDOM.getElementsByTagName("vwr"))
+        self.getVWRs(docDOM.getElementsByTagName("vwr"))
+        self.getVOFCs(docDOM.getElementsByTagName("vofc"))
 
     def getSwitches(self, elements):
         "get the switch configuration"
@@ -62,6 +64,18 @@ class GINI_NW:
                         newIF = self.getVMIF(para, len(newVM.interfaces))
                         newVM.addInterface(newIF)
             self.vm.append(newVM)
+        return True
+
+    def getVOFCs(self, elements):
+        "get OpenFlow controller configurations"
+        for vofc in elements:
+            newVOFC = VOFC(vofc.getAttribute("name"))
+            for para in vofc.childNodes:
+                if (para.nodeType == para.ELEMENT_NODE):
+                    if (para.tagName.lower() == "if"):
+                        newIF = self.getVMIF(para, len(newVOFC.interfaces))
+                        newVOFC.addInterface(newIF)
+            self.vofc.append(newVOFC)
         return True
 
     def getVRMs(self, elements):

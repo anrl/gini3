@@ -42,6 +42,8 @@ def startGINI(myGINI, options):
     success = createVS(myGINI.switches, options.switchDir)
     print "\nStarting Mobiles..."
     success = success and createVMB(myGINI, options)
+    print "\nStarting OpenFlow controllers..."
+    success = success and createVOFC(myGINI, options)
     print "\nStarting GINI routers..."
     success = success and createVR(myGINI, options)
     print "\nStarting UMLs..."
@@ -335,6 +337,50 @@ def createVM(myGINI, options):
         os.chdir(oldDir)
     return True
 
+def createVOFC(myGINI, options):
+    "create OpenFlow controller config file, and start the OpenFlow controller"
+    return True
+    # makeDir(options.umlDir)
+    # print myGINI.vm
+    # for uml in myGINI.vm:
+    #     print "Starting UML %s...\t" % uml.name,
+    #     subUMLDir = "%s/%s" % (options.umlDir, uml.name)
+    #     makeDir(subUMLDir)
+    #     # create command line
+    #     command = createUMLCmdLine(uml)
+    #     ### ---- process the UML interfaces ---- ###
+    #     # it creates one config for each interface in the /tmp/ directory
+    #     # and returns a string to be attached to the UML exec command line
+    #     for nwIf in uml.interfaces:
+    #         # check whether it is connecting to a switch or router
+    #         socketName = getSocketName(nwIf, uml.name, myGINI, options);
+    #         if (socketName == "fail"):
+    #             print "UML %s [interface %s]: Target not found" % (uml.name, nwIf.name)
+    #             return False
+    #         else:
+    #             # create the config file in /tmp and
+    #             # return a line to be added in the command
+    #             outLine = getVMIFOutLine(nwIf, socketName, uml.name)
+    #         if (outLine):
+    #             command += "%s " % outLine
+    #         else:
+    #             print "[FAILED]"
+    #             return False
+    #     ### ------- execute ---------- ###
+    #     # go to the UML directory to execute the command
+    #
+    #     oldDir = os.getcwd()
+    #     os.chdir(subUMLDir)
+    #     startOut = open("startit.sh", "w")
+    #     startOut.write(command)
+    #     startOut.close()
+    #     os.chmod("startit.sh",0755)
+    #     system("./startit.sh")
+    #     print "[OK]"
+    #
+    #     os.chdir(oldDir)
+    # return True
+
 def createVMB(myGINI, options):
     "create UML config file, and start the UML"
     baseDir = os.environ["GINI_HOME"] + "/data/uml_virtual_switch"
@@ -495,6 +541,16 @@ def getSocketName(nwIf, name, myGINI, options):
         if (uml.name == nwIf.target):
             # target matching a UML; UML can't create sockets
             # so return value is socket name of the current router
+            targetDir = getFullyQualifiedDir(options.routerDir)
+            return "%s/%s/%s_%s.ctl" % \
+                   (targetDir, name, SOCKET_NAME, nwIf.name)
+
+    controllers = myGINI.vofc
+    for controller in controllers:
+        if (controller.name == nwIf.target):
+            # target matching a OpenFlow controller; OpenFlow controller can't
+            # create sockets so return value is socket name of the current
+            # router
             targetDir = getFullyQualifiedDir(options.routerDir)
             return "%s/%s/%s_%s.ctl" % \
                    (targetDir, name, SOCKET_NAME, nwIf.name)
