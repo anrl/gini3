@@ -836,6 +836,7 @@ class OpenFlow_01_Task (Task):
     self.port = int(port)
     self.address = address
     self.started = False
+    self.sockets = []
 
     core.addListener(pox.core.GoingUpEvent, self._handle_GoingUpEvent)
 
@@ -849,9 +850,6 @@ class OpenFlow_01_Task (Task):
     return super(OpenFlow_01_Task,self).start()
 
   def run (self):
-    # List of open sockets/connections to select on
-    sockets = []
-
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
@@ -868,7 +866,7 @@ class OpenFlow_01_Task (Task):
       return
 
     listener.listen(16)
-    sockets.append(listener)
+    self.sockets.append(listener)
 
     log.debug("Listening on %s:%s" %
               (self.address, self.port))
@@ -878,7 +876,7 @@ class OpenFlow_01_Task (Task):
       try:
         while True:
           con = None
-          rlist, wlist, elist = yield Select(sockets, [], sockets, 5)
+          rlist, wlist, elist = yield Select(self.sockets, [], self.sockets, 5)
           if len(rlist) == 0 and len(wlist) == 0 and len(elist) == 0:
             if not core.running: break
 
@@ -891,7 +889,7 @@ class OpenFlow_01_Task (Task):
               except:
                 pass
               try:
-                sockets.remove(con)
+                self.sockets.remove(con)
               except:
                 pass
 
@@ -905,13 +903,13 @@ class OpenFlow_01_Task (Task):
               # Note that instantiating a Connection object fires a
               # ConnectionUp event (after negotation has completed)
               newcon = Connection(new_sock)
-              sockets.append( newcon )
+              self.sockets.append( newcon )
               #print str(newcon) + " connected"
             else:
               con.idle_time = timestamp
               if con.read() is False:
                 con.close()
-                sockets.remove(con)
+                self.sockets.remove(con)
       except exceptions.KeyboardInterrupt:
         break
       except:
@@ -932,7 +930,7 @@ class OpenFlow_01_Task (Task):
         except:
           pass
         try:
-          sockets.remove(con)
+          self.sockets.remove(con)
         except:
           pass
 

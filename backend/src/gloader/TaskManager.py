@@ -1,7 +1,7 @@
 from PyQt4 import QtCore
 import os, time
 
-devFilter = ["WAP_","UML_","Router_","Mobile_","REALM_"]
+devFilter = ["WAP_","UML_","Router_","Mobile_","REALM_","OpenFlow_Controller_"]
 
 class TaskManager(QtCore.QThread):
     def __init__(self, server):
@@ -12,16 +12,16 @@ class TaskManager(QtCore.QThread):
     def reportStatus(self):
         devices = self.devices.copy()
         self.server.processStatus(devices)
-    
+
     def stop(self):
-        self.running = False        
+        self.running = False
 
     def getStatus(self):
         return self.devices
 
     def isRunning(self):
         return self.running
-    
+
     def run(self):
         self.running = True
         self.devices = {}
@@ -42,7 +42,7 @@ class TaskManager(QtCore.QThread):
                 for dev in devFilter:
                     if parts[1].find(dev) == 0:
                         devices[parts[1]] = (parts[0], status)
-    
+
             self.devices = devices
             self.reportStatus()
             time.sleep(1)

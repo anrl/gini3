@@ -11,12 +11,14 @@ from program import Program
 VS_PROG = "uswitch"
 VM_PROG = "glinux"
 GR_PROG = "grouter"
+VOFC_PROG = "gpox"
 GWR_PROG = "gwcenter.sh"
 MCONSOLE_PROG = "uml_mconsole"
 SOCKET_NAME = "gini_socket"
 VS_PROG_BIN = VS_PROG
 VM_PROG_BIN = VM_PROG
 GR_PROG_BIN = GR_PROG
+VOFC_PROG_BIN = VOFC_PROG
 GWR_PROG_BIN = GWR_PROG
 MCONSOLE_PROG_BIN = MCONSOLE_PROG
 SRC_FILENAME = "%s/gini_setup" % os.environ["GINI_HOME"] # setup file name
@@ -42,10 +44,10 @@ def startGINI(myGINI, options):
     success = createVS(myGINI.switches, options.switchDir)
     print "\nStarting Mobiles..."
     success = success and createVMB(myGINI, options)
-    print "\nStarting OpenFlow controllers..."
-    success = success and createVOFC(myGINI, options)
     print "\nStarting GINI routers..."
     success = success and createVR(myGINI, options)
+    print "\nStarting OpenFlow controllers..."
+    success = success and createVOFC(myGINI, options)
     print "\nStarting UMLs..."
     success = success and createVM(myGINI, options)
     print "\nStarting Wireless access points..."
@@ -297,7 +299,6 @@ def createVR(myGINI, options):
 def createVM(myGINI, options):
     "create UML config file, and start the UML"
     makeDir(options.umlDir)
-    print myGINI.vm
     for uml in myGINI.vm:
         print "Starting UML %s...\t" % uml.name,
         subUMLDir = "%s/%s" % (options.umlDir, uml.name)
@@ -339,47 +340,34 @@ def createVM(myGINI, options):
 
 def createVOFC(myGINI, options):
     "create OpenFlow controller config file, and start the OpenFlow controller"
+    makeDir(options.controllerDir);
+    for controller in myGINI.vofc:
+        print "Starting OpenFlow controller %s...\t" % controller.name,
+        subControllerDir = "%s/%s" % (options.controllerDir, controller.name)
+        makeDir(subControllerDir)
+
+        vofcFlags = "py pid --path='%s/%s/%s.pid' openflow.of_01 --port=0 " % (options.controllerDir, controller.name, controller.name)
+        for nwIf in controller.interfaces:
+            # check whether it is connecting to a switch or router
+            socketName = getSocketName(nwIf, controller.name, myGINI, options);
+            if (socketName == "fail"):
+                print "OpenFlow controller %s [interface %s]: Target not found" % (controller.name, nwIf.name)
+                return False
+            else:
+                vofcFlags += "unix_socket_iface --path='%s' " % socketName
+
+        command = "screen -d -m -S %s %s %s" % (controller.name, VOFC_PROG_BIN, vofcFlags)
+        print command
+
+        oldDir = os.getcwd()
+        os.chdir(subControllerDir)
+        startOut = open("startit.sh", "w")
+        startOut.write(command)
+        startOut.close()
+        os.chmod("startit.sh",0755)
+        system("./startit.sh")
+        print "[OK]"
     return True
-    # makeDir(options.umlDir)
-    # print myGINI.vm
-    # for uml in myGINI.vm:
-    #     print "Starting UML %s...\t" % uml.name,
-    #     subUMLDir = "%s/%s" % (options.umlDir, uml.name)
-    #     makeDir(subUMLDir)
-    #     # create command line
-    #     command = createUMLCmdLine(uml)
-    #     ### ---- process the UML interfaces ---- ###
-    #     # it creates one config for each interface in the /tmp/ directory
-    #     # and returns a string to be attached to the UML exec command line
-    #     for nwIf in uml.interfaces:
-    #         # check whether it is connecting to a switch or router
-    #         socketName = getSocketName(nwIf, uml.name, myGINI, options);
-    #         if (socketName == "fail"):
-    #             print "UML %s [interface %s]: Target not found" % (uml.name, nwIf.name)
-    #             return False
-    #         else:
-    #             # create the config file in /tmp and
-    #             # return a line to be added in the command
-    #             outLine = getVMIFOutLine(nwIf, socketName, uml.name)
-    #         if (outLine):
-    #             command += "%s " % outLine
-    #         else:
-    #             print "[FAILED]"
-    #             return False
-    #     ### ------- execute ---------- ###
-    #     # go to the UML directory to execute the command
-    #
-    #     oldDir = os.getcwd()
-    #     os.chdir(subUMLDir)
-    #     startOut = open("startit.sh", "w")
-    #     startOut.write(command)
-    #     startOut.close()
-    #     os.chmod("startit.sh",0755)
-    #     system("./startit.sh")
-    #     print "[OK]"
-    #
-    #     os.chdir(oldDir)
-    # return True
 
 def createVMB(myGINI, options):
     "create UML config file, and start the UML"
@@ -713,6 +701,12 @@ def destroyGINI(myGINI, options):
     except:
         pass
 
+    print "\nTerminating OpenFlow controllers..."
+    try:
+        result = result and destroyVOFC(myGINI.vofc, options.controllerDir)
+    except:
+        pass
+
     #system("killall uswitch screen")
 
     print "\nCleaning the interprocess message queues"
@@ -922,6 +916,49 @@ def destroyVM(umls, umlDir, mode):
         print "[OK]"
     return True
 
+def destroyVOFC(controllers, controllerDir):
+    for controller in controllers:
+        print "Stopping OpenFlow controller %s..." % controller.name
+        # get the pid file
+        print "\tCleaning the PID file...\t",
+        subControllerDir = "%s/%s" % (controllerDir, controller.name)
+        pidFile = "%s/%s.pid" % (subControllerDir, controller.name)
+        # check the validity of the pid file
+        pidFileFound = True
+        if (os.access(pidFile, os.R_OK)):
+            # kill the controller
+            # controllerPid = getPIDFromFile(pidFile)
+            # os.kill(controllerPid, signal.SIGTERM)
+            command = "screen -S %s -X quit" % controller.name
+            system(command)
+        else:
+            pidFileFound = False
+            print "[FAILED]"
+
+        print "\tCleaning the directory...\t",
+        if (os.access(subControllerDir, os.F_OK)):
+            for file in os.listdir(subControllerDir):
+                fileName = "%s/%s" % (subControllerDir, file)
+                if (os.access(fileName, os.W_OK)):
+                    os.remove(fileName)
+                else:
+                    print "\n\OpenFlow controller %s: Could not delete file %s" % (controller.name, fileName)
+                    print "\tCheck your directory"
+                    return False
+            if (os.access(subControllerDir, os.W_OK)):
+                os.rmdir(subControllerDir)
+            else:
+                print "\n\OpenFlow controller %s: Could not remove directory" % controller.name
+                print "\tCheck your directory"
+                return False
+        print "[OK]"
+        if (pidFileFound):
+            print "\tStopping OpenFlow controller %s...\t[OK]" % controller.name
+        else:
+            print "\tStopping OpenFlow controller %s...\t[FAILED]" % controller.name
+            print "\tKill the controller %s manually" % controller.name
+    return True
+
 def checkProcAlive(procName):
     alive = False
     # grep the UML processes
@@ -956,6 +993,7 @@ def writeSrcFile(options):
     outFile.write("%s\n" % options.routerDir)
     outFile.write("%s\n" % options.umlDir)
     outFile.write("%s\n" % options.binDir)
+    outFile.write("%s\n" % options.controllerDir)
     outFile.close()
 
 def deleteSrcFile():
@@ -976,6 +1014,9 @@ def checkAliveGini():
         result = True
     if checkProcAlive(GR_PROG_BIN):
         print "At least one of %s is alive" % GR_PROG_BIN
+        result = True
+    if checkProcAlive(VOFC_PROG_BIN):
+        print "At least one of %s is alive" % VOFC_PROG_BIN
         result = True
     return result
 
@@ -1026,6 +1067,9 @@ if (binDir):
     MCONSOLE_PROG_BIN = "%s/%s" % (binDir, MCONSOLE_PROG)
     if (not os.access(MCONSOLE_PROG_BIN, os.X_OK)):
         MCONSOLE_PROG_BIN = MCONSOLE_PROG
+    VOFC_PROG_BIN = "%s/%s" % (binDir, VOFC_PROG)
+    if (not os.access(VOFC_PROG_BIN, os.X_OK)):
+        VOFC_PROG_BIN = VOFC_PROG
 
 # get the populated GINI network class
 # its structure is the same as the XML specification

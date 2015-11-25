@@ -46,6 +46,10 @@ class Program:
                                   dest="umlDir",\
                                   default="",\
                                   help="Specify the UML configuration directory")
+        self.optParser.add_option("-o", "--controller-dir", \
+                                  dest="controllerDir",\
+                                  default="",\
+                                  help="Specify the OpenFlow controller configuration directory")
         self.optParser.add_option("-b", "--bin-dir", \
                                   dest="binDir",\
                                   default="",\
@@ -78,7 +82,7 @@ class Program:
                 del rargs[0]
         self.createOpt = True
         setattr(parser.values, option.dest, value)
-        
+
     def destroyCallBack(self, option, opt_str, value, parser):
         "Handling the optional argument for the option -d"
         value = ""
@@ -90,7 +94,7 @@ class Program:
                 del rargs[0]
         self.destroyOpt = True
         setattr(parser.values, option.dest, value)
-        
+
     def processOptions(self,args):
         "Processing options and checking the provided XML file (if any)"
         # parse the command line arguments and extract options
@@ -115,6 +119,7 @@ class Program:
                 self.options.routerDir = lines[2].strip()
                 self.options.umlDir = lines[3].strip()
                 self.options.binDir = lines[4].strip()
+                self.options.controllerDir = lines[5].strip()
                 setupFileHandle.close()
             else:
                 print "No XML file specified and no setup file in the current directory"
@@ -126,9 +131,8 @@ class Program:
         # if everything is fine, start XML processing
         if (self.options.xmlFile != ""):
             myXMLProcess = xml_processor.XMLProcessor(self.options.xmlFile)
-	    if (not myXMLProcess.checkSemantics()):
+        if (not myXMLProcess.checkSemantics()):
                 return False
         # get the GINI network setup from the XML processor
         self.giniNW = myXMLProcess.giniNW
         return True
-        
