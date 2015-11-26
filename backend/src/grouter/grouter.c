@@ -12,16 +12,19 @@
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
+#include <pthread.h>
+
 #include "packetcore.h"
 #include "classifier.h"
 #include "filter.h"
-#include <pthread.h>
 #include "openflow_flowtable.h"
+#include "openflow_controller_iface.h"
 
 router_config rconfig = {
 	.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL,
-	.config_dir=NULL, .openflow=0, .ghandler=0, .clihandler= 0, .scheduler=0,
-	.worker=0, .openflowWorker=0, .schedcycle=10000
+	.config_dir=NULL, .openflow=0, .openflow_controller_port=-1, .ghandler=0,
+	.clihandler= 0, .scheduler=0, .worker=0, .openflow_worker=0,
+	.openflow_controller_iface=0, .schedcycle=10000
 };
 pktcore_t *pcore;
 classlist_t *classifier;
@@ -45,6 +48,10 @@ Option grouter_optab[] =
 	{
 		"openflow", 'o', "0 or 1", "When enabled, grouter functions as an OpenFlow 1.0 switch",
 		optional_argument, OPT_INTEGER, OPT_VARIABLE, &(rconfig.openflow)
+	},
+	{
+		"openflow-controller-port", 'f', "port", "The port number of the OpenFlow controller",
+		optional_argument, OPT_INTEGER, OPT_VARIABLE, &(rconfig.openflow_controller_port)
 	},
 	{
 		NULL, '\0', NULL, NULL, 0, 0, 0, NULL
@@ -90,6 +97,7 @@ int main(int ac, char *av[])
 
 	if (rconfig.openflow) {
 		openflow_flowtable_init();
+		openflow_controller_iface_init(rconfig.openflow_controller_port);
 	}
 
 	pcore = createPacketCore(rconfig.router_name, outputQ, workQ,
@@ -101,7 +109,7 @@ int main(int ac, char *av[])
 	rconfig.scheduler = PktCoreSchedulerInit(pcore);
 	rconfig.worker = PktCoreWorkerInit(pcore);
 	if (rconfig.openflow) {
-		rconfig.openflowWorker = PktCoreOpenflowWorkerInit(pcore);
+		rconfig.openflow_worker = PktCoreOpenflowWorkerInit(pcore);
 	}
 
 	infoInit(rconfig.config_dir, rconfig.router_name);
@@ -118,7 +126,8 @@ int main(int ac, char *av[])
 	wait4thread(rconfig.scheduler);
 	wait4thread(rconfig.worker);
 	if (rconfig.openflow) {
-		wait4thread(rconfig.openflowWorker);
+		wait4thread(rconfig.openflow_controller_iface);
+		wait4thread(rconfig.openflow_worker);
 	}
 	wait4thread(rconfig.ghandler);
 }
@@ -140,7 +149,7 @@ void shutdownRouter()
 	pthread_cancel(rconfig.scheduler);
 	pthread_cancel(rconfig.worker);
 	if (rconfig.openflow) {
-		pthread_cancel(rconfig.openflowWorker);
+		pthread_cancel(rconfig.openflow_worker);
 	}
 	verbose(1, "[main]:: shutting down the CLI handler.. ");
 	pthread_cancel(rconfig.clihandler);

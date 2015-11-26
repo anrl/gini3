@@ -5,7 +5,7 @@
 #include "icmp.h"
 #include "ip.h"
 #include "openflow.h"
-#include "openflow_controller.h"
+#include "openflow_controller_iface.h"
 #include "protocols.h"
 #include "simplequeue.h"
 #include "tcp.h"

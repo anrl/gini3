@@ -88,11 +88,13 @@ typedef struct _router_config
 	char *config_file;
 	char *config_dir;
 	int openflow;
+	int openflow_controller_port;
 	pthread_t ghandler;
 	pthread_t clihandler;
 	pthread_t scheduler;
 	pthread_t worker;
-	pthread_t openflowWorker;
+	pthread_t openflow_worker;
+	pthread_t openflow_controller_iface;
 	int schedcycle;
 } router_config;
 

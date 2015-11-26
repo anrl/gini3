@@ -44,10 +44,10 @@ def startGINI(myGINI, options):
     success = createVS(myGINI.switches, options.switchDir)
     print "\nStarting Mobiles..."
     success = success and createVMB(myGINI, options)
-    print "\nStarting GINI routers..."
-    success = success and createVR(myGINI, options)
     print "\nStarting OpenFlow controllers..."
     success = success and createVOFC(myGINI, options)
+    print "\nStarting GINI routers..."
+    success = success and createVR(myGINI, options)
     print "\nStarting UMLs..."
     success = success and createVM(myGINI, options)
     print "\nStarting Wireless access points..."
@@ -281,10 +281,21 @@ def createVR(myGINI, options):
         command += "--config=%s.conf " % GR_PROG
         command += "--confpath=" + os.environ["GINI_HOME"] + "/data/" + router.name + " "
         command += "--interactive=1 "
+
         if (router.openflow):
             command += "--openflow=1 "
+            # TODO: Because GINI doesn't yet have a TCP stack, we have to fake
+            # the connection (go through normal Linux TCP rather than VPL)
+            for controller in myGINI.vofc:
+                for nwIf in controller.interfaces:
+                    if nwIf.target == router.name:
+                        tcp_file = open("%s/%s/%s.tcp" % (options.controllerDir, controller.name, controller.name), "r")
+                        command += "--openflow-controller-port=" + tcp_file.read().strip() + " "
+                        tcp_file.close()
+
         command += "%s" % router.name
-        #print command
+        print command
+
         startOut = open("startit.sh", "w")
         startOut.write(command)
         startOut.close()
@@ -346,18 +357,12 @@ def createVOFC(myGINI, options):
         subControllerDir = "%s/%s" % (options.controllerDir, controller.name)
         makeDir(subControllerDir)
 
-        vofcFlags = "py gini_pid --pid_path='%s/%s/%s.pid' openflow.of_01 --port=0 " % (options.controllerDir, controller.name, controller.name)
-        for nwIf in controller.interfaces:
-            # check whether it is connecting to a switch or router
-            socketName = getSocketName(nwIf, controller.name, myGINI, options);
-            if (socketName == "fail"):
-                print "OpenFlow controller %s [interface %s]: Target not found" % (controller.name, nwIf.name)
-                return False
-            else:
-                vofcFlags += "gini_socket --socket_path='%s' " % socketName
+        vofcFlags = "py "
+        vofcFlags += "openflow.of_01 --port=0 "
+        vofcFlags += "gini_pid --pid_path='%s/%s/%s.pid' " % (options.controllerDir, controller.name, controller.name)
+        vofcFlags += "gini_tcp --tcp_path='%s/%s/%s.tcp' " % (options.controllerDir, controller.name, controller.name)
 
         command = "screen -d -m -S %s %s %s" % (controller.name, VOFC_PROG_BIN, vofcFlags)
-        print command
 
         oldDir = os.getcwd()
         os.chdir(subControllerDir)
@@ -367,6 +372,7 @@ def createVOFC(myGINI, options):
         os.chmod("startit.sh",0755)
         system("./startit.sh")
         print "[OK]"
+    time.sleep(GROUTER_WAIT)
     return True
 
 def createVMB(myGINI, options):
