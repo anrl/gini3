@@ -346,7 +346,7 @@ def createVOFC(myGINI, options):
         subControllerDir = "%s/%s" % (options.controllerDir, controller.name)
         makeDir(subControllerDir)
 
-        vofcFlags = "py pid --path='%s/%s/%s.pid' openflow.of_01 --port=0 " % (options.controllerDir, controller.name, controller.name)
+        vofcFlags = "py gini_pid --pid_path='%s/%s/%s.pid' openflow.of_01 --port=0 " % (options.controllerDir, controller.name, controller.name)
         for nwIf in controller.interfaces:
             # check whether it is connecting to a switch or router
             socketName = getSocketName(nwIf, controller.name, myGINI, options);
@@ -354,7 +354,7 @@ def createVOFC(myGINI, options):
                 print "OpenFlow controller %s [interface %s]: Target not found" % (controller.name, nwIf.name)
                 return False
             else:
-                vofcFlags += "unix_socket_iface --path='%s' " % socketName
+                vofcFlags += "gini_socket --socket_path='%s' " % socketName
 
         command = "screen -d -m -S %s %s %s" % (controller.name, VOFC_PROG_BIN, vofcFlags)
         print command
