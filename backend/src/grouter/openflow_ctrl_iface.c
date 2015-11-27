@@ -13,6 +13,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "gnet.h"
 #include "message.h"
 #include "openflow.h"
 #include "openflow_config.h"
@@ -47,7 +48,7 @@ static uint32_t openflow_ctrl_iface_get_txid()
  *
  * @return The current controller connection state.
  */
-uint8_t openflow_ctrl_iface_up() {
+uint8_t openflow_ctrl_iface_get_conn_state() {
 	pthread_mutex_lock(&connection_status_mutex);
 	return connection_status;
 	pthread_mutex_unlock(&connection_status_mutex);
@@ -172,7 +173,7 @@ static int32_t openflow_ctrl_iface_recv(void **ptr_to_msg)
 		}
 	}
 
-	verbose(2, "[openflow_ctrl_iface_recv]:: Message received from"
+	verbose(2, "[openflow_ctrl_iface_recv]:: Header of message received from"
 		" controller.");
 	if (header.version != OFP_VERSION)
 	{
@@ -185,6 +186,7 @@ static int32_t openflow_ctrl_iface_recv(void **ptr_to_msg)
 
 		int32_t ret = openflow_ctrl_iface_send(error_msg,
 			OPENFLOW_ERROR_MSG_SIZE);
+		free(error_msg);
 		if (ret < 0)
 		{
 			return ret;
@@ -201,6 +203,7 @@ static int32_t openflow_ctrl_iface_recv(void **ptr_to_msg)
 
 		int32_t ret = openflow_ctrl_iface_send(error_msg,
 			OPENFLOW_ERROR_MSG_SIZE);
+		free(error_msg);
 		if (ret < 0)
 		{
 			return ret;
@@ -208,34 +211,38 @@ static int32_t openflow_ctrl_iface_recv(void **ptr_to_msg)
 		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
 	}
 
-	void *msg = malloc(header.length);
+	void *msg = malloc(ntohs(header.length));
 	memcpy(msg, &header, sizeof(header));
 
-	pthread_mutex_lock(&ofc_socket_mutex);
-	ret = recv(ofc_socket_fd, msg + sizeof(header),
-		header.length - sizeof(header), 0);
-	pthread_mutex_unlock(&ofc_socket_mutex);
-	if (ret == 0) {
-		verbose(2, "[openflow_ctrl_iface_recv]:: Controller connection"
-			" closed.");
-		return OPENFLOW_CTRL_IFACE_ERR_CONN_CLOSED;
-	}
-	else if (ret == -1)
+	if (ntohs(header.length) - sizeof(header) > 0)
 	{
-		if (errno == EAGAIN)
-		{
-			return 0;
+		pthread_mutex_lock(&ofc_socket_mutex);
+		ret = recv(ofc_socket_fd, msg + sizeof(header),
+			ntohs(header.length) - sizeof(header), 0);
+		pthread_mutex_unlock(&ofc_socket_mutex);
+		if (ret == 0) {
+			verbose(2, "[openflow_ctrl_iface_recv]:: Controller connection"
+				" closed.");
+			return OPENFLOW_CTRL_IFACE_ERR_CONN_CLOSED;
 		}
-		else
+		else if (ret == -1)
 		{
-			verbose(2, "[openflow_ctrl_iface_recv]:: Unknown error.");
-			return OPENFLOW_CTRL_IFACE_ERR_UNKNOWN;
+			if (errno == EAGAIN)
+			{
+				return 0;
+			}
+			else
+			{
+				verbose(2, "[openflow_ctrl_iface_recv]:: Unknown error.");
+				return OPENFLOW_CTRL_IFACE_ERR_UNKNOWN;
+			}
 		}
 	}
 
-	verbose(2, "[openflow_ctrl_iface_recv]:: Message successfully processed.");
+	verbose(2, "[openflow_ctrl_iface_recv]:: Message received from"
+        " controller.");
 	*ptr_to_msg = msg;
-	return header.length;
+	return ntohs(header.length);
 }
 
 /**
@@ -245,7 +252,7 @@ static int32_t openflow_ctrl_iface_recv(void **ptr_to_msg)
  */
 static int32_t openflow_ctrl_iface_send_hello()
 {
-    verbose(2, "[openflow_ctrl_iface_send_hello]:: Preparing hello message.");
+	verbose(2, "[openflow_ctrl_iface_send_hello]:: Preparing hello message.");
 
 	ofp_hello hello_request;
 	hello_request.header.version = OFP_VERSION;
@@ -276,6 +283,7 @@ static int32_t openflow_ctrl_iface_recv_hello(ofp_hello* hello)
 
 		int32_t ret = openflow_ctrl_iface_send(error_msg,
 			OPENFLOW_ERROR_MSG_SIZE);
+		free(error_msg);
 		if (ret < 0)
 		{
 			return ret;
@@ -324,44 +332,45 @@ static int32_t openflow_ctrl_iface_hello_req_rep()
  * @return 0, or a negative value if an error occurred.
  */
 static int32_t openflow_ctrl_iface_recv_features_req(
-    ofp_header* features_request)
+	ofp_header* features_request)
 {
-    ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
-    error_msg->header.xid = features_request->xid;
-    error_msg->type = OFPET_BAD_REQUEST;
+	ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
+	error_msg->header.xid = features_request->xid;
+	error_msg->type = OFPET_BAD_REQUEST;
 
-    if (features_request->type != OFPT_FEATURES_REQUEST)
-    {
-        verbose(2, "[openflow_ctrl_iface_recv_features_req]:: Unexpected"
-            " message type.");
-        error_msg->code = OFPBRC_BAD_TYPE;
+	if (features_request->type != OFPT_FEATURES_REQUEST)
+	{
+		verbose(2, "[openflow_ctrl_iface_recv_features_req]:: Unexpected"
+			" message type.");
+		error_msg->code = OFPBRC_BAD_TYPE;
 
-        int32_t ret = openflow_ctrl_iface_send(error_msg,
-            OPENFLOW_ERROR_MSG_SIZE);
-        if (ret < 0)
-        {
-            return ret;
-        }
-        return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
-    }
-    if (ntohs(features_request->length) != 8)
-    {
-        verbose(2, "[openflow_ctrl_iface_recv_features_req]:: Unexpected"
-            " message length.");
-        error_msg->code = OFPBRC_BAD_LEN;
+		int32_t ret = openflow_ctrl_iface_send(error_msg,
+			OPENFLOW_ERROR_MSG_SIZE);
+		free(error_msg);
+		if (ret < 0)
+		{
+			return ret;
+		}
+		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
+	}
+	if (ntohs(features_request->length) != 8)
+	{
+		verbose(2, "[openflow_ctrl_iface_recv_features_req]:: Unexpected"
+			" message length.");
+		error_msg->code = OFPBRC_BAD_LEN;
 
-        int32_t ret = openflow_ctrl_iface_send(error_msg,
-            OPENFLOW_ERROR_MSG_SIZE);
-        if (ret < 0)
-        {
-            return ret;
-        }
-        return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
-    }
+		int32_t ret = openflow_ctrl_iface_send(error_msg,
+			OPENFLOW_ERROR_MSG_SIZE);
+		if (ret < 0)
+		{
+			return ret;
+		}
+		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
+	}
 
-    verbose(2, "[openflow_ctrl_iface_recv_features_req]:: OpenFlow controller"
-        " features request message valid.");
-    return 0;
+	verbose(2, "[openflow_ctrl_iface_recv_features_req]:: OpenFlow controller"
+		" features request message valid.");
+	return 0;
 }
 
 /**
@@ -371,23 +380,42 @@ static int32_t openflow_ctrl_iface_recv_features_req(
  */
 static int32_t openflow_ctrl_iface_send_features_rep()
 {
-    verbose(2, "[openflow_ctrl_iface_send_features_rep]:: Preparing features"
-        " reply message.");
+	uint32_t i;
+	verbose(2, "[openflow_ctrl_iface_send_features_rep]:: Preparing features"
+		" reply message.");
 
-    ofp_switch_features switch_features;
-    ofp_phy_port phy_ports[OPENFLOW_MAX_PHYSICAL_PORTS];
+	ofp_switch_features switch_features = openflow_config_get_switch_features();
+	ofp_phy_port *phy_ports[OPENFLOW_MAX_PHYSICAL_PORTS];
 
-    void *features_reply = malloc(sizeof(switch_features) + sizeof(phy_ports));
-    memcpy(features_reply, &switch_features, sizeof(switch_features));
-    memcpy(features_reply + sizeof(switch_features), phy_ports,
-        sizeof(phy_ports));
-    int32_t ret = openflow_ctrl_iface_send(features_reply,
-        sizeof(switch_features) + sizeof(phy_ports));
+	switch_features.header.version = OFP_VERSION;
+	switch_features.header.type = OFPT_FEATURES_REPLY;
+	switch_features.header.length = htons(sizeof(switch_features) +
+		(OPENFLOW_MAX_PHYSICAL_PORTS * sizeof(ofp_phy_port)));
+	switch_features.header.xid = htonl(openflow_ctrl_iface_get_txid());
+
+	for (i = 0; i < OPENFLOW_MAX_PHYSICAL_PORTS; i++)
+	{
+		phy_ports[i] = openflow_config_get_phy_port(
+			openflow_config_gnet_to_of_port_num(i));
+	}
+
+	void *features_reply = malloc(sizeof(switch_features) +
+		(OPENFLOW_MAX_PHYSICAL_PORTS * sizeof(ofp_phy_port)));
+	memcpy(features_reply, &switch_features, sizeof(switch_features));
+	for (i = 0; i < OPENFLOW_MAX_PHYSICAL_PORTS; i++)
+	{
+		memcpy(features_reply + sizeof(switch_features) +
+			(i * sizeof(ofp_phy_port)), phy_ports[i], sizeof(ofp_phy_port));
+	}
+	int32_t ret = openflow_ctrl_iface_send(features_reply,
+        sizeof(switch_features) +
+        (OPENFLOW_MAX_PHYSICAL_PORTS * sizeof(ofp_phy_port)));
+    free(features_reply);
     if (ret < 0)
-    {
-        return ret;
-    }
-    return 0;
+	{
+		return ret;
+	}
+	return 0;
 }
 
 /**
@@ -399,8 +427,8 @@ static int32_t openflow_ctrl_iface_features_req_rep()
 {
 	verbose(2, "[openflow_ctrl_iface_features_req_rep]:: Performing controller"
 		" features request/reply.");
-	ofp_header* features_request;
-    int32_t ret;
+	ofp_header *features_request;
+	int32_t ret;
 	do
 	{
 		ret = openflow_ctrl_iface_recv((void **)&features_request);
@@ -435,6 +463,12 @@ void *openflow_ctrl_iface(void *pn)
 		exit(1);
 	}
 
+    verbose(1, "[openflow_ctrl_iface]:: Sleeping for 15 seconds to allow"
+        " interfaces to be configured.");
+    sleep(15);
+
+    openflow_config_set_phy_port_defaults();
+
 	verbose(1, "[openflow_ctrl_iface]:: Connecting to controller.");
 
 	struct sockaddr_in ofc_sock_addr;
@@ -455,7 +489,7 @@ void *openflow_ctrl_iface(void *pn)
 	pthread_mutex_unlock(&ofc_socket_mutex);
 
 	openflow_ctrl_iface_hello_req_rep();
-	// openflow_ctrl_iface_features_req_rep();
+	openflow_ctrl_iface_features_req_rep();
 
 	openflow_ctrl_iface_conn_up();
 

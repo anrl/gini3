@@ -7,6 +7,7 @@
 #include "openflow.h"
 #include "openflow_config.h"
 #include "openflow_ctrl_iface.h"
+#include "openflow_proc.h"
 #include "protocols.h"
 #include "simplequeue.h"
 #include "tcp.h"
@@ -431,11 +432,11 @@ static void openflow_flowtable_perform_action(
 		{
 			// Send packet to input interface
 			uint16_t openflow_port_num =
-				openflow_get_openflow_port_num(packet->frame.src_interface);
+				openflow_config_gnet_to_of_port_num(packet->frame.src_interface);
 			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
 				" OFPP_IN_PORT. Sending to physical port number %d.",
 				openflow_port_num);
-			openflow_forward_packet_to_port(packet, openflow_port_num,
+			openflow_proc_forward_packet_to_port(packet, openflow_port_num,
 				packet_core, 0);
 		}
 		else if (port == OFPP_TABLE)
@@ -461,10 +462,10 @@ static void openflow_flowtable_perform_action(
 				" enabled except input port.");
 			for (i = 1; i <= OPENFLOW_MAX_PHYSICAL_PORTS; i++)
 			{
-				uint16_t gnet_port_num = openflow_get_gnet_port_num(i);
+				uint16_t gnet_port_num = openflow_config_of_to_gnet_port_num(i);
 				if (gnet_port_num != packet->frame.src_interface)
 				{
-					openflow_forward_packet_to_port(packet, i, packet_core, 1);
+					openflow_proc_forward_packet_to_port(packet, i, packet_core, 1);
 				}
 			}
 		}
@@ -475,10 +476,10 @@ static void openflow_flowtable_perform_action(
 				" OFPP_ALL. Sending to all physical ports except input port.");
 			for (i = 1; i <= OPENFLOW_MAX_PHYSICAL_PORTS; i++)
 			{
-				uint16_t gnet_port_num = openflow_get_gnet_port_num(i);
+				uint16_t gnet_port_num = openflow_config_of_to_gnet_port_num(i);
 				if (gnet_port_num != packet->frame.src_interface)
 				{
-					openflow_forward_packet_to_port(packet, i, packet_core, 0);
+					openflow_proc_forward_packet_to_port(packet, i, packet_core, 0);
 				}
 			}
 		}
@@ -501,7 +502,7 @@ static void openflow_flowtable_perform_action(
 			// Forward packet to specified port
 			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
 				" %d. Sending to that physical port number.", port);
-			openflow_forward_packet_to_port(packet, port, packet_core, 0);
+			openflow_proc_forward_packet_to_port(packet, port, packet_core, 0);
 		}
 	}
 	else if (header_type == OFPAT_SET_VLAN_VID)
@@ -752,7 +753,7 @@ void openflow_flowtable_handle_packet(gpacket_t *packet,
 			!(ntohs(ip_packet->ip_frag_off) & 0x2000))
 		{
 			// Fragmented IP packet
-			uint16_t flags = ntohs(openflow_config_get_flags());
+			uint16_t flags = ntohs(openflow_config_get_switch_config_flags());
 			if (flags & OFPC_FRAG_DROP) {
 				// Switch configured to drop fragmented IP packets
 				free(packet);
