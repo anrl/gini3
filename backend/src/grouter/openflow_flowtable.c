@@ -5,7 +5,8 @@
 #include "icmp.h"
 #include "ip.h"
 #include "openflow.h"
-#include "openflow_controller_iface.h"
+#include "openflow_config.h"
+#include "openflow_ctrl_iface.h"
 #include "protocols.h"
 #include "simplequeue.h"
 #include "tcp.h"
@@ -486,14 +487,14 @@ static void openflow_flowtable_perform_action(
 			// Forward packet to controller
 			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
 				" OFPP_CONTROLLER. Sending to controller.");
-			openflow_send_packet_to_controller(packet);
+			openflow_ctrl_iface_send_to_ctrl(packet);
 		}
 		else if (port == OFPP_LOCAL)
 		{
 			// Forward packet to controller packet processing
 			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
 				" OFPP_LOCAL. Sending to controller processing.");
-			openflow_parse_packet_from_controller(packet);
+			openflow_ctrl_iface_parse_packet(packet);
 		}
 		else
 		{
@@ -790,7 +791,7 @@ void openflow_flowtable_handle_packet(gpacket_t *packet,
 	{
 		verbose(2, "[flowtable_handle_packet]:: No matching entry found."
 				   " Forwarding to controller.");
-		openflow_send_packet_to_controller(packet);
+		openflow_ctrl_iface_send_to_ctrl(packet);
 	}
 
 	free(packet);

@@ -5,7 +5,7 @@
 #include <time.h>
 
 #include "openflow.h"
-#include "openflow_ports.h"
+#include "openflow_config.h"
 #include "message.h"
 #include "packetcore.h"
 #include "simplequeue.h"

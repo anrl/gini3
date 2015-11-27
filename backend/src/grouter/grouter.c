@@ -18,7 +18,7 @@
 #include "classifier.h"
 #include "filter.h"
 #include "openflow_flowtable.h"
-#include "openflow_controller_iface.h"
+#include "openflow_ctrl_iface.h"
 
 router_config rconfig = {
 	.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL,
@@ -97,7 +97,7 @@ int main(int ac, char *av[])
 
 	if (rconfig.openflow) {
 		openflow_flowtable_init();
-		openflow_controller_iface_init(rconfig.openflow_controller_port);
+		openflow_ctrl_iface_init(rconfig.openflow_controller_port);
 	}
 
 	pcore = createPacketCore(rconfig.router_name, outputQ, workQ,
