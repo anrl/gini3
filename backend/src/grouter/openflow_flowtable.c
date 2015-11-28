@@ -1,3 +1,10 @@
+/**
+ * openflow_flowtable.c - OpenFlow flowtable
+ *
+ * Author: Michael Kourlas
+ * Date: November 26, 2015
+ */
+
 #include "arp.h"
 #include "gnet.h"
 #include "grouter.h"
@@ -860,7 +867,7 @@ uint8_t openflow_flowtable_find_identical_entry(ofp_flow_mod* flow_mod,
 	return 0;
 }
 
-static uint8_t openflow_flowtable_modify_entry_at_index(ofp_flow_mod *flow_mod,
+static int32_t openflow_flowtable_modify_entry_at_index(ofp_flow_mod *flow_mod,
 	uint32_t index, ofp_error_msg *error_msg, uint8_t reset)
 {
 	openflow_flowtable_action_wrapper_type actions[OPENFLOW_MAX_ACTIONS];
@@ -1040,7 +1047,7 @@ static uint8_t openflow_flowtable_modify_entry_at_index(ofp_flow_mod *flow_mod,
  *
  * @return 0 if no error occurred, -1 otherwise.
  */
-static uint8_t openflow_flowtable_add(ofp_flow_mod* flow_mod,
+static int32_t openflow_flowtable_add(ofp_flow_mod* flow_mod,
 	ofp_error_msg* error_msg)
 {
 	uint32_t i;
@@ -1095,25 +1102,25 @@ static uint8_t openflow_flowtable_add(ofp_flow_mod* flow_mod,
  *
  * @return 0 if no error occurred, -1 otherwise.
  */
-static uint8_t openflow_flowtable_edit(ofp_flow_mod *flow_mod,
+static int32_t openflow_flowtable_edit(ofp_flow_mod *flow_mod,
 	ofp_error_msg *error_msg)
 {
 	// TODO: Implement this function.
 }
 
-static uint8_t openflow_flowtable_edit_strict(ofp_flow_mod *flow_mod,
+static int32_t openflow_flowtable_edit_strict(ofp_flow_mod *flow_mod,
 	ofp_error_msg *error_msg)
 {
 	// TODO: Implement this function.
 }
 
-static uint8_t openflow_flowtable_delete(ofp_flow_mod *flow_mod,
+static int32_t openflow_flowtable_delete(ofp_flow_mod *flow_mod,
 	ofp_error_msg *error_msg)
 {
 	// TODO: Implement this function.
 }
 
-static uint8_t openflow_flowtable_delete_strict(ofp_flow_mod *flow_mod,
+static int32_t openflow_flowtable_delete_strict(ofp_flow_mod *flow_mod,
 	ofp_error_msg *error_msg)
 {
 	// TODO: Implement this function.
@@ -1128,7 +1135,7 @@ static uint8_t openflow_flowtable_delete_strict(ofp_flow_mod *flow_mod,
  *
  * @return 0 if no error occurred, -1 otherwise.
  */
-uint8_t openflow_flowtable_modify(ofp_flow_mod *flow_mod,
+int32_t openflow_flowtable_modify(ofp_flow_mod *flow_mod,
 	ofp_error_msg *error_msg)
 {
 	uint16_t command = ntohs(flow_mod->command);

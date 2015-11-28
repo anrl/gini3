@@ -58,7 +58,8 @@ void openflow_proc_forward_packet_to_port(gpacket_t *packet,
 		return;
 	}
 
-	uint32_t gnet_port_num = openflow_config_of_to_gnet_port_num(openflow_port_num);
+	uint32_t gnet_port_num = openflow_config_of_to_gnet_port_num(
+        openflow_port_num);
 	packet->frame.dst_interface = gnet_port_num;
 	openflow_proc_send_packet_to_queue(packet, packet_core->outputQ);
 }

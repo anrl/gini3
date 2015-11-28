@@ -66,11 +66,25 @@ ofp_phy_port *openflow_config_get_phy_port(uint16_t openflow_port_num);
 uint16_t openflow_config_get_switch_config_flags();
 
 /**
+ * Sets the current switch configuration flags in network byte order.
+ *
+ * @param flags The switch configuration flags to set.
+ */
+void openflow_config_set_switch_config_flags(uint16_t flags);
+
+/**
  * Gets the current miss send length value in network byte order.
  *
  * @return The current miss send length value.
  */
 uint16_t openflow_config_get_miss_send_len();
+
+/**
+ * Sets the current miss send length value in network byte order.
+ *
+ * @param len The miss send length value to set.
+ */
+void openflow_config_set_miss_send_len(uint16_t len);
 
 /**
  * Gets the OpenFlow switch features.

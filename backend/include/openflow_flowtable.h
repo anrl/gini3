@@ -126,7 +126,7 @@ void openflow_flowtable_handle_packet(gpacket_t *packet,
 *
 * @return 0 if no error occurred, -1 otherwise.
 */
-uint8_t openflow_flowtable_modify(ofp_flow_mod *flow_mod,
+int32_t openflow_flowtable_modify(ofp_flow_mod *flow_mod,
 	ofp_error_msg *error_msg);
 
 #endif // ifndef __OPENFLOW_FLOWTABLE_H_

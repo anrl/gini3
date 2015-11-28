@@ -26,13 +26,43 @@ typedef struct ofp_hello ofp_hello;
 typedef struct ofp_error_msg ofp_error_msg;
 typedef struct ofp_switch_features ofp_switch_features;
 typedef struct ofp_phy_port	ofp_phy_port;
+typedef struct ofp_switch_config ofp_switch_config;
+typedef struct ofp_flow_mod ofp_flow_mod;
 
-pthread_t openflow_ctrl_iface_init(int port_num);
-
+/**
+ * Gets the current controller connection state.
+ *
+ * @return The current controller connection state.
+ */
 uint8_t openflow_ctrl_iface_get_conn_state();
 
+/**
+ * Parses a packet as though it came from the OpenFlow controller.
+ *
+ * @param packet The packet to parse.
+ */
+void openflow_ctrl_iface_parse_packet(gpacket_t *packet);
+
+/**
+ * Sends a packet to the OpenFlow controller via a packet in message.
+ *
+ * @param packet The packet to send the OpenFlow controller.
+ */
 void openflow_ctrl_iface_send_to_ctrl(gpacket_t *packet);
 
-void openflow_ctrl_iface_parse_packet(gpacket_t *packet);
+/**
+ * OpenFlow controller thread. Connects to controller and passes incoming packets to
+ * handlers.
+ *
+ * @param pn Pointer to the controller TCP port number.
+ */
+void openflow_ctrl_iface(void *pn);
+
+/**
+ * Initializes the OpenFlow controller-switch interface.
+ *
+ * @param port_num The TCP port number of the OpenFlow controller.
+ */
+pthread_t openflow_ctrl_iface_init(int32_t port_num);
 
 #endif // ifndef __OPENFLOW_CTRL_IFACE_H_

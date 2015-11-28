@@ -54,7 +54,8 @@ void openflow_config_set_phy_port_defaults()
 	uint32_t i;
 	for (i = 0; i < OPENFLOW_MAX_PHYSICAL_PORTS; i++)
 	{
-		phy_ports[i].port_no = htons(openflow_config_gnet_to_of_port_num(i));
+		phy_ports[i].port_no = htons(
+            openflow_config_gnet_to_of_port_num(i));
 		sprintf(phy_ports[i].name, "Port %d",
 			openflow_config_gnet_to_of_port_num(i));
 		phy_ports[i].config = htonl(0);
@@ -78,8 +79,8 @@ void openflow_config_set_phy_port_defaults()
 }
 
 /**
- * Updates the specified OpenFlow physical port struct to match the state of
- * the corresponding GNET interface.
+ * Updates the specified OpenFlow physical port struct to match the state
+ * of the corresponding GNET interface.
  *
  * @param The OpenFlow port number corresponing to the port to update.
  */
@@ -93,7 +94,8 @@ void openflow_config_update_phy_port(int32_t openflow_port_num)
 	}
 	else
 	{
-		COPY_MAC(phy_ports[openflow_port_num - 1].hw_addr, iface->mac_addr);
+		COPY_MAC(phy_ports[openflow_port_num - 1].hw_addr,
+            iface->mac_addr);
 	}
 
 	// TODO: Send port update message.
@@ -105,15 +107,16 @@ void openflow_config_update_phy_port(int32_t openflow_port_num)
  *
  * @param openflow_port_num The specified OpenFlow port number.
  *
- * @return The OpenFlow physical port struct corresponding to the specified
- *         port number.
+ * @return The OpenFlow physical port struct corresponding to the
+ *         specified port number.
  */
 ofp_phy_port *openflow_config_get_phy_port(uint16_t openflow_port_num)
 {
 	if (openflow_port_num >= 1 &&
 		openflow_port_num <= OPENFLOW_MAX_PHYSICAL_PORTS)
 	{
-		return &phy_ports[openflow_config_of_to_gnet_port_num(openflow_port_num)];
+		return &phy_ports[openflow_config_of_to_gnet_port_num(
+            openflow_port_num)];
 	}
 	else
 	{
@@ -132,6 +135,16 @@ uint16_t openflow_config_get_switch_config_flags()
 }
 
 /**
+ * Sets the current switch configuration flags in network byte order.
+ *
+ * @param flags The switch configuration flags to set.
+ */
+void openflow_config_set_switch_config_flags(uint16_t flags)
+{
+    switch_config_flags = flags;
+}
+
+/**
  * Gets the current miss send length value in network byte order.
  *
  * @return The current miss send length value.
@@ -139,6 +152,16 @@ uint16_t openflow_config_get_switch_config_flags()
 uint16_t openflow_config_get_miss_send_len()
 {
     return miss_send_len;
+}
+
+/**
+ * Sets the current miss send length value in network byte order.
+ *
+ * @param len The miss send length value to set.
+ */
+void openflow_config_set_miss_send_len(uint16_t len)
+{
+    miss_send_len = len;
 }
 
 /**
@@ -154,8 +177,8 @@ ofp_switch_features openflow_config_get_switch_features()
 	switch_features.datapath_id = 0;
 	switch_features.n_buffers = htonl(0);
 	switch_features.n_tables = 1;
-	switch_features.capabilities = htonl(OFPC_FLOW_STATS | OFPC_TABLE_STATS |
-        OFPC_PORT_STATS | OFPC_ARP_MATCH_IP);
+	switch_features.capabilities = htonl(OFPC_FLOW_STATS |
+        OFPC_TABLE_STATS | OFPC_PORT_STATS | OFPC_ARP_MATCH_IP);
 	switch_features.actions = htonl(1 << OFPAT_OUTPUT |
         1 << OFPAT_SET_VLAN_VID | 1 << OFPAT_SET_VLAN_PCP |
         1 << OFPAT_STRIP_VLAN | 1 << OFPAT_SET_DL_SRC |
