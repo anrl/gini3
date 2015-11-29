@@ -86,6 +86,9 @@ void openflow_config_set_phy_port_defaults()
  */
 void openflow_config_update_phy_port(int32_t openflow_port_num)
 {
+	// TODO: Call this function whenever an interface is added, removed or
+	// changed.
+
 	interface_t *iface = findInterface(openflow_port_num - 1);
 	if (iface == NULL)
 	{
@@ -98,7 +101,7 @@ void openflow_config_update_phy_port(int32_t openflow_port_num)
             iface->mac_addr);
 	}
 
-	// TODO: Send port update message.
+	openflow_ctrl_iface_send_port_status(&phy_ports[openflow_port_num - 1]);
 }
 
 /**
@@ -173,7 +176,7 @@ ofp_switch_features openflow_config_get_switch_features()
 {
     ofp_switch_features switch_features;
 
-	// TODO: Fix datapath ID.
+	// TODO: Fix datapath ID by using the MAC address of the first interface.
 	switch_features.datapath_id = 0;
 	switch_features.n_buffers = htonl(0);
 	switch_features.n_tables = 1;
