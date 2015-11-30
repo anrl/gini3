@@ -32,7 +32,7 @@ pthread_mutex_t ofc_socket_mutex;
 static uint32_t txid = 0;
 
 // Connection status
-static uint8_t connection_status;
+static uint8_t connection_status = 0;
 pthread_mutex_t connection_status_mutex;
 
 /**
@@ -54,8 +54,9 @@ static uint32_t openflow_ctrl_iface_get_txid()
  */
 uint8_t openflow_ctrl_iface_get_conn_state() {
 	pthread_mutex_lock(&connection_status_mutex);
-	return connection_status;
+	uint8_t status = connection_status;
 	pthread_mutex_unlock(&connection_status_mutex);
+	return status;
 }
 
 /**
@@ -288,8 +289,8 @@ static int32_t openflow_ctrl_iface_recv_hello(ofp_hello* hello)
 
 		ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
 		error_msg->header.xid = hello->header.xid;
-		error_msg->type = OFPET_HELLO_FAILED;
-		error_msg->code = OFPHFC_INCOMPATIBLE;
+		error_msg->type = ntohs(OFPET_HELLO_FAILED);
+		error_msg->code = ntohs(OFPHFC_INCOMPATIBLE);
 		memcpy(&error_msg->data, hello, sizeof(ofp_hello));
 
 		int32_t ret = openflow_ctrl_iface_send(error_msg,
@@ -349,13 +350,13 @@ static int32_t openflow_ctrl_iface_recv_features_req(
 {
 	ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
 	error_msg->header.xid = features_request->xid;
-	error_msg->type = OFPET_BAD_REQUEST;
+	error_msg->type = ntohs(OFPET_BAD_REQUEST);
 
 	if (features_request->type != OFPT_FEATURES_REQUEST)
 	{
 		verbose(2, "[openflow_ctrl_iface_recv_features_req]:: Unexpected"
 			" message type.");
-		error_msg->code = OFPBRC_BAD_TYPE;
+		error_msg->code = ntohs(OFPBRC_BAD_TYPE);
 		memcpy(&error_msg->data, features_request, sizeof(ofp_header));
 
 		int32_t ret = openflow_ctrl_iface_send(error_msg,
@@ -371,7 +372,7 @@ static int32_t openflow_ctrl_iface_recv_features_req(
 	{
 		verbose(2, "[openflow_ctrl_iface_recv_features_req]:: Unexpected"
 			" message length.");
-		error_msg->code = OFPBRC_BAD_LEN;
+		error_msg->code = ntohs(OFPBRC_BAD_LEN);
 		memcpy(&error_msg->data, features_request, sizeof(ofp_header));
 
 		int32_t ret = openflow_ctrl_iface_send(error_msg,
@@ -481,8 +482,8 @@ static int32_t openflow_ctrl_iface_recv_set_config(
 
 		ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
 		error_msg->header.xid = switch_config->header.xid;
-		error_msg->type = OFPET_BAD_REQUEST;
-		error_msg->code = OFPBRC_BAD_LEN;
+		error_msg->type = htons(OFPET_BAD_REQUEST);
+		error_msg->code = htons(OFPBRC_BAD_LEN);
 		memcpy(&error_msg->data, switch_config, sizeof(ofp_switch_config));
 
 		int32_t ret = openflow_ctrl_iface_send(error_msg,
@@ -519,8 +520,8 @@ static int32_t openflow_ctrl_iface_recv_barrier_req(
 
 		ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
 		error_msg->header.xid = barrier_request->xid;
-		error_msg->type = OFPET_BAD_REQUEST;
-		error_msg->code = OFPBRC_BAD_LEN;
+		error_msg->type = htons(OFPET_BAD_REQUEST);
+		error_msg->code = htons(OFPBRC_BAD_LEN);
 		memcpy(&error_msg->data, barrier_request, sizeof(ofp_header));
 
 		int32_t ret = openflow_ctrl_iface_send(error_msg,
@@ -568,7 +569,7 @@ static int32_t openflow_ctrl_iface_recv_flow_mod(ofp_flow_mod *flow_mod)
 {
 	ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
 	error_msg->header.xid = flow_mod->header.xid;
-	error_msg->type = OFPET_FLOW_MOD_FAILED;
+	error_msg->type = htons(OFPET_FLOW_MOD_FAILED);
 
 	int32_t ret;
 	if (ntohs(flow_mod->header.length) < 72)
@@ -576,8 +577,8 @@ static int32_t openflow_ctrl_iface_recv_flow_mod(ofp_flow_mod *flow_mod)
 		verbose(2, "[openflow_ctrl_iface_recv_flow_mod]:: Unexpected"
 			" message length.");
 
-		error_msg->type = OFPET_BAD_REQUEST;
-		error_msg->code = OFPBRC_BAD_LEN;
+		error_msg->type = htons(OFPET_BAD_REQUEST);
+		error_msg->code = htons(OFPBRC_BAD_LEN);
 		memcpy(&error_msg->data, flow_mod, 64);
 
 		ret = openflow_ctrl_iface_send(error_msg, OPENFLOW_ERROR_MSG_SIZE);

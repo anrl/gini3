@@ -27,8 +27,10 @@
 #include "classifier.h"
 #include "grouter.h"
 #include "openflow_flowtable.h"
+#include "filter.h"
 
 extern classlist_t *classifier;
+extern filtertab_t *filter;
 extern router_config rconfig;
 
 /*
@@ -468,6 +470,14 @@ int enqueuePacket(pktcore_t *pcore, gpacket_t *in_pkt, int pktsize,
 	{
 		char *qkey;
 		simplequeue_t *thisq;
+
+		// check for filtering.. if the it should be filtered.. then drop
+		if (filteredPacket(filter, in_pkt))
+		{
+			verbose(2, "[enqueuePacket]:: Packet filtered..!");
+			free(in_pkt);
+			return EXIT_FAILURE;
+		}
 
 		/*
 		 * invoke the packet classifier to get the packet tag at the very minimum,

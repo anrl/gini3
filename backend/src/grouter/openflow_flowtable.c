@@ -5,6 +5,8 @@
  * Date: November 26, 2015
  */
 
+#include <inttypes.h>
+
 #include "arp.h"
 #include "gnet.h"
 #include "grouter.h"
@@ -98,6 +100,28 @@ static void openflow_flowtable_update_checksums(ip_packet_t *ip_packet) {
 }
 
 /**
+ * Compares two IP addresses.
+ *
+ * @param ip_1   The first IP address to compare.
+ * @param ip_2   The second IP address to compare.
+ * @param ip_len The number of bits in the IP address to compare.
+ *
+ * @return 1 if the IP addresses are the same, 0 otherwise.
+ */
+static uint8_t openflow_flowtable_ip_compare(uint32_t ip_1, uint32_t ip_2,
+	uint8_t ip_len)
+{
+	if ((ip_1 >> (32 - ip_len)) == (ip_2 >> (32 - ip_len)))
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+/**
  * Determines whether the specified OpenFlow match matches the specified packet.
  *
  * @param match  The match to test the packet against.
@@ -123,10 +147,9 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
 	uint16_t tp_dst = 0;
 	memcpy(&dl_src, packet->data.header.src, OFP_ETH_ALEN);
 	memcpy(&dl_dst, packet->data.header.dst, OFP_ETH_ALEN);
-	verbose(2, "[openflow_flowtable_match_packet]:: Setting default headers.");
 
 	// All field wildcard
-	if (ntohl(match->wildcards) & OFPFW_ALL)
+	if (ntohl(match->wildcards) == OFPFW_ALL)
 	{
 		verbose(2, "[openflow_flowtable_match_packet]:: Packet matched (all"
 			" field wildcard).");
@@ -245,6 +268,8 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
 			else if (ip_packet->ip_prot == ICMP_PROTOCOL)
 			{
 				// ICMP packet
+				verbose(2, "[openflow_flowtable_match_packet]:: Setting"
+					" headers for ICMP.");
 				int ip_header_length = ip_packet->ip_hdr_len * 4;
 				icmphdr_t *icmp_packet = (icmphdr_t *)
 					((uint8_t *) ip_packet + ip_header_length);
@@ -305,7 +330,7 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
 	}
 	// Match IP type of service
 	if (!(ntohl(match->wildcards) & OFPFW_NW_TOS) &&
-		(nw_tos != match->nw_tos))
+		(nw_tos != match->nw_tos) && ntohs(match->dl_type) == IP_PROTOCOL)
 	{
 		verbose(2, "[openflow_flowtable_match_packet]:: Packet not matched"
 			" (IP type of service).");
@@ -313,7 +338,9 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
 	}
 	// Match IP protocol or ARP opcode
 	if (!(ntohl(match->wildcards) & OFPFW_NW_PROTO) &&
-		(nw_proto != match->nw_proto))
+		(nw_proto != match->nw_proto) &&
+		(ntohs(match->dl_type) == IP_PROTOCOL ||
+		ntohs(match->dl_type) == ARP_PROTOCOL))
 	{
 		verbose(2, "[openflow_flowtable_match_packet]:: Packet not matched"
 			" (IP protocol or ARP opcode).");
@@ -323,7 +350,8 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
 	// Match IP source address
 	uint8_t ip_len = (OFPFW_NW_SRC_ALL >> OFPFW_NW_SRC_SHIFT) -
 		((ntohl(match->wildcards) & OFPFW_NW_SRC_ALL) >> OFPFW_NW_SRC_SHIFT);
-	if (ip_len > 0 && memcmp(&nw_src, &match->nw_src, ip_len))
+	if (ip_len > 0 && !openflow_flowtable_ip_compare(ntohl(nw_src),
+		ntohl(match->nw_src), ip_len) && ntohs(match->dl_type) == IP_PROTOCOL)
 	{
 		verbose(2, "[openflow_flowtable_match_packet]:: Packet not matched"
 			" (IP source address).");
@@ -332,7 +360,8 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
 	// Match IP destination address
 	ip_len = (OFPFW_NW_DST_ALL >> OFPFW_NW_DST_SHIFT) -
 		((match->wildcards & OFPFW_NW_DST_ALL) >> OFPFW_NW_DST_SHIFT);
-	if (ip_len > 0 && memcmp(&nw_dst, &match->nw_dst, ip_len))
+	if (ip_len > 0 && !openflow_flowtable_ip_compare(ntohl(nw_dst),
+		ntohl(match->nw_dst), ip_len) && ntohs(match->dl_type) == IP_PROTOCOL)
 	{
 		verbose(2, "[openflow_flowtable_match_packet]:: Packet not matched"
 			" (IP destination address).");
@@ -341,7 +370,10 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
 
 	// Match TCP/UDP source port or ICMP type
 	if (!(ntohl(match->wildcards) & OFPFW_TP_SRC) &&
-		(tp_src != match->tp_src))
+		(tp_src != match->tp_src) && ntohs(match->dl_type) == IP_PROTOCOL &&
+		(ntohs(match->nw_proto) == ICMP_PROTOCOL ||
+		ntohs(match->nw_proto) == TCP_PROTOCOL ||
+		ntohs(match->nw_proto) == UDP_PROTOCOL))
 	{
 		verbose(2, "[openflow_flowtable_match_packet]:: Packet not matched"
 			" (TCP/UDP source port or ICMP type).");
@@ -349,7 +381,10 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
 	}
 	// Match TCP/UDP destination port or ICMP code
 	if (!(ntohl(match->wildcards) & OFPFW_TP_DST) &&
-		(tp_dst != match->tp_dst))
+		(tp_dst != match->tp_dst) && ntohs(match->dl_type) == IP_PROTOCOL &&
+		(ntohs(match->nw_proto) == ICMP_PROTOCOL ||
+		ntohs(match->nw_proto) == TCP_PROTOCOL ||
+		ntohs(match->nw_proto) == UDP_PROTOCOL))
 	{
 		verbose(2, "[openflow_flowtable_match_packet]:: Packet not matched"
 			" (TCP/UDP destination port or ICMP code).");
@@ -369,7 +404,7 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
  * @return The matching flowtable entry.
  */
 static openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
-	gpacket_t *packet, uint8_t emergency)
+	gpacket_t *packet)
 {
 	uint32_t current_priority = 0;
 	openflow_flowtable_entry_type *current_entry = NULL;
@@ -383,6 +418,7 @@ static openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
 			uint8_t is_match = openflow_flowtable_match_packet(match, packet);
 			if (is_match)
 			{
+				uint8_t emergency = !openflow_ctrl_iface_get_conn_state();
 				if ((emergency && (ntohs(entry->flags) & OFPFF_EMERG)) ||
 					(!emergency && !(ntohs(entry->flags) & OFPFF_EMERG)))
 				{
@@ -391,24 +427,44 @@ static openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
 					{
 						// Exact match
 						verbose(2, "[openflow_flowtable_get_entry_for_packet]::"
-							" Found exact match.");
+							" Found exact match at index %" PRIu32 ".", i);
 						return entry;
 					}
-
 					else if (entry->priority >= current_priority)
 					{
 						// Possible wildcard match, but wait to see if there
 						// are any other wildcard matches with higher priority
 						verbose(2, "[openflow_flowtable_get_entry_for_packet]::"
-							" Found possible match.");
+							" Found possible match at index %" PRIu32 ".", i);
 						current_entry = entry;
 						current_priority = entry->priority;
 					}
 				}
-
-
+				else
+				{
+					if (emergency)
+					{
+						verbose(2, "[openflow_flowtable_get_entry_for_packet]::"
+							" Found matching non-emergency entry at index"
+							" %" PRIu32 ", but switch is in emergency"
+							" mode.", i);
+					}
+					else
+					{
+						verbose(2, "[openflow_flowtable_get_entry_for_packet]::"
+							" Found matching emergency entry at index"
+							" %" PRIu32 ", but switch is not in emergency"
+							" mode.", i);
+					}
+				}
 			}
 		}
+	}
+
+	if (current_entry == NULL)
+	{
+		verbose(2, "[openflow_flowtable_get_entry_for_packet]::"
+			" No entry found.");
 	}
 
 	return current_entry;
@@ -439,9 +495,10 @@ static void openflow_flowtable_perform_action(
 		{
 			// Send packet to input interface
 			uint16_t openflow_port_num =
-				openflow_config_gnet_to_of_port_num(packet->frame.src_interface);
+				openflow_config_gnet_to_of_port_num(
+					packet->frame.src_interface);
 			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
-				" OFPP_IN_PORT. Sending to physical port number %d.",
+				" OFPP_IN_PORT. Sending to physical port number %" PRIu16 ".",
 				openflow_port_num);
 			openflow_proc_forward_packet_to_port(packet, openflow_port_num,
 				packet_core, 0);
@@ -472,7 +529,8 @@ static void openflow_flowtable_perform_action(
 				uint16_t gnet_port_num = openflow_config_of_to_gnet_port_num(i);
 				if (gnet_port_num != packet->frame.src_interface)
 				{
-					openflow_proc_forward_packet_to_port(packet, i, packet_core, 1);
+					openflow_proc_forward_packet_to_port(packet, i,
+						packet_core, 1);
 				}
 			}
 		}
@@ -486,7 +544,8 @@ static void openflow_flowtable_perform_action(
 				uint16_t gnet_port_num = openflow_config_of_to_gnet_port_num(i);
 				if (gnet_port_num != packet->frame.src_interface)
 				{
-					openflow_proc_forward_packet_to_port(packet, i, packet_core, 0);
+					openflow_proc_forward_packet_to_port(packet, i,
+						packet_core, 0);
 				}
 			}
 		}
@@ -508,7 +567,7 @@ static void openflow_flowtable_perform_action(
 		{
 			// Forward packet to specified port
 			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
-				" %d. Sending to that physical port number.", port);
+				" %" PRIu16 ". Sending to that physical port number.", port);
 			openflow_proc_forward_packet_to_port(packet, port, packet_core, 0);
 		}
 	}
@@ -528,7 +587,8 @@ static void openflow_flowtable_perform_action(
 		else
 		{
 			// No VLAN header
-			gpacket_t new_packet = openflow_flowtable_add_vlan_header_to_packet(packet);
+			gpacket_t new_packet =
+				openflow_flowtable_add_vlan_header_to_packet(packet);
 			memcpy(packet, &new_packet, sizeof(gpacket_t));
 			pkt_data_vlan_t *vlan_data = (pkt_data_vlan_t *) &packet->data;
 			vlan_data->header.tci = vlan_vid_action->vlan_vid;
@@ -554,7 +614,8 @@ static void openflow_flowtable_perform_action(
 		else
 		{
 			// No VLAN header
-			gpacket_t new_packet = openflow_flowtable_add_vlan_header_to_packet(packet);
+			gpacket_t new_packet =
+				openflow_flowtable_add_vlan_header_to_packet(packet);
 			memcpy(packet, &new_packet, sizeof(gpacket_t));
 			pkt_data_vlan_t *vlan_data = (pkt_data_vlan_t *) &packet->data;
 			vlan_data->header.tci = htons(ntohs(
@@ -568,7 +629,8 @@ static void openflow_flowtable_perform_action(
 				   " OFPAT_STRIP_VLAN.");
 		if (ntohs(packet->data.header.prot) == ETHERTYPE_IEEE_802_1Q)
 		{
-			gpacket_t new_packet = openflow_flowtable_remove_vlan_header_from_packet(packet);
+			gpacket_t new_packet =
+				openflow_flowtable_remove_vlan_header_from_packet(packet);
 			memcpy(packet, &new_packet, sizeof(gpacket_t));
 		}
 	}
@@ -581,7 +643,7 @@ static void openflow_flowtable_perform_action(
 			(ofp_action_dl_addr *) &action->action;
 		COPY_MAC(&packet->data.header.dst, &dl_addr_action->dl_addr);
 	}
-	else if (action->action.header.type == OFPAT_SET_DL_DST)
+	else if (header_type == OFPAT_SET_DL_DST)
 	{
 		// Modify Ethernet destination MAC address
 		verbose(2, "[openflow_flowtable_perform_action]:: Action is"
@@ -714,6 +776,11 @@ static void openflow_flowtable_perform_action(
 			}
 		}
 	}
+	else
+	{
+		verbose(2, "[openflow_flowtable_perform_action]:: Unrecognized"
+			" action %" PRIu16 ".", header_type);
+	}
 }
 
 /**
@@ -772,8 +839,7 @@ void openflow_flowtable_handle_packet(gpacket_t *packet,
 	uint32_t i;
 	verbose(2, "[flowtable_handle_packet]:: Received packet.");
 	openflow_flowtable_entry_type *matching_entry =
-		openflow_flowtable_get_entry_for_packet(packet,
-			openflow_config_is_emergency());
+		openflow_flowtable_get_entry_for_packet(packet);
 
 	if (matching_entry != NULL)
 	{
@@ -883,9 +949,7 @@ uint8_t openflow_flowtable_find_matching_entry(ofp_flow_mod* flow_mod,
 		// All field wildcard
 		if (ntohl(flow_mod->match.wildcards) & OFPFW_ALL)
 		{
-			verbose(2, "[openflow_flowtable_match_packet]:: Packet matched (all"
-				" field wildcard).");
-			return 1;
+			break;
 		}
 
 		// Match switch input port
@@ -1013,145 +1077,163 @@ static int32_t openflow_flowtable_modify_entry_at_index(ofp_flow_mod *flow_mod,
 	uint32_t index, ofp_error_msg *error_msg, uint8_t reset)
 {
 	openflow_flowtable_action_wrapper_type actions[OPENFLOW_MAX_ACTIONS];
-	ofp_action_header *action_header;
 	uint32_t i;
 
 	if ((ntohs(flow_mod->flags) & OFPFF_EMERG) &&
-		(flow_mod->idle_timeout != 0 || flow_mod->hard_timeout != 0))
+		(ntohs(flow_mod->idle_timeout) != 0 ||
+		ntohs(flow_mod->hard_timeout) != 0))
 	{
 		verbose(2, "[openflow_flowtable_modify_entry_at_index]:: Emergency"
-			" entry has non-zero timeout.");
-		error_msg->type = htonl(OFPET_FLOW_MOD_FAILED);
-		error_msg->code = htonl(OFPFMFC_BAD_EMERG_TIMEOUT);
+			" entry has non-zero timeout. Not modifying entry.");
+		error_msg->type = htons(OFPET_FLOW_MOD_FAILED);
+		error_msg->code = htons(OFPFMFC_BAD_EMERG_TIMEOUT);
 		return -1;
 	}
 
-	uint16_t action_block_len = flow_mod->header.length - sizeof(ofp_flow_mod);
 	uint16_t action_block_index = sizeof(ofp_flow_mod);
 	uint16_t actions_index = 0;
-	while (action_block_index < action_block_len)
+
+	ofp_action_header *action_header;
+	while (action_block_index < ntohs(flow_mod->header.length))
 	{
-		action_header = (ofp_action_header *) &flow_mod[action_block_index];
-		memcpy(&actions[actions_index], action_header, action_header->len);
-		if (actions[actions_index].header.type == OFPAT_ENQUEUE)
+		// Use temporary pointer to increment pointer address by bytes
+		char *tmp_ptr = (char *)flow_mod;
+		tmp_ptr += action_block_index;
+		action_header = (ofp_action_header *)tmp_ptr;
+
+		memcpy(&actions[actions_index], action_header,
+			ntohs(action_header->len));
+
+		if (ntohs(actions[actions_index].header.type) == OFPAT_ENQUEUE)
 		{
 			verbose(2, "[openflow_flowtable_modify_entry_at_index]::"
-				" OFPAT_ENQUEUE action not supported.");
-			error_msg->type = htonl(OFPET_FLOW_MOD_FAILED);
-			error_msg->code = htonl(OFPFMFC_UNSUPPORTED);
+				" OFPAT_ENQUEUE action not supported. Not modifying entry.");
+			error_msg->type = htons(OFPET_FLOW_MOD_FAILED);
+			error_msg->code = htons(OFPFMFC_UNSUPPORTED);
 			return -1;
 		}
-		if (actions[actions_index].header.type == OFPAT_VENDOR)
+		if (ntohs(actions[actions_index].header.type) == OFPAT_VENDOR)
 		{
 			verbose(2, "[openflow_flowtable_modify_entry_at_index]::"
-				" OFPAT_VENDOR action not supported.");
-			error_msg->type = htonl(OFPET_FLOW_MOD_FAILED);
-			error_msg->code = htonl(OFPFMFC_UNSUPPORTED);
+				" OFPAT_VENDOR action not supported. Not modifying entry.");
+			error_msg->type = htons(OFPET_FLOW_MOD_FAILED);
+			error_msg->code = htons(OFPFMFC_UNSUPPORTED);
 			return -1;
 		}
-		if ((actions[actions_index].header.type > OFPAT_ENQUEUE) &&
-			(actions[actions_index].header.type < OFPAT_VENDOR))
+		if ((ntohs(actions[actions_index].header.type) > OFPAT_ENQUEUE) &&
+			(ntohs(actions[actions_index].header.type) < OFPAT_VENDOR))
 		{
 			verbose(2, "[openflow_flowtable_modify_entry_at_index]::"
-				" Unrecognized action.");
-			error_msg->type = htonl(OFPET_BAD_ACTION);
-			error_msg->code = htonl(OFPBAC_BAD_TYPE);
+				" Unrecognized action. Not modifying entry.");
+			error_msg->type = htons(OFPET_BAD_ACTION);
+			error_msg->code = htons(OFPBAC_BAD_TYPE);
 			return -1;
 		}
 
-		if (actions[actions_index].header.type == OFPAT_OUTPUT)
+		if (ntohs(actions[actions_index].header.type) == OFPAT_OUTPUT)
 		{
 			ofp_action_output *output_action =
 				(ofp_action_output *) action_header;
-			if (output_action->len != 8) {
+			if (ntohs(output_action->len) != 8) {
 				verbose(2, "[openflow_flowtable_modify_entry_at_index]::"
-					" OFPAT_OUTPUT action not of length 8.");
-				error_msg->type = htonl(OFPET_BAD_ACTION);
-				error_msg->code = htonl(OFPBAC_BAD_LEN);
+					" OFPAT_OUTPUT action not of length 8. Not modifying"
+					" entry.");
+				error_msg->type = htons(OFPET_BAD_ACTION);
+				error_msg->code = htons(OFPBAC_BAD_LEN);
 				return -1;
 			}
-			if (output_action->port > OPENFLOW_MAX_PHYSICAL_PORTS) {
+			if (ntohs(output_action->port) > OPENFLOW_MAX_PHYSICAL_PORTS &&
+				ntohs(output_action->port) < OFPP_IN_PORT) {
 				verbose(2, "[openflow_flowtable_modify_entry_at_index]::"
-					" OFPAT_OUTPUT action uses invalid port.");
-				error_msg->type = htonl(OFPET_BAD_ACTION);
-				error_msg->code = htonl(OFPBAC_BAD_OUT_PORT);
-				return -1;
-			}
-		}
-		else if (actions[actions_index].header.type == OFPAT_SET_VLAN_VID)
-		{
-			if (actions[actions_index].header.len != 8) {
-				verbose(2, "[openflow_flowtable_modify_entry_at_index]::"
-					" OFPAT_SET_VLAN_VID action not of length 8.");
-				error_msg->type = htonl(OFPET_BAD_ACTION);
-				error_msg->code = htonl(OFPBAC_BAD_LEN);
+					" OFPAT_OUTPUT action uses invalid port. Not modifying"
+					" entry.");
+				error_msg->type = htons(OFPET_BAD_ACTION);
+				error_msg->code = htons(OFPBAC_BAD_OUT_PORT);
 				return -1;
 			}
 		}
-		else if (actions[actions_index].header.type == OFPAT_SET_VLAN_PCP)
+		else if (ntohs(actions[actions_index].header.type) ==
+			OFPAT_SET_VLAN_VID)
 		{
-			if (actions[actions_index].header.len != 8) {
+			if (ntohs(actions[actions_index].header.len) != 8) {
 				verbose(2, "[openflow_flowtable_modify_entry_at_index]::"
-					" OFPAT_SET_VLAN_PCP action not of length 8.");
-				error_msg->type = htonl(OFPET_BAD_ACTION);
-				error_msg->code = htonl(OFPBAC_BAD_LEN);
+					" OFPAT_SET_VLAN_VID action not of length 8. Not"
+					" modifying entry.");
+				error_msg->type = htons(OFPET_BAD_ACTION);
+				error_msg->code = htons(OFPBAC_BAD_LEN);
 				return -1;
 			}
 		}
-		else if (actions[actions_index].header.type == OFPAT_SET_DL_SRC ||
-			actions[actions_index].header.type == OFPAT_SET_DL_DST)
+		else if (ntohs(actions[actions_index].header.type) ==
+			OFPAT_SET_VLAN_PCP)
 		{
-			if (actions[actions_index].header.len != 8) {
+			if (ntohs(actions[actions_index].header.len) != 8) {
+				verbose(2, "[openflow_flowtable_modify_entry_at_index]::"
+					" OFPAT_SET_VLAN_PCP action not of length 8. Not"
+					" modifying entry.");
+				error_msg->type = htons(OFPET_BAD_ACTION);
+				error_msg->code = htons(OFPBAC_BAD_LEN);
+				return -1;
+			}
+		}
+		else if (ntohs(actions[actions_index].header.type) ==
+			OFPAT_SET_DL_SRC ||
+			ntohs(actions[actions_index].header.type) == OFPAT_SET_DL_DST)
+		{
+			if (ntohs(actions[actions_index].header.len) != 16) {
 				verbose(2, "[openflow_flowtable_modify_entry_at_index]::"
 					" OFPAT_SET_DL_SRC or OFPAT_SET_DL_DST action not of"
-					" length 16.");
-				error_msg->type = htonl(OFPET_BAD_ACTION);
-				error_msg->code = htonl(OFPBAC_BAD_LEN);
+					" length 16. Not modifying entry.");
+				error_msg->type = htons(OFPET_BAD_ACTION);
+				error_msg->code = htons(OFPBAC_BAD_LEN);
 				return -1;
 			}
 		}
-		else if (actions[actions_index].header.type == OFPAT_SET_NW_SRC ||
-			actions[actions_index].header.type == OFPAT_SET_NW_DST)
+		else if (ntohs(actions[actions_index].header.type) ==
+			OFPAT_SET_NW_SRC ||
+			ntohs(actions[actions_index].header.type) == OFPAT_SET_NW_DST)
 		{
-			if (actions[actions_index].header.len != 8) {
+			if (ntohs(actions[actions_index].header.len) != 8) {
 				verbose(2, "[openflow_flowtable_modify_entry_at_index]::"
 					" OFPAT_SET_NW_SRC or OFPAT_SET_NW_DST action not of"
-					" length 8.");
-				error_msg->type = htonl(OFPET_BAD_ACTION);
-				error_msg->code = htonl(OFPBAC_BAD_LEN);
+					" length 8. Not modifying entry.");
+				error_msg->type = htons(OFPET_BAD_ACTION);
+				error_msg->code = htons(OFPBAC_BAD_LEN);
 				return -1;
 			}
 		}
-		else if (actions[actions_index].header.type == OFPAT_SET_NW_TOS)
+		else if (ntohs(actions[actions_index].header.type) == OFPAT_SET_NW_TOS)
 		{
-			if (actions[actions_index].header.len != 8) {
+			if (ntohs(actions[actions_index].header.len) != 8) {
 				verbose(2, "[openflow_flowtable_modify_entry_at_index]::"
-					" OFPAT_SET_NW_TOS action not of length 8.");
-				error_msg->type = htonl(OFPET_BAD_ACTION);
-				error_msg->code = htonl(OFPBAC_BAD_LEN);
+					" OFPAT_SET_NW_TOS action not of length 8. Not modifying"
+					" entry.");
+				error_msg->type = htons(OFPET_BAD_ACTION);
+				error_msg->code = htons(OFPBAC_BAD_LEN);
 				return -1;
 			}
 		}
-		else if (actions[actions_index].header.type == OFPAT_SET_TP_SRC ||
-			actions[actions_index].header.type == OFPAT_SET_TP_DST)
+		else if (ntohs(actions[actions_index].header.type) ==
+			OFPAT_SET_TP_SRC ||
+			ntohs(actions[actions_index].header.type) == OFPAT_SET_TP_DST)
 		{
-			if (actions[actions_index].header.len != 8) {
+			if (ntohs(actions[actions_index].header.len) != 8) {
 				verbose(2, "[openflow_flowtable_modify_entry_at_index]::"
 					" OFPAT_SET_TP_SRC or OFPAT_SET_TP_DST action not of"
-					" length 8.");
-				error_msg->type = htonl(OFPET_BAD_ACTION);
-				error_msg->code = htonl(OFPBAC_BAD_LEN);
+					" length 8. Not modifying entry.");
+				error_msg->type = htons(OFPET_BAD_ACTION);
+				error_msg->code = htons(OFPBAC_BAD_LEN);
 				return -1;
 			}
 		}
 
-		action_block_index += action_header->len;
+		action_block_index += ntohs(action_header->len);
 		actions_index += 1;
-		if (actions_index == OPENFLOW_MAX_ACTIONS) {
+		if (actions_index > OPENFLOW_MAX_ACTIONS) {
 			verbose(2, "[openflow_flowtable_modify_entry_at_index]::"
-				" Too many actions.");
-			error_msg->type = htonl(OFPET_BAD_ACTION);
-			error_msg->code = htonl(OFPBAC_TOO_MANY);
+				" Too many actions. Not modifying entry.");
+			error_msg->type = htons(OFPET_BAD_ACTION);
+			error_msg->code = htons(OFPBAC_TOO_MANY);
 			return -1;
 		}
 	}
@@ -1166,16 +1248,23 @@ static int32_t openflow_flowtable_modify_entry_at_index(ofp_flow_mod *flow_mod,
 	flowtable->entries[index].flags = flow_mod->flags;
 	for (i = 0; i < OPENFLOW_MAX_ACTIONS; i++)
 	{
-		if (actions_index < i)
+		if (i < actions_index)
 		{
 			flowtable->entries[index].actions[i].active = 1;
 			flowtable->entries[index].actions[i].action = actions[i];
+		}
+		else
+		{
+			flowtable->entries[index].actions[i].active = 0;
 		}
 	}
 	if (reset)
 	{
 		memset(&flowtable->entries[index].stats, 0, sizeof(ofp_flow_stats));
 	}
+
+	verbose(2, "[openflow_flowtable_modify_entry_at_index]:: Modified entry"
+		" at index %" PRIu32 ".", index);
 
 	return 0;
 }
@@ -1195,23 +1284,23 @@ static int32_t openflow_flowtable_add(ofp_flow_mod* flow_mod,
 	uint32_t i;
 	uint16_t flags = ntohs(flow_mod->flags);
 
-	verbose(2, "[openflow_flowtable_add]:: Adding flowtable entry.");
-
 	if (flags & OFPFF_CHECK_OVERLAP)
 	{
 		verbose(2, "[openflow_flowtable_add]:: OFPFF_CHECK_OVERLAP flag set.");
 		if (openflow_flowtable_find_overlapping_entry(flow_mod, &i))
 		{
-			verbose(2, "[openflow_flowtable_add]:: Overlapping entry found.");
-			error_msg->type = htonl(OFPET_FLOW_MOD_FAILED);
-			error_msg->code = htonl(OFPFMFC_OVERLAP);
+			verbose(2, "[openflow_flowtable_add]:: Overlapping entry found at"
+				" index %" PRIu32 ". Not adding to table.", i);
+			error_msg->type = htons(OFPET_FLOW_MOD_FAILED);
+			error_msg->code = htons(OFPFMFC_OVERLAP);
 			return -1;
 		}
 	}
 
 	if (openflow_flowtable_find_identical_entry(flow_mod, &i))
 	{
-		verbose(2, "[openflow_flowtable_add]:: Found identical match.");
+		verbose(2, "[openflow_flowtable_add]:: Replacing flowtable entry to"
+			" index %" PRIu32 ".", i);
 		memset(&flowtable->entries[i], 0,
 			sizeof(openflow_flowtable_entry_type));
 		return openflow_flowtable_modify_entry_at_index(flow_mod, i,
@@ -1222,8 +1311,8 @@ static int32_t openflow_flowtable_add(ofp_flow_mod* flow_mod,
 	{
 		if (!flowtable->entries[i].active)
 		{
-			verbose(2, "[openflow_flowtable_add]:: Found unused flowtable"
-				" entry.");
+			verbose(2, "[openflow_flowtable_add]:: Adding flowtable entry at"
+				" index %" PRIu32 ".", i);
 			memset(&flowtable->entries[i], 0,
 				sizeof(openflow_flowtable_entry_type));
 			return openflow_flowtable_modify_entry_at_index(flow_mod, i,
@@ -1232,8 +1321,8 @@ static int32_t openflow_flowtable_add(ofp_flow_mod* flow_mod,
 	}
 
 	verbose(2, "[openflow_flowtable_add]:: No room in flowtable to add entry.");
-	error_msg->type = htonl(OFPET_FLOW_MOD_FAILED);
-	error_msg->code = htonl(OFPFMFC_ALL_TABLES_FULL);
+	error_msg->type = htons(OFPET_FLOW_MOD_FAILED);
+	error_msg->code = htons(OFPFMFC_ALL_TABLES_FULL);
 	return -1;
 }
 
@@ -1252,15 +1341,14 @@ static int32_t openflow_flowtable_edit(ofp_flow_mod *flow_mod,
 	uint32_t i;
 	uint32_t start_index;
 
-	verbose(2, "[openflow_flowtable_edit]:: Editing flowtable entry.");
-
 	uint8_t found_match = 0;
 	while (start_index < OPENFLOW_MAX_FLOWTABLE_ENTRIES)
 	{
 		if (openflow_flowtable_find_matching_entry(flow_mod, &i, start_index,
 			OFPP_NONE))
 		{
-			verbose(2, "[openflow_flowtable_edit]:: Found match.");
+			verbose(2, "[openflow_flowtable_edit]:: Editing flowtable entry at"
+				" index %" PRIu32 ".", i);
 			int32_t ret = openflow_flowtable_modify_entry_at_index(flow_mod, i,
 				error_msg, 0);
 			if (ret < 0)
@@ -1300,12 +1388,10 @@ static int32_t openflow_flowtable_edit_strict(ofp_flow_mod *flow_mod,
 {
 	uint32_t i;
 
-	verbose(2, "[openflow_flowtable_edit_strict]:: Editing flowtable entry"
-		" (strict).");
-
 	if (openflow_flowtable_find_identical_entry(flow_mod, &i))
 	{
-		verbose(2, "[openflow_flowtable_edit_strict]:: Found identical match.");
+		verbose(2, "[openflow_flowtable_edit_strict]:: Editing flowtable entry"
+			" at index %" PRIu32 ".", i);
 		return openflow_flowtable_modify_entry_at_index(flow_mod, i,
 			error_msg, 0);
 	}
@@ -1328,15 +1414,14 @@ static int32_t openflow_flowtable_delete(ofp_flow_mod *flow_mod,
 	uint32_t i;
 	uint32_t start_index;
 
-	verbose(2, "[openflow_flowtable_delete]:: Deleting flowtable entry.");
-
 	uint8_t found_match = 0;
 	while (start_index < OPENFLOW_MAX_FLOWTABLE_ENTRIES)
 	{
 		if (openflow_flowtable_find_matching_entry(flow_mod, &i, start_index,
 			ntohs(flow_mod->out_port)))
 		{
-			verbose(2, "[openflow_flowtable_edit]:: Found match.");
+			verbose(2, "[openflow_flowtable_delete]:: Deleting flowtable entry"
+				" at index %" PRIu32 ".", i);
 
 			if (ntohs(flowtable->entries[i].flags) & OFPFF_SEND_FLOW_REM)
 			{
@@ -1361,12 +1446,10 @@ static int32_t openflow_flowtable_delete_strict(ofp_flow_mod *flow_mod,
 {
 	uint32_t i;
 
-	verbose(2, "[openflow_flowtable_delete_strict]:: Deleting flowtable entry"
-		" (strict).");
-
 	if (openflow_flowtable_find_identical_entry(flow_mod, &i))
 	{
-		verbose(2, "[openflow_flowtable_edit_strict]:: Found identical match.");
+		verbose(2, "[openflow_flowtable_edit_strict]:: Deleting flowtable"
+			" entry at index %" PRIu32 ".", i);
 
 		if (ntohs(flowtable->entries[i].flags) & OFPFF_SEND_FLOW_REM)
 		{
@@ -1427,8 +1510,8 @@ int32_t openflow_flowtable_modify(ofp_flow_mod *flow_mod,
 	{
 		verbose(2, "[openflow_flowtable_modify]:: Modify command not"
 			" recognized.");
-		error_msg->type = htonl(OFPET_FLOW_MOD_FAILED);
-		error_msg->code = htonl(OFPFMFC_BAD_COMMAND);
+		error_msg->type = htons(OFPET_FLOW_MOD_FAILED);
+		error_msg->code = htons(OFPFMFC_BAD_COMMAND);
 		return -1;
 	}
 }

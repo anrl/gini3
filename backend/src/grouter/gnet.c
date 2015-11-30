@@ -346,7 +346,7 @@ interface_t *GNETMakeEthInterface(char *vsock_name, char *device,
 		device, MAC2Colon(tmpbuf, mac_addr), IP2Dot((tmpbuf+20), nw_addr));
 
 	iface_id = gAtoi(device);
-	
+
 	if (findInterface(iface_id) != NULL)
 	{
 		verbose(1, "[GNETMakeEthInterface]:: device %s already defined.. ", device);
@@ -478,21 +478,21 @@ interface_t *GNETMakeTunInterface(char *device, uchar *mac_addr, uchar *nw_addr,
 	device, MAC2Colon(tmpbuf, mac_addr), IP2Dot((tmpbuf+20), nw_addr));
 
     iface_id = gAtoi(device);
-        
+
     if (findInterface(iface_id) != NULL)
     {
 	verbose(1, "[GNETMakeTunInterface]:: device %s already defined.. ", device);
 	return NULL;
     }
-    
+
     // setup the interface..
     iface = newInterfaceStructure(device, device,
                                   mac_addr, nw_addr, MAX_MTU);
-    
+
     verbose(2, "[GNETMakeTunInterface]:: trying to connect to %s..", device);
-    
-    vcon = tun_connect((short int)(BASEPORTNUM+iface_id+gAtoi(rconfig.router_name)*100), NULL, (short int)(BASEPORTNUM+dst_port+gAtoi(rconfig.router_name)*100), dst_ip); 
-    
+
+    vcon = tun_connect((short int)(BASEPORTNUM+iface_id+gAtoi(rconfig.router_name)*100), NULL, (short int)(BASEPORTNUM+dst_port+gAtoi(rconfig.router_name)*100), dst_ip);
+
     if(vcon == NULL)
     {
         verbose(1, "[GNETMakeTunInterface]:: unable to connect to %s", device);
@@ -501,7 +501,7 @@ interface_t *GNETMakeTunInterface(char *device, uchar *mac_addr, uchar *nw_addr,
 
     iface->iface_fd = vcon->data;
     iface->vpl_data = vcon;
-    
+
     upThisInterface(iface);
     return iface;
 }
@@ -824,22 +824,23 @@ void *GNETHandler(void *outq)
 		// we have a valid interface handle -- iface.
 		COPY_MAC(in_pkt->data.header.src, iface->mac_addr);
 
-		if (in_pkt->frame.arp_valid == TRUE)
-			putARPCache(in_pkt->frame.nxth_ip_addr, in_pkt->data.header.dst);
-		else if (in_pkt->frame.arp_bcast != TRUE)
+		if (!in_pkt->frame.openflow)
 		{
-			if ((cached = lookupARPCache(in_pkt->frame.nxth_ip_addr,
-						     mac_addr)) == TRUE)
-				COPY_MAC(in_pkt->data.header.dst, mac_addr);
-			else
+			if (in_pkt->frame.arp_valid == TRUE)
+				putARPCache(in_pkt->frame.nxth_ip_addr, in_pkt->data.header.dst);
+			else if (in_pkt->frame.arp_bcast != TRUE)
 			{
-				ARPResolve(in_pkt);
-				continue;
+				if ((cached = lookupARPCache(in_pkt->frame.nxth_ip_addr,
+							     mac_addr)) == TRUE)
+					COPY_MAC(in_pkt->data.header.dst, mac_addr);
+				else
+				{
+					ARPResolve(in_pkt);
+					continue;
+				}
 			}
 		}
 
 		iface->devdriver->todev((void *)in_pkt);
-
 	}
 }
-

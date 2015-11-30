@@ -9,7 +9,6 @@
 
 #include "packetcore.h"
 #include "classifier.h"
-#include "filter.h"
 #include "protocols.h"
 #include "message.h"
 #include "gnet.h"
@@ -21,7 +20,6 @@
 
 extern pktcore_t *pcore;
 extern classlist_t *classifier;
-extern filtertab_t *filter;
 
 
 extern router_config rconfig;
@@ -115,14 +113,6 @@ void* fromEthernetDev(void *arg)
 		in_pkt->frame.src_interface = iface->interface_id;
 		COPY_MAC(in_pkt->frame.src_hw_addr, iface->mac_addr);
 		COPY_IP(in_pkt->frame.src_ip_addr, iface->ip_addr);
-
-		// check for filtering.. if the it should be filtered.. then drop
-		if (filteredPacket(filter, in_pkt))
-		{
-			verbose(2, "[fromEthernetDev]:: Packet filtered..!");
-			free(in_pkt);
-			continue;   // skip the rest of the loop
-		}
 
 		verbose(2, "[fromEthernetDev]:: Packet is sent for enqueuing..");
 		enqueuePacket(pcore, in_pkt, sizeof(gpacket_t), rconfig.openflow);

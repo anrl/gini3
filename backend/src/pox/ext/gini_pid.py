@@ -1,6 +1,7 @@
 #!/usr/bin/python2
 
-"""gini_pid.py: Retrieves the OpenFlow controller PID and writes it to a file."""
+"""gini_pid.py: Retrieves the OpenFlow controller PID and writes it to a
+   file."""
 
 from pox.core import core
 import pox.lib.util as poxutil

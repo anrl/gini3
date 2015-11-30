@@ -191,14 +191,3 @@ ofp_switch_features openflow_config_get_switch_features()
 
     return switch_features;
 }
-
-/**
- * Determines if the switch is currently operating in emergency mode.
- *
- * @return 1 if the switch is currently operating in emergency mode, 0
- *         otherwise.
- */
-uint8_t openflow_config_is_emergency()
-{
-	return openflow_ctrl_iface_get_conn_state();
-}

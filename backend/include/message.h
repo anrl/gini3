@@ -62,6 +62,7 @@ typedef struct _pkt_frame_t
 	uchar nxth_ip_addr[4];           // destination interface IP address; required by ARP, filled IP
 	int arp_valid;
 	int arp_bcast;
+	int openflow;
 } pkt_frame_t;
 
 

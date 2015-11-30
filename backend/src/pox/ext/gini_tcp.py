@@ -1,6 +1,7 @@
 #!/usr/bin/python2
 
-"""gini_tcp.py: Retrieves the OpenFlow controller TCP port number and writes it to a file."""
+"""gini_tcp.py: Retrieves the OpenFlow controller TCP port number and writes it
+   to a file."""
 
 from pox.core import core
 import pox.lib.util as poxutil
