@@ -1,0 +1,3 @@
+[submodule "backend/third-party/mut"]
+	path = backend/third-party/mut
+	url = https://github.com/galvedro/mut.git
