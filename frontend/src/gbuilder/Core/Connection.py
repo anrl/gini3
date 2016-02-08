@@ -20,16 +20,16 @@ connection_rule={}
 connection_rule[UML.device_type]=(Switch.device_type, Subnet.device_type, Bridge.device_type, Hub.device_type)
 connection_rule[UML_Android.device_type]=connection_rule[UML.device_type]
 connection_rule[UML_FreeDOS.device_type]=connection_rule[UML.device_type]
-connection_rule[Router.device_type]=(Subnet.device_type)
-connection_rule[Switch.device_type]=(UML.device_type, Subnet.device_type, Switch.device_type, REALM.device_type, OpenFlow_Controller.device_type)
-connection_rule[Bridge.device_type]=(UML.device_type, Subnet.device_type, REALM.device_type, OpenFlow_Controller.device_type)
-connection_rule[Hub.device_type]=(UML.device_type, Subnet.device_type, REALM.device_type, OpenFlow_Controller.device_type)
+connection_rule[Router.device_type]=(Subnet.device_type, OpenFlow_Controller.device_type)
+connection_rule[Switch.device_type]=(UML.device_type, Subnet.device_type, Switch.device_type, REALM.device_type)
+connection_rule[Bridge.device_type]=(UML.device_type, Subnet.device_type, REALM.device_type)
+connection_rule[Hub.device_type]=(UML.device_type, Subnet.device_type, REALM.device_type)
 connection_rule[Wireless_access_point.device_type]=(Mobile.device_type)
-connection_rule[Subnet.device_type]=(UML.device_type, Switch.device_type, Router.device_type, Bridge.device_type, Hub.device_type, Firewall.device_type, REALM.device_type, OpenFlow_Controller.device_type)
+connection_rule[Subnet.device_type]=(UML.device_type, Switch.device_type, Router.device_type, Bridge.device_type, Hub.device_type, Firewall.device_type, REALM.device_type)
 connection_rule[Mobile.device_type]=(Wireless_access_point.device_type)
 connection_rule[Firewall.device_type]=(Subnet.device_type)
 connection_rule[REALM.device_type]=(Switch.device_type, Subnet.device_type, Bridge.device_type, Hub.device_type)
-connection_rule[OpenFlow_Controller.device_type]=(Switch.device_type, Subnet.device_type, Bridge.device_type, Hub.device_type)
+connection_rule[OpenFlow_Controller.device_type]=(Router.device_type)
 
 class Connection(Edge):
     device_type = "Connection"
@@ -39,7 +39,7 @@ class Connection(Edge):
         Create a connection to link devices together.
         """
         Edge.__init__(self, source, dest)
-
+    
     def getOtherDevice(self, node):
         """
         Retrieve the device opposite to node from this connection.

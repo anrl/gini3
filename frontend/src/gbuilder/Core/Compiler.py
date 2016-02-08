@@ -13,7 +13,7 @@ class Compiler:
         """
         self.warnings = 0
         self.errors = 0
-
+        
         self.device_list = device_list
         self.filename = filename.replace(".gsav", ".xml")
         self.output = open(self.filename, "w")
@@ -38,7 +38,7 @@ class Compiler:
             self.log.append("Auto-routing is ON.")
         else:
             self.log.append("Auto-routing is OFF.")
-
+            
         self.output.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
         self.output.write("<!DOCTYPE gloader SYSTEM \"" + os.environ["GINI_SHARE"] + "/gloader/gloader.dtd"+"\">\n")
         self.output.write("<gloader>\n\n")
@@ -54,39 +54,37 @@ class Compiler:
         if options["autogen"]:
             self.autogen_wireless_access_point()
         self.compile_wireless_access_point()
-
+            
         if options["autogen"]:
             self.autogen_router()
             self.autogen_UML()
-            self.autogen_OpenFlow_Controller()
             self.autogen_REALM()
             self.autogen_mobile()
-
+            
         self.routing_table_clear()
         if options["autorouting"]:
             self.routing_table_router()
             #self.routing_table_wireless_access_point()
             self.routing_table_entry()
             self.routing_table_uml()
-            self.routing_table_OpenFlow_Controller()
             #self.routing_table_mobile()
-
+        
         self.compile_router()
         self.compile_UML()
-        self.compile_OpenFlow_Controller()
         self.compile_REALM()
         self.compile_mobile()
+        self.compile_OpenFlow_Controller()
 
         self.output.write("</gloader>\n")
-        self.output.close()
-
+        self.output.close()    
+        
         self.log.append("Compile finished with " + str(self.errors) + \
                         " error(s) and " + str(self.warnings) + " warning(s).\n")
 
         if self.errors:
             os.remove(self.filename)
             return ""
-
+        
         return self.filename
 
     def autogen_subnet(self):
@@ -106,7 +104,7 @@ class Compiler:
         self.output.write("\t\t<" + prop + ">")
         self.output.write(value)
         self.output.write("</" + prop + ">\n")
-
+        
     def generateREALMError(self):
         self.errors += 1
         self.log.append("Error: there is more than one REALM")
@@ -120,7 +118,7 @@ class Compiler:
         if not errorType == "missing":
             message += " value"
         if interface:
-            message += " of interface " + str(device.getInterfaces().index(interface) + 1)
+            message += " of interface " + str(device.getInterfaces().index(interface) + 1)        
         message += " is " + errorType + "."
         self.log.append(message)
 
@@ -139,7 +137,7 @@ class Compiler:
         self.warnings += 1
         message = ' '.join(("Warning:", device.getName(), "has less than", str(numCons), "connection(s)."))
         self.log.append(message)
-
+        
     def compile_subnet(self):
         """
         Compile all the Subnets.
@@ -149,14 +147,14 @@ class Compiler:
             edges = subnet.edges()
             if len(edges) < 1:
                 self.generateConnectionWarning(subnet, 1)
-
+                
             for prop in ["subnet", "mask"]:
                 value = subnet.getProperty(prop)
                 if not value:
                     self.generateError(subnet, prop, "empty")
                 elif not self.validate(prop, value):
                     self.generateError(subnet, prop, "invalid")
-
+            
             self.pass_mask(subnet)
 
     def autogen_router(self):
@@ -165,11 +163,11 @@ class Compiler:
         """
         for router in self.compile_list["Router"]:
             i = 0
-            for con in router.edges():
+            for con in router.edges(): 
                 i += 1
                 node = con.getOtherDevice(router)
                 node = node.getTarget(router)
-
+                
                 if options["autogen"]:
                     subnet = str(router.getInterfaceProperty("subnet", node)).rsplit(".", 1)[0]
                     router.setInterfaceProperty("ipv4", "%s.%d" % (subnet, 127 + router.getID()), node)
@@ -181,25 +179,27 @@ class Compiler:
         """
         for router in self.compile_list["Router"]:
             self.output.write("<vr name=\"" + router.getName() + "\">\n")
+
             if router.getProperty("openflow") == "True":
                 self.output.write("\t<openflow/>\n")
+
             edges = router.edges()
             if len(edges) < 2:
                 self.generateConnectionWarning(router, 2)
-
-            for con in edges:
+            
+            for con in edges: 
                 node = con.getOtherDevice(router)
                 node = node.getTarget(router)
-
+                
                 self.output.write("\t<netif>\n")
-
+                
                 interface = router.getInterface(node)
                 mapping = {"subnet":"network", "mac":"nic", "ipv4":"ip"}
 
                 self.writeInterface(router, interface, mapping)
-
+                    
                 self.output.write("\t</netif>\n")
-
+            
             self.output.write("</vr>\n\n")
 
     def autogen_wireless_access_point(self):
@@ -215,8 +215,8 @@ class Compiler:
                 subnet = str(subnet).rsplit(".", 1)[0]
                 router.setInterfaceProperty("mask", "255.255.255.0")
                 router.setInterfaceProperty("ipv4", "%s.%d" % (subnet, router.getID()))
-                router.setInterfaceProperty("mac", "fe:fd:01:%02x:00:00" % router.getID())
-
+                router.setInterfaceProperty("mac", "fe:fd:01:%02x:00:00" % router.getID())    
+        
     def compile_wireless_access_point(self):
         """
         Compile all the Wireless_access_points.
@@ -227,11 +227,11 @@ class Compiler:
             edges = router.edges()
             if len(edges) < 1:
                 self.errors += 1
-                message = "Error: " + router.getName() + " needs at least one connected Mobile to start."
+                message = "Error: " + router.getName() + " needs at least one connected Mobile to start." 
                 self.log.append(message)
-
+                
             self.output.write("\t<netif_wireless>\n")
-
+                
             interface = router.getInterface()
             mapping = {"subnet":"network", "mac":"nic", "ipv4":"ip"}
 
@@ -244,15 +244,15 @@ class Compiler:
             p_types["energy"]=("power", "PSM", "energy_amount")
             p_types["mobility"]=("m_type", "ran_max", "ran_min")
             p_types["mac_layer"]=("mac_type", "trans")
-
-            for item in p_types:
+                
+            for item in p_types:        
                 self.output.write("\t<"+item+">\n")
                 for p in p_types[item]:
                     self.output.write("\t\t<"+p+">"+router.getProperty(p)+"</"+p+">\n")
                 self.output.write("\t</"+item+">\n")
 
             self.output.write("\t</netif_wireless>\n")
-
+            
             self.output.write("</vwr>\n\n")
 
             subnet = router.getInterfaceProperty("subnet")
@@ -275,16 +275,16 @@ class Compiler:
             except:
                 self.generateError(device, prop, "missing", interface)
                 return
-
+            
             if not value:
                 self.generateError(device, prop, "empty", interface)
             elif not self.validate(prop, value, interface):
                 self.generateError(device, prop, "invalid", interface)
             else:
                 self.writeProperty(eq, value)
-
+                
         table = self.formatRoutes(interface[QtCore.QString("routing")], device.device_type)
-        self.output.write(table)
+        self.output.write(table)    
 
     def autogen_switch(self):
         """
@@ -292,7 +292,7 @@ class Compiler:
         """
         for switch in self.compile_list["Switch"]:
             switch.setProperty("mac", "fe:fd:04:00:00:%02x" % switch.getID())
-
+            
     def compile_switch(self):
         """
         Compile all the Switches.
@@ -341,7 +341,7 @@ class Compiler:
 
     def switch_pass_mask(self):
         for switch in self.compile_list["Switch"]:
-
+            
           has_subnet = False
           for edge in switch.edges():
               node = edge.getOtherDevice(switch)
@@ -349,8 +349,8 @@ class Compiler:
                   has_subnet = True
 
           if has_subnet:
-              target = switch.getTarget(None)
-              gateway = target.getInterface(switch) if target is not None else None
+              target = switch.getTarget(None) 
+              gateway = target.getInterface(switch) if target is not None else None 
               Q = [switch]
               switch_seen = set([switch])
               while Q:
@@ -365,7 +365,7 @@ class Compiler:
                               switch_seen.add(node)
                               Q.append(node)
 
-
+      
 
     def autogen_UML(self):
         """
@@ -379,8 +379,8 @@ class Compiler:
                     except:
                         continue
                     uml.setInterfaceProperty("ipv4", "%s.%d" % (subnet, uml.getID()+1))
-                    uml.setInterfaceProperty("mac", "fe:fd:02:00:00:%02x" % uml.getID())
-
+                    uml.setInterfaceProperty("mac", "fe:fd:02:00:00:%02x" % uml.getID())    
+        
     def compile_UML(self):
         """
         Compile all the UMLs.
@@ -393,53 +393,17 @@ class Compiler:
             interfaces = uml.getInterfaces()
             if len(interfaces) < 1:
                 self.generateConnectionWarning(uml, 1)
-
+                
             for interface in interfaces:
 
                 self.output.write("\t<if>\n")
 
                 mapping = {"subnet":"network", "mac":"mac", "ipv4":"ip"}
                 self.writeInterface(uml, interface, mapping)
-
+        
                 self.output.write("\t</if>\n")
-
+            
             self.output.write("</vm>\n\n")
-
-    def autogen_OpenFlow_Controller(self):
-        """
-        Auto-generate properties for OpenFlow controllers.
-        """
-        for controller in self.compile_list["OpenFlow_Controller"]:
-            for interface in controller.getInterfaces():
-                if options["autogen"]:
-                    try:
-                        subnet = str(controller.getInterfaceProperty("subnet")).rsplit(".", 1)[0]
-                    except:
-                        continue
-                    controller.setInterfaceProperty("ipv4", "%s.%d" % (subnet, controller.getID()+1))
-                    controller.setInterfaceProperty("mac", "fe:fd:02:00:00:%02x" % controller.getID())
-
-    def compile_OpenFlow_Controller(self):
-        """
-        Compile all the OpenFlow controllers.
-        """
-        for controller in self.compile_list["OpenFlow_Controller"]:
-            self.output.write("<vofc name=\"" + controller.getName() + "\">\n")
-
-            interfaces = controller.getInterfaces()
-            if len(interfaces) < 1:
-                self.generateConnectionWarning(controller, 1)
-
-            for interface in interfaces:
-
-                self.output.write("\t<if>\n")
-
-                mapping = {"subnet":"network", "mac":"mac", "ipv4":"ip"}
-                self.writeInterface(controller, interface, mapping)
-
-                self.output.write("\t</if>\n")
-
-            self.output.write("</vofc>\n\n")
 
 #********************************* REALM
     def autogen_REALM(self):
@@ -454,7 +418,7 @@ class Compiler:
                     except:
                         continue
                     realm.setInterfaceProperty("ipv4", "%s.%d" % (subnet, realm.getID()+1+len(self.compile_list["UML"])))
-                    realm.setInterfaceProperty("mac", "fe:fd:02:00:01:%02x" % realm.getID())
+                    realm.setInterfaceProperty("mac", "fe:fd:02:00:01:%02x" % realm.getID()) 
 
     def compile_REALM(self):
         """
@@ -466,20 +430,20 @@ class Compiler:
             self.output.write("<vrm name=\"" + realm.getName() + "\">\n")
             self.output.write("\t<filesystem type=\"" + realm.getProperty("filetype") + "\">"
                           + realm.getProperty("filesystem") + "</filesystem>\n")
-
+    
             interfaces = realm.getInterfaces()
             if len(interfaces) < 1:
                 self.generateConnectionWarning(realm, 1)
-
+    
             for interface in interfaces:
-
+    
                 self.output.write("\t<if>\n")
-
+    
                 mapping = {"subnet":"network", "mac":"mac", "ipv4":"ip"}
                 self.writeInterface(realm, interface, mapping)
-
+    
                 self.output.write("\t</if>\n")
-
+    
             self.output.write("</vrm>\n\n")
 #******************************FINISH REALM
 
@@ -493,7 +457,7 @@ class Compiler:
                     subnet = str(uml.getInterfaceProperty("subnet")).rsplit(".", 1)[0]
                     uml.setInterfaceProperty("ipv4", "%s.%d" % (subnet, uml.getID()+1))
                     uml.setInterfaceProperty("mac", "fe:fd:00:00:00:%02x" % uml.getID())
-
+                
     def compile_mobile(self):
         """
         Compile all the Mobiles.
@@ -506,17 +470,30 @@ class Compiler:
             interfaces = uml.getInterfaces()
             if len(interfaces) < 1:
                 self.generateConnectionWarning(uml, 1)
-
+                
             for interface in interfaces:
-
+    
                 self.output.write("\t<if>\n")
-
+                      
                 mapping = {"subnet":"network", "mac":"mac", "ipv4":"ip"}
-                self.writeInterface(uml, interface, mapping)
-
+                self.writeInterface(uml, interface, mapping)  
+                    
                 self.output.write("\t</if>\n")
-
+            
             self.output.write("</vmb>\n\n")
+
+    def compile_OpenFlow_Controller(self):
+        """
+        Compile all the OpenFlow controllers.
+        """
+        for controller in self.compile_list["OpenFlow_Controller"]:
+            self.output.write("<vofc name=\"" + controller.getName() + "\">\n")
+
+            for con in controller.edges(): 
+                node = con.getOtherDevice(controller)
+                self.output.write("\t<ofcif router=\"" + node.getName() + "\" \>\n")
+
+            self.output.write("</vofc>\n\n")
 
     def pass_mask(self, node):
         """
@@ -527,7 +504,7 @@ class Compiler:
         except:
             self.generateError(node, "subnet", "missing")
             return
-
+        
         try:
             mask = node.getProperty("mask")
         except:
@@ -536,7 +513,7 @@ class Compiler:
 
         for con in node.edges():
             otherDevice = con.getOtherDevice(node)
-            if otherDevice.device_type in ["Router", "UML", "OpenFlow_Controller", "REALM", "Mobile"]:
+            if otherDevice.device_type in ["Router", "UML", "REALM", "Mobile"]:
                 target = node
                 if node.device_type == "Subnet":
                     target = node.getTarget(otherDevice)
@@ -555,12 +532,8 @@ class Compiler:
         for interfaceable in self.compile_list["Router"]:
             interfaceable.emptyAdjacentLists()
             interfaceable.emptyRouteTable()
-
+            
         for interfaceable in self.compile_list["UML"]:
-            interfaceable.emptyAdjacentLists()
-            interfaceable.emptyRouteTable()
-
-        for interfaceable in self.compile_list["OpenFlow_Controller"]:
             interfaceable.emptyAdjacentLists()
             interfaceable.emptyRouteTable()
 
@@ -577,7 +550,7 @@ class Compiler:
             interfaceable.emptyRouteTable()
             self.findAdjacentRouters(interfaceable)
             self.findAdjacentSubnets(interfaceable)
-
+            
     def routing_table_uml(self):
         """
         Compute route tables of UMLs.
@@ -585,17 +558,6 @@ class Compiler:
         self.routing_table_interfaceable("UML")
 
         for uml in self.compile_list["UML"]:
-            for subnet in self.compile_list["Subnet"]:
-                if not uml.hasSubnet(subnet.getProperty("subnet")):
-                    uml.addRoutingEntry(subnet.getProperty("subnet"))
-
-    def routing_table_OpenFlow_Controller(self):
-        """
-        Compute route tables of OpenFlow controllers.
-        """
-        self.routing_table_interfaceable("OpenFlow_Controller")
-
-        for uml in self.compile_list["OpenFlow_Controller"]:
             for subnet in self.compile_list["Subnet"]:
                 if not uml.hasSubnet(subnet.getProperty("subnet")):
                     uml.addRoutingEntry(subnet.getProperty("subnet"))
@@ -621,19 +583,19 @@ class Compiler:
             for subnet in self.compile_list["Subnet"]:
                 if not uml.hasSubnet(subnet.getProperty("subnet")):
                     uml.addRoutingEntry(subnet.getProperty("subnet"))
-
+    
     def routing_table_router(self):
         """
         Compute route tables of Routers.
         """
         self.routing_table_interfaceable("Router")
-
+        
     def routing_table_wireless_access_point(self):
         """
         Compute route tables of Wireless_access_points.
         """
         self.routing_table_interfaceable("Wireless_access_point")
-
+    
     def routing_table_entry(self):
         """
         Add routing entries for Routers.
@@ -653,10 +615,10 @@ class Compiler:
                     otherDevice = otherDevice.getTarget(device)
                 if interface[QtCore.QString("target")] == otherDevice:
                     break
-
+            
             visitedNodes = []
             self.visitAdjacentRouters(device, con, device, interface, visitedNodes)
-
+            
     def visitAdjacentRouters(self, myself, con, device, interface, visitedNodes):
         """
         Helper method to find adjacent Routers.
@@ -664,16 +626,16 @@ class Compiler:
         otherDevice = con.getOtherDevice(device)
         if otherDevice in visitedNodes:
             return
-
+        
         visitedNodes.append(otherDevice)
 
         if otherDevice.device_type in ["Router", "Wireless_access_point"]:
             myself.addAdjacentRouter(otherDevice, interface)
-        elif otherDevice.device_type in ["UML", "Mobile", "REALM", "OpenFlow_Controller"]:
+        elif otherDevice.device_type in ["UML", "Mobile", "REALM"]:
             pass
         else:
             for c in otherDevice.edges():
-                if con != c:
+                if con != c: 
                     self.visitAdjacentRouters(myself, c, otherDevice, interface, visitedNodes)
 
     def findAdjacentSubnets(self, device):
@@ -686,12 +648,12 @@ class Compiler:
                 device.addAdjacentSubnet(otherDevice.getProperty("subnet"))
             elif otherDevice.device_type == "Wireless_access_point":
                 device.addAdjacentSubnet(otherDevice.getProperty("subnet"))
-
+            
     def formatRoutes(self, routes, devType):
         """
         Format the routes in xml.
         """
-        if devType == "UML" or devType == "REALM" or devType == "OpenFlow_Controller":
+        if devType == "UML" or devType == "REALM":
             header = "\t\t<route type=\"net\" "
             gateway = "\" gw=\""
             footer = "</route>\n"
@@ -731,7 +693,7 @@ class Compiler:
             return self.valid_mask(value)
         else:
             return self.valid_ip(value)
-
+    
     def valid_ip(self, ip):
         """
         Validate an ip-like address (includes mask).
@@ -758,9 +720,9 @@ class Compiler:
             return True
         else:
             self.warnings += 1
-            message = "Warning: Using a mask other than 255.255.255.0 is not recommended."
+            message = "Warning: Using a mask other than 255.255.255.0 is not recommended." 
             self.log.append(message)
-
+            
         if not self.valid_ip(mask):
             return False
 
@@ -773,7 +735,7 @@ class Compiler:
         # The last chunk of a mask cannot be 255
         if int(chunks[-1]) == 255:
             return False
-
+        
         return True
 
     def valid_ip_subnet(self, ip, subnet, mask):
@@ -788,7 +750,7 @@ class Compiler:
             return False
         if not self.valid_mask(mask):
             return False
-
+        
         p=re.compile('\d+')
         ip_chunk=p.findall(ip)
         subnet_chunk=p.findall(subnet)
