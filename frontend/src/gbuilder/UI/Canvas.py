@@ -9,7 +9,7 @@ from Core.Wireless_Connection import *
 realMnumber=3
 deviceTypes = {"Bridge":Bridge, "Firewall":Firewall, "Hub":Hub, "Mobile":Mobile,
                "Router":Router, "Subnet":Subnet, "Switch":Switch, "REALM":REALM,
-               "UML":UML, "UML_FreeDOS":UML_FreeDOS, "UML_Android":UML_Android,
+               "UML":UML, "UML_FreeDOS":UML_FreeDOS, "UML_Android":UML_Android, 
                "Wireless_access_point":Wireless_access_point,
                "OpenFlow_Controller":OpenFlow_Controller}
 
@@ -39,14 +39,14 @@ class View(QtGui.QGraphicsView):
         """
         if not self.timerId:
             self.timerId = self.startTimer(1000 / 25)
-
+    
     def timerEvent(self, event):
         """
         Handle a timer event for arranging.
         """
         if not options["elasticMode"]:
             return
-
+        
         nodes = [item for item in self.scene().items() if isinstance(item, Node)]
 
         for node in nodes:
@@ -80,7 +80,7 @@ class View(QtGui.QGraphicsView):
         Customize the drawing of the background.
         """
         sceneRect = self.sceneRect()
-
+        
         # Background image
         background = str(options["background"])
         if background.startswith("(") and background.endswith(")"):
@@ -92,7 +92,7 @@ class View(QtGui.QGraphicsView):
         else:
             painter.drawImage(rect, QtGui.QImage(options["background"]))
         painter.eraseRect(sceneRect)
-
+        
         # Shadow
         rightShadow = QtCore.QRectF(sceneRect.right(), sceneRect.top() + 5, 5, sceneRect.height())
         bottomShadow = QtCore.QRectF(sceneRect.left() + 5, sceneRect.bottom(), sceneRect.width(), 5)
@@ -103,8 +103,8 @@ class View(QtGui.QGraphicsView):
 
         # Fill
         painter.setBrush(QtCore.Qt.NoBrush)
-        painter.drawRect(sceneRect)
-
+        painter.drawRect(sceneRect)  
+        
         # Grid
         if not options["grid"]:
             return
@@ -118,7 +118,7 @@ class View(QtGui.QGraphicsView):
         for i in range(int(sceneRect.width() / 50)):
             painter.drawLine(sceneRect.left() + (i+1)*50, sceneRect.top(), sceneRect.left() + (i+1)*50, sceneRect.bottom())
         painter.setPen(QtCore.Qt.black)
-
+    
     def scaleView(self, scaleFactor):
         """
         Zoom in or out based on scaleFactor.
@@ -138,14 +138,14 @@ class View(QtGui.QGraphicsView):
         if self.line != None:
             self.scene().removeItem(self.line)
             self.line = None
-
+            
     def connectNode(self, node):
         """
         Start a connection attempt from a node.
         """
         if mainWidgets["main"].isRunning():
             return
-
+        
         scene = self.scene()
         self.sourceNode = node
         self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(node.pos(), node.pos()))
@@ -161,7 +161,7 @@ class View(QtGui.QGraphicsView):
             con = Connection(sourceNode, item)
         self.scene().addItem(con)
         item.nudge()
-
+    
     def mouseMoveEvent(self, event):
         """
         Handle mouse movement for connection purposes.
@@ -173,17 +173,17 @@ class View(QtGui.QGraphicsView):
         if event.buttons() == QtCore.Qt.RightButton:
             scene = self.scene()
             item = scene.itemAt(self.mapToScene(event.pos()))
-            self.line.setLine(QtCore.QLineF(self.line.line().p1(), self.mapToScene(event.pos())))
+            self.line.setLine(QtCore.QLineF(self.line.line().p1(), self.mapToScene(event.pos())))        
 
     def mouseReleaseEvent(self, event):
         """
         Handle mouse button release for connection and context menu.
         """
         if event.button() == QtCore.Qt.RightButton:
-
+            
             scene = self.scene()
             item = scene.itemAt(self.mapToScene(event.pos()))
-
+            
             def validateEdge():
 
                 def isValid(dest, source):
@@ -196,7 +196,7 @@ class View(QtGui.QGraphicsView):
                                 return "REALM cannot have more than one connection!"
                         elif dest.device_type == "Subnet":
                             if len(dest.edges()) == 2:
-                                return "Subnet cannot have more than two connections!"
+                                return "Subnet cannot have more than two connections!"    
                             if source.device_type == "Switch":
                                 for edge in dest.edges():
                                     if edge.getOtherDevice(dest).device_type == "Switch":
@@ -206,11 +206,11 @@ class View(QtGui.QGraphicsView):
                                         return "Switch cannot have more than one Subnet!"
                         return True
                     return False
-
+    
                 # Don't create an edge between the same node
                 if self.sourceNode == item:
                     return item.contextMenu(event.globalPos())
-
+                
                 # Check for existing edge
                 edges = self.sourceNode.edges()
                 for edge in edges:
@@ -240,11 +240,11 @@ class View(QtGui.QGraphicsView):
                     validateEdge()
             elif isinstance(item, Node) or isinstance(item, Connection):
                 item.contextMenu(event.globalPos())
-
+                                
             self.disconnectNode()
-
+            
         QtGui.QGraphicsView.mouseReleaseEvent(self, event)
-
+        
 class Canvas(View):
     def dragEnterEvent(self, event):
         """
@@ -320,21 +320,21 @@ class Scene(QtGui.QGraphicsScene):
         """
         if options["glowingLights"] and not self.paused:
             self.update()
-
+            
         if not self.refreshing:
             self.timer.stop()
             self.clearSelection()
             self.select()
             mainWidgets["tm"].clear()
             mainWidgets["main"].stopped()
-
+        
     def stopRefresh(self):
         """
         Stop refreshing.
         """
         self.paused = False
         self.refreshing = False
-
+        
     def itemAt(self, pos):
         """
         Find item by position.
