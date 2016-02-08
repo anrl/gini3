@@ -1,8 +1,8 @@
+# Build artifacts
 *.pyc
-*~
 *.o
-.tags*
-config.log
+
+# Build folders
 backend/build
 bin/
 build/
@@ -10,7 +10,18 @@ doc/
 etc/
 lib/
 share/
-root_fs_beta2
+
+# Scons
 .sconf_temp/
 .sconsign.dblite
+
+# Ctags
+.ctags
+.tags*
+tags
+
+# Miscellaneous
+*~
+config.log
+root_fs_beta2
 frontend/src/gbuilder/Core/paths.py
