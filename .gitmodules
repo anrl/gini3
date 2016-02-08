@@ -1,3 +1,7 @@
 [submodule "backend/third-party/mut"]
 	path = backend/third-party/mut
 	url = https://github.com/galvedro/mut.git
+
+[submodule "backend/third-party/pox"]
+	path = backend/third-party/pox
+	url = https://github.com/noxrepo/pox.git
