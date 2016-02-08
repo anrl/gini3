@@ -17,7 +17,7 @@ class Router(Interfaceable):
         
         self.lightPoint = QPoint(-19,-3)
 
-		self.setProperty("openflow", "False")
+        self.setProperty("openflow", "False")
 		
     def graph(self):
         """
