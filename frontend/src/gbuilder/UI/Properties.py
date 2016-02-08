@@ -141,7 +141,7 @@ class PropertiesWindow(Dockable):
             editable = True
             checkable = False
             combo = False
-            if prop == "Hub mode" or prop == "openflow":
+            if prop == "Hub mode":
                 checkable = True
             elif prop == "Hosts":
                 combo = True

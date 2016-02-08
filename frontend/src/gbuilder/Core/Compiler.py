@@ -180,8 +180,11 @@ class Compiler:
         for router in self.compile_list["Router"]:
             self.output.write("<vr name=\"" + router.getName() + "\">\n")
 
-            if router.getProperty("openflow") == "True":
-                self.output.write("\t<openflow/>\n")
+            for con in router.edges():
+                node = con.getOtherDevice(router)
+                if node.device_type == "OpenFlow_Controller":
+                    self.output.write("\t<ofcif controller=\"" + node.getName() + "\" />\n")
+                    break
 
             edges = router.edges()
             if len(edges) < 2:
