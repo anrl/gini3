@@ -242,7 +242,7 @@ class VR:
 
     def addNetIF(self, newIF):
         self.netIF.append(newIF)
-        
+
     def printMe(self):
         print "[Name: " + self.name + "]",
         print "[CLI: " + str(self.cli) + "]",
