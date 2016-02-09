@@ -121,6 +121,14 @@ class Compiler:
             message += " of interface " + str(device.getInterfaces().index(interface) + 1)        
         message += " is " + errorType + "."
         self.log.append(message)
+        
+    def generateGenericError(self, device, message):
+        """
+        Generate a compile error.
+        """
+        self.errors += 1
+        message = ' '.join(("Error:", device.getName(), message))
+        self.log.append(message)
 
     def generateConnectionError(self, device, numCons):
         """
@@ -136,6 +144,14 @@ class Compiler:
         """
         self.warnings += 1
         message = ' '.join(("Warning:", device.getName(), "has less than", str(numCons), "connection(s)."))
+        self.log.append(message)
+        
+    def generateGenericWarning(self, device, message):
+        """
+        Generate a compile warning.
+        """
+        self.warnings += 1
+        message = ' '.join(("Warning:", device.getName(), message))
         self.log.append(message)
         
     def compile_subnet(self):
@@ -166,6 +182,8 @@ class Compiler:
             for con in router.edges(): 
                 i += 1
                 node = con.getOtherDevice(router)
+                if node.device_type == "OpenFlow_Controller":
+                    continue
                 node = node.getTarget(router)
                 
                 if options["autogen"]:
@@ -180,11 +198,15 @@ class Compiler:
         for router in self.compile_list["Router"]:
             self.output.write("<vr name=\"" + router.getName() + "\">\n")
 
+            controllerFound = False
             for con in router.edges():
                 node = con.getOtherDevice(router)
                 if node.device_type == "OpenFlow_Controller":
+                    if controllerFound:
+                        self.generateGenericError(router, " is connected to multiple OpenFlow controllers")
+                        return
+                    controllerFound = True
                     self.output.write("\t<ofcif controller=\"" + node.getName() + "\" />\n")
-                    break
 
             edges = router.edges()
             if len(edges) < 2:
@@ -192,6 +214,8 @@ class Compiler:
             
             for con in edges: 
                 node = con.getOtherDevice(router)
+                if node.device_type == "OpenFlow_Controller":
+                    continue
                 node = node.getTarget(router)
                 
                 self.output.write("\t<netif>\n")
@@ -492,9 +516,17 @@ class Compiler:
         for controller in self.compile_list["OpenFlow_Controller"]:
             self.output.write("<vofc name=\"" + controller.getName() + "\">\n")
 
+            routerFound = False
             for con in controller.edges(): 
                 node = con.getOtherDevice(controller)
-                self.output.write("\t<ofcif router=\"" + node.getName() + "\" \>\n")
+                if node.device_type == "Router":
+                    self.output.write("\t<ofcif router=\"" + node.getName() + "\" \>\n")
+                    routerFound = True
+                else:
+                    self.generateGenericWarning(controller, "has non-router connection; ignored")
+
+            if not routerFound:
+                self.generateGenericWarning(controller, "has no router connections")
 
             self.output.write("</vofc>\n\n")
 
