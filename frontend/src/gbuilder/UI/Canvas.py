@@ -204,6 +204,11 @@ class View(QtGui.QGraphicsView):
                                 for edge in source.edges():
                                     if edge.getOtherDevice(source).device_type == "Subnet":
                                         return "Switch cannot have more than one Subnet!"
+                        elif dest.device_type == "Router":
+                            if source.device_type == "OpenFlow_Controller":
+                                for edge in dest.edges():
+                                    if edge.getOtherDevice(dest).device_type == "OpenFlow_Controller":
+                                        return "Router cannot have more than one OpenFlow Controller!"
                         return True
                     return False
     
