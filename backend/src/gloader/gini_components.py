@@ -18,7 +18,7 @@ class Switch:
         self.targets = []
         self.priority = ""
         self.mac = ""
-
+      
     def addTarget(self, newTarget):
         self.targets.append(newTarget)
 
@@ -56,26 +56,6 @@ class VM:
             print "[Mem: " + self.mem + "]",
         if (self.kernel):
             print "[Kernel: " + self.kernel + "]",
-        print ""
-        print "[Interfaces: %d" % len(self.interfaces),
-        for item in self.interfaces:
-            item.printMe()
-        print "end if]"
-
-class VOFC:
-    name = ""
-    interfaces = None
-
-    def __init__(self, vofcName):
-        "Initialize the VOFC class"
-        self.name = vofcName
-        self.interfaces = []
-
-    def addInterface(self, newIF):
-        self.interfaces.append(newIF)
-
-    def printMe(self):
-        print "[Name: " + self.name + "]",
         print ""
         print "[Interfaces: %d" % len(self.interfaces),
         for item in self.interfaces:
@@ -254,23 +234,46 @@ class VR:
     name = ""
     netIF = None
     cli = False
-    openflow = False
 
     def __init__(self, vrName):
         "Initialize the VR class"
         self.name = vrName
         self.netIF = []
+        self.openFlowControllers = []
 
     def addNetIF(self, newIF):
         self.netIF.append(newIF)
+        
+    def addOpenFlowController(self, newOpenFlowController):
+        self.openFlowControllers.append(newOpenFlowController)
 
     def printMe(self):
         print "[Name: " + self.name + "]",
         print "[CLI: " + str(self.cli) + "]",
-        print "[Openflow: " + str(self.openflow) + "]"
+        print "[OpenFlow Controllers: "
+        for item in self.openFlowControllers:
+            print "[Name: " + item + "]"
+        print "]"
         print "[NetIF: "
         for item in self.netIF:
             item.printMe()
+        print "]"
+
+class VOFC:
+    def __init__(self, vofcName):
+        "Initialize the VOFC class"
+        self.name = vofcName
+        self.routers = []
+
+    def addRouter(self, newRouter):
+        self.routers.append(newRouter)
+
+    def printMe(self):
+        print "[Name: " + self.name + "]",
+        print ""
+        print "[Routers: "
+        for item in self.routers:
+            print "[Name: " + item + "]"
         print "]"
 
 class VWR(VR):

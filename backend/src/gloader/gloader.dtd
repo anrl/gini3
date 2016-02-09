@@ -3,7 +3,7 @@
 
 
 <!-- wired router definition -->
-<!ELEMENT vr (netif*, cli?)>
+<!ELEMENT vr (netif*, cli?, controller?)>
 <!ATTLIST vr name CDATA #REQUIRED>
 <!ELEMENT netif (target, network, nic, ip, rtentry*, mtu?)>
 <!ELEMENT network (#PCDATA)>
@@ -15,7 +15,7 @@
                 nexthop CDATA #REQUIRED>
 <!ELEMENT mtu (#PCDATA)>
 <!ELEMENT cli EMPTY>
-<!ELEMENT openflow EMPTY>
+<!ELEMENT controller (#PCDATA)>
 
 
 <!-- Virtual wireless router -->
@@ -95,5 +95,6 @@
 <!ATTLIST vrm name CDATA #REQUIRED>
 
 <!-- OpenFlow controller definition -->
-<!ELEMENT vofc (if*)>
+<!ELEMENT vofc (router*)>
 <!ATTLIST vofc name CDATA #REQUIRED>
+<!ELEMENT router (#PCDATA)>
