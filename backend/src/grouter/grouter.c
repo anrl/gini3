@@ -22,9 +22,9 @@
 
 router_config rconfig = {
 	.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL,
-	.config_dir=NULL, .openflow=0, .openflow_controller_port=-1, .ghandler=0,
-	.clihandler= 0, .scheduler=0, .worker=0, .openflow_worker=0,
-	.openflow_controller_iface=0, .schedcycle=10000
+	.config_dir=NULL, .openflow=0, .ghandler=0, .clihandler= 0, .scheduler=0, 
+	.worker=0, .openflow_worker=0, .openflow_controller_iface=0, 
+	.schedcycle=10000
 };
 pktcore_t *pcore;
 classlist_t *classifier;
@@ -46,12 +46,9 @@ Option grouter_optab[] =
 		required_argument, OPT_STRING, OPT_VARIABLE, &(rconfig.config_dir)
 	},
 	{
-		"openflow", 'o', "0 or 1", "When enabled, grouter functions as an OpenFlow 1.0 switch",
+		"openflow", 'o', "port", "The port number of the OpenFlow controller;"
+		" when specified, grouter functions as an OpenFlow 1.0 switch",
 		optional_argument, OPT_INTEGER, OPT_VARIABLE, &(rconfig.openflow)
-	},
-	{
-		"openflow-controller-port", 'f', "port", "The port number of the OpenFlow controller",
-		optional_argument, OPT_INTEGER, OPT_VARIABLE, &(rconfig.openflow_controller_port)
 	},
 	{
 		NULL, '\0', NULL, NULL, 0, 0, 0, NULL
@@ -97,7 +94,7 @@ int main(int ac, char *av[])
 
 	if (rconfig.openflow) {
 		openflow_flowtable_init();
-		openflow_ctrl_iface_init(rconfig.openflow_controller_port);
+		openflow_ctrl_iface_init(rconfig.openflow);
 	}
 
 	pcore = createPacketCore(rconfig.router_name, outputQ, workQ,

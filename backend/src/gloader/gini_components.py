@@ -239,21 +239,15 @@ class VR:
         "Initialize the VR class"
         self.name = vrName
         self.netIF = []
-        self.openFlowControllers = []
 
     def addNetIF(self, newIF):
         self.netIF.append(newIF)
         
-    def addOpenFlowController(self, newOpenFlowController):
-        self.openFlowControllers.append(newOpenFlowController)
-
     def printMe(self):
         print "[Name: " + self.name + "]",
         print "[CLI: " + str(self.cli) + "]",
-        print "[OpenFlow Controllers: "
-        for item in self.openFlowControllers:
-            print "[Name: " + item + "]"
-        print "]"
+        if self.openFlowController:
+            print "[OpenFlow Controller: " + self.openFlowController + "]",
         print "[NetIF: "
         for item in self.netIF:
             item.printMe()

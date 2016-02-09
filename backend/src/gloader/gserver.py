@@ -20,7 +20,7 @@ class Server(QtCore.QObject):
         self.leftovers = ""
         self.readlength = 0
         self.connect(self.tcpServer, QtCore.SIGNAL("newConnection()"), self.newConnection)
-
+    
         global server
         server = self
         self.tm = TaskManager(self)
@@ -31,7 +31,7 @@ class Server(QtCore.QObject):
 
     def getLeftovers(self):
         return self.leftovers
-
+        
     def newConnection(self):
         self.clientConnection = self.tcpServer.nextPendingConnection()
         self.connect(self.clientConnection, QtCore.SIGNAL("disconnected()"), self.stop)
@@ -44,7 +44,7 @@ class Server(QtCore.QObject):
         stdout, stderr = ps.communicate()
         lines = str(stdout).split("\n")
         return lines.count(processName)
-
+    
     def start(self, ip, port):
         if self.checkAlive("gserver") > 1:
             raw_input("Another instance of gserver is already running!")
@@ -64,7 +64,7 @@ class Server(QtCore.QObject):
 
     def waitForMessage(self, instring):
         instring = self.leftovers + instring
-
+        
         if not self.readlength and instring.find(" ") == -1:
             self.leftovers = instring
             return ""
@@ -83,14 +83,14 @@ class Server(QtCore.QObject):
                 self.readlength = 0
 
         return instring
-
+    
     def process(self, instring):
         if not instring:
             return
-
+        
         args = ""
         instring = str(instring)
-
+        
         index = instring.find(" ")
         if index != -1:
             commandType, args = instring.split(" ", 1)
@@ -107,7 +107,7 @@ class Server(QtCore.QObject):
             print "invalid command"
 
         self.process(self.waitForMessage(""))
-
+        
     def send(self, text):
         if not self.clientConnection:
             print "not connected"
@@ -119,7 +119,7 @@ class Server(QtCore.QObject):
         self.status = devices
 
     def getStatus(self):
-        return self.status
+        return self.status    
 
     def getTimer(self):
         return self.timer
@@ -174,10 +174,10 @@ class ShellStarter(QtCore.QThread):
 class Callable:
     def __init__(self, anycallable):
         self.__call__ = anycallable
-
+        
 class Command:
     mutex = QtCore.QMutex()
-
+    
     def __init__(self, args):
         global server
         self.args = args
@@ -190,7 +190,7 @@ class Command:
     @classmethod
     def release(cls):
         cls.mutex.unlock()
-
+    
     def create(commandType, args):
         return commands[commandType](args)
     create = Callable(create)
@@ -209,7 +209,7 @@ class ReceiveInitStartCommand(Command):
             global recovery
             recovery = True
             return
-
+            
         # clear old uml_mconsole files
         subprocess.call(["/bin/bash", "-c", "rm -rf ./.uml/*"])
 
@@ -223,7 +223,7 @@ class ReceiveInitStartCommand(Command):
         mobiledir = datadir + "/mobile_data"
         if not os.access(mobiledir, os.F_OK):
             os.mkdir(mobiledir, 0755)
-
+    
 class ReceiveCanvasInfoCommand(Command):
     def execute(self):
         print "writing canvas info..."
@@ -237,16 +237,16 @@ class ReceiveMobileInfoCommand(Command):
     def execute(self):
         mobiledir = datadir + "/mobile_data"
         name, pos = self.args.split(" ", 1)
-
+        
         print "writing " + name + " info..."
-
+        
         dataOut = open(mobiledir + "/" + name + ".data", "w")
         dataOut.write(pos)
         dataOut.close()
 
 class ReceiveStartCommand(Command):
     def execute(self):
-        print "starting..."
+        print "starting..."  
         self.server.getTM().start()
         self.server.getTimer().start(1000)
 
@@ -254,11 +254,11 @@ class ReceiveStartCommand(Command):
         if recovery:
             recovery = False
             return
-
+        
         command = GL_PROG + " -c " + os.environ["GINI_HOME"] + "/" + self.args + " -s %s -r %s -u %s -o %s" % (datadir, datadir, datadir, datadir)
 
         subprocess.Popen(["/bin/bash", "-c", command])
-
+        
 class ReceiveStopCommand(Command):
     def execute(self):
         print "stopping..."
@@ -266,16 +266,16 @@ class ReceiveStopCommand(Command):
             not self.server.checkAlive("uswitch") and \
             not self.server.checkAlive("grouter"):
             return
-
+        
         tm = self.server.getTM()
         if not tm.isRunning():
             tm.start()
         timer = self.server.getTimer()
         if not timer.isActive():
             timer.start(1000)
-
+            
         command = GL_PROG + " -d; sleep 0.1; rm -rf $HOME/.uml/* $GINI_HOME/tmp/*.out $GINI_HOME/bin/*.0"
-
+        
         subprocess.Popen(["/bin/bash", "-c", command])
 
 class ReceiveAttachDetachCommand(Command):
@@ -289,7 +289,7 @@ class ReceiveAttachDetachCommand(Command):
         time.sleep(0.1)
 
         subprocess.Popen(["/bin/bash", "-c", command2])
-
+        
 class ReceiveFileCommand(Command):
     def execute(self):
         print "receiving file..."
@@ -310,7 +310,7 @@ class ShowDevicesStatusCommand(Command):
 class ReceiveKillCommand(Command):
     def execute(self):
         subprocess.call(["/bin/bash", "-c", "kill " + self.args])
-
+    
 class ListCommand(Command):
     def execute(self):
         subprocess.call(["/bin/bash", "-c", "screen -ls"])
@@ -346,7 +346,7 @@ class ReceiveRequestWirelessStatsCommand(Command):
         if not os.access("gwc.out", os.F_OK):
             os.chdir(olddir)
             return
-
+        
         subprocess.call(["/bin/bash", "-c", "tail gwc.out > node%s.out" % index])
 
         stats = ""
@@ -354,14 +354,14 @@ class ReceiveRequestWirelessStatsCommand(Command):
         lines = statsIn.readlines()
         statsIn.close()
 
-        if lines[0].find("stats show node") >= 0:
+        if lines[0].find("stats show node") >= 0:                
             for line in lines[3:len(lines)-1]:
                 stats += line.strip("\t")
 
             self.server.send("wstats " + self.args + " " + stats)
-
+       
         os.chdir(olddir)
-
+        
 class ReceiveRequestRouterStatsCommand(Command):
     def execute(self):
         #print "sending stats for " + self.args + "..."
@@ -369,7 +369,7 @@ class ReceiveRequestRouterStatsCommand(Command):
 
         olddir = os.getcwd()
         os.chdir(datadir + "/%s" % self.args)
-
+        
         filename = "%s.out" % self.args
         if not os.access(filename, os.F_OK):
             subprocess.call(["/bin/bash", "-c", "cat %s.info > %s &" % (self.args, filename)])
@@ -426,7 +426,7 @@ class ReceiveRestartCommand(Command):
                     pid = pidIn.readline().strip()
                     pidIn.close()
                     os.kill(int(pid), signal.SIGTERM)
-                    time.sleep(0.5)
+                    time.sleep(0.5)  
                 except:
                     pass
             subprocess.call(["/bin/bash", "-c", "./startit.sh"])
@@ -465,7 +465,7 @@ class ReceiveRestartCommand(Command):
         else:
             print "failed to restart " + self.args
         os.chdir(olddir)
-
+        
 class ReceiveTerminateCommand(Command):
     def execute(self):
         print "terminating " + self.args + "..."
@@ -487,7 +487,7 @@ class ReceiveTerminateCommand(Command):
 class ShowStatusCommand(Command):
     def execute(self):
         print self.server.getTM().getStatus()
-
+        
 class CaptureSender(QtCore.QThread):
     def __init__(self, routername):
         QtCore.QThread.__init__(self)
@@ -500,9 +500,9 @@ class CaptureSender(QtCore.QThread):
         while buf:
             buf = pobj.stdout.read(1024)
             server.send("wshark " + self.routername + " " + buf)
-
-
-
+        
+        
+    
 commands = \
     {
         "leftovers":LeftoversCommand,
@@ -534,7 +534,7 @@ if __name__ == "__main__":
         port = int(sys.argv[1])
     else:
         port = 10000
-
+        
     server = Server()
     server.start(QtNetwork.QHostAddress("127.0.0.1"), port)
 
@@ -542,3 +542,4 @@ if __name__ == "__main__":
     while text != "exit":
         server.process(text)
         text = raw_input("gserver " + version + "> ")
+    

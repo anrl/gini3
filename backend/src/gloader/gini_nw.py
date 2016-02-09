@@ -134,7 +134,7 @@ class GINI_NW:
                         newIF = self.getVRIF(para, len(newVR.netIF)+1)
                         newVR.addNetIF(newIF)
                     if (para.tagName.lower() == "controller"):
-                        newVR.addOpenFlowController(self.getTextPart(para))
+                        newVR.openFlowController = self.getTextPart(para)
             self.vr.append(newVR)
         return True
                                 

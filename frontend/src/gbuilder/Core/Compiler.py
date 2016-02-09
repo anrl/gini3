@@ -206,7 +206,7 @@ class Compiler:
                         self.generateGenericError(router, " is connected to multiple OpenFlow controllers")
                         return
                     controllerFound = True
-                    self.output.write("\t<ofcif controller=\"" + node.getName() + "\" />\n")
+                    self.output.write("\t<controller>" + node.getName() + "</controller>\n")
 
             edges = router.edges()
             if len(edges) < 2:
@@ -520,7 +520,7 @@ class Compiler:
             for con in controller.edges(): 
                 node = con.getOtherDevice(controller)
                 if node.device_type == "Router":
-                    self.output.write("\t<ofcif router=\"" + node.getName() + "\" \>\n")
+                    self.output.write("\t<router>" + node.getName() + "</router>\n")
                     routerFound = True
                 else:
                     self.generateGenericWarning(controller, "has non-router connection; ignored")
