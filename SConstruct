@@ -81,7 +81,7 @@ def gen_environment_file(target,source,env):
   output_file.write('os.environ["GINI_ROOT"] = os.path.realpath("%s")\n' % os.path.relpath(prefix,bindir))
   output_file.write('os.environ["GINI_SHARE"] = os.path.realpath("%s")\n' % os.path.relpath(sharedir,bindir))
   output_file.write('os.environ["GINI_LIB"] = os.path.realpath("%s")\n' % os.path.relpath(libdir,bindir))
-  output_file.write('os.environ["GINI_HOME"] = os.environ["HOME"] + "/.gini"\n')
+  output_file.write('os.environ["GINI_HOME"] = os.environ["HOME"] + "/.gini"\n') 
   output_file.write('if not os.path.exists(os.environ["GINI_HOME"] + "/etc"): os.makedirs(os.environ["GINI_HOME"] + "/etc")\n')
   output_file.write('if not os.path.exists(os.environ["GINI_HOME"] + "/sav"): os.makedirs(os.environ["GINI_HOME"] + "/sav")\n')
   output_file.write('if not os.path.exists(os.environ["GINI_HOME"] + "/data"): os.makedirs(os.environ["GINI_HOME"] + "/data")\n')
@@ -98,7 +98,7 @@ def gen_python_path_file(target,source,env):
   output_file = open(target[0].abspath,'w')
   output_file.write('import os\n')
   output_file.write('GINI_ROOT = "%s"\n' % prefix)
-  #if env['PLATFORM'] != 'win32':
+  #if env['PLATFORM'] != 'win32': 
     #output_file.write('GINI_HOME = os.environ["HOME"] + "/.gini"\n')
   #else:
     #output_file.write('GINI_HOME = os.environ["USERPROFILE"] + "/gini_files"\n')
@@ -214,11 +214,17 @@ pox_ext_dir = src_dir + "/backend/src/pox/ext"
 lib_pox_dir = libdir + "/pox"
 lib_pox_ext_dir = lib_pox_dir + "/ext"
 
-gpox = env.Command(bindir + "/gpox", libdir, "ln -f -s " + lib_pox_dir + "/pox.py" + " $TARGET")
-Depends(gpox, libdir)
+gpox = env.Command(bindir + "/gpox", libdir, 
+                   "ln -f -s " + lib_pox_dir + "/pox.py" + " $TARGET")
+env.Depends(gpox, libdir)
 
 env.Install(libdir, pox_dir)
 env.Install(lib_pox_dir, pox_ext_dir)
+
+# Scons won't notice changes to the POX directories for some reason, so always 
+# copy them; there is a small performance penalty but it's not that significant
+env.AlwaysBuild(lib_pox_dir)
+env.AlwaysBuild(lib_pox_ext_dir)
 
 ###########
 # grouter #
@@ -328,7 +334,7 @@ env.Alias('install','install-wgini')
 # Gloader #
 ###########
 
-gloader_dir = backend_dir + "/src/gloader"
+gloader_dir = backend_dir + "/src/gloader" 
 gloader_conf = gloader_dir + "/gloader.dtd"
 gloader_lib_dir = libdir
 
@@ -360,7 +366,7 @@ env.Alias('install','install-gloader')
 
 kernel_dir = backend_dir + "/kernel"
 kernel = kernel_dir + "/linux-2.6.26.1"
-alt_kernel = kernel_dir + "/linux-2.6.25.10"
+alt_kernel = kernel_dir + "/linux-2.6.25.10" 
 
 # Copy kernel and glinux loader into bin and set executable
 env.Install(libdir + '/kernel/',kernel_dir + '/glinux')

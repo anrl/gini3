@@ -287,27 +287,33 @@ def createVR(myGINI, options):
             for controller in myGINI.vofc:
                 for r in controller.routers:
                     if r == router.name:
-                        pid_file = open("%s/%s/%s.pid" % (options.controllerDir, controller.name, controller.name), "r")
-                        cmd = "netstat -tlpn | egrep %s/" % pid_file.read().strip()
-                        process = subprocess.Popen(cmd, shell=True,
-                                                   stdout=subprocess.PIPE, 
-                                                   stderr=subprocess.PIPE)
-                        out = process.stdout.read().strip()
-                        if out == "":
-                            print "Failed to identify OpenFlow controller TCP port"
-                            return False
-                        pid_file.close()
-                        process.stdout.close()
-
                         port = None
-                        regex = re.compile("^.+:([0-9]+)[^0-9].*$")
-                        matches = regex.match(out)
-                        if matches and len(matches.groups()) == 1:
-                            port = matches.group(1)
-                        else:
+                        try:
+                            # Determine PID of controller and find the netstat entry associated with that PID
+                            pid_file = open("%s/%s/%s.pid" % (options.controllerDir, controller.name, controller.name), "r")
+                            cmd = "netstat -tlpn | egrep %s/" % pid_file.read().strip()
+
+                            process = subprocess.Popen(cmd, shell=True,
+                                                       stdout=subprocess.PIPE, 
+                                                       stderr=subprocess.PIPE)
+                            out = process.stdout.read().strip()
+                            if out == "":
+                                raise StandardError()
+                            pid_file.close()
+                            process.stdout.close()
+                            
+                            # Get TCP port number from netstat entry
+                            regex = re.compile("^.+:([0-9]+)[^0-9].*$")
+                            matches = regex.match(out)
+                            if matches and len(matches.groups()) == 1:
+                                port = matches.group(1)
+                            else:
+                                raise StandardError()
+                        except StandardError as e:
                             print "Failed to identify OpenFlow controller TCP port"
                             return False
 
+                        # Pass controller port number to router so that router can connect to controller
                         command += port + " "
         
         command += "%s" % router.name
@@ -376,7 +382,8 @@ def createVOFC(myGINI, options):
 
         vofcFlags = "py "
         vofcFlags += "openflow.of_01 --port=0 "
-        vofcFlags += "gini_pid --pid_path='%s/%s/%s.pid' " % (options.controllerDir, controller.name, controller.name)
+        vofcFlags += "gini.support.gini_pid --pid_file_path='%s/%s/%s.pid' " % (options.controllerDir, controller.name, controller.name)
+        vofcFlags += "gini.support.gini_module_load --module_file_path='%s/%s/%s.modules' " % (options.controllerDir, controller.name, controller.name)
 
         command = "screen -d -m -S %s %s %s" % (controller.name, VOFC_PROG_BIN, vofcFlags)
 

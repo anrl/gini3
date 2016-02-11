@@ -1,6 +1,6 @@
 #!/usr/bin/python2
 
-"""gini_sample_icmp_proxy.py: Configures the switch to create a transparent
+"""icmp_proxy.py: Configures the switch to create a transparent
    ICMP echo proxy for requests directed to 192.168.2.3 from 192.168.1.2."""
 
 from pox.core import core
@@ -10,6 +10,8 @@ from pox.lib.addresses import IPAddr, EthAddr
 log = core.getLogger()
 
 def configure_icmp_proxy(connection):
+    log.info("icmp_proxy: loading...")
+    
     msg = of.ofp_flow_mod()
     msg.match.priority = 50
     msg.actions.append(of.ofp_action_output(port = of.OFPP_NORMAL))
@@ -46,4 +48,4 @@ def connection_up(event):
     configure_icmp_proxy(event.connection)
 
 def launch():
-  core.openflow.addListenerByName("ConnectionUp", connection_up)
+    core.openflow.addListenerByName("ConnectionUp", connection_up)

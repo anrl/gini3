@@ -13,6 +13,9 @@ root_fs_beta2
 .sconf_temp/
 .sconsign.dblite
 frontend/src/gbuilder/Core/paths.py
-.ctags
+.ctags*
 .tags*
 tags
+.cproject*
+.project*
+.pydevproject*
