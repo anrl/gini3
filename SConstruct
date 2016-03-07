@@ -218,7 +218,6 @@ pox_ext_dir = src_dir + "/backend/src/pox/ext"
 lib_pox_dir = libdir + "/pox"
 lib_pox_ext_dir = lib_pox_dir + "/ext"
 
-env.Command(bindir + "/gpox", libdir,
 gpox = env.Command(bindir + "/gpox", libdir,
                    "ln -f -s " + lib_pox_dir + "/pox.py" + " $TARGET")
 env.Depends(gpox, libdir)
