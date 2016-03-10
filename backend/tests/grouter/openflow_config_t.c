@@ -27,13 +27,15 @@ CHECK(result==65534)
 TEST_END
 
 TEST_BEGIN("Assert gnet to openflow to gnet")
-for(uint8_t i=0; i<100; i++){
+uint8_t i;
+for(i=0; i<100; i++){
   CHECK(i==openflow_config_gnet_to_of_port_num(openflow_config_of_to_gnet_port_num(i)))
 }
 TEST_END
 
 TEST_BEGIN("Assert openflow to gnet to openflow")
-for(uint8_t i=1; i<101; i++){
+uint8_t i;
+for(i=1; i<101; i++){
   CHECK(i==openflow_config_of_to_gnet_port_num(openflow_config_gnet_to_of_port_num(i)))
 }
 TEST_END
