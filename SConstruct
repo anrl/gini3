@@ -509,3 +509,26 @@ env.Alias('install-gbuilder', libdir + '/gbuilder')
 env.Clean(sharedir + '/gbuilder',sharedir + '/gbuilder')
 env.Clean(libdir + '/gbuilder',libdir + '/gbuilder')
 env.Alias('install', 'install-gbuilder')
+
+##################
+# Test Framework #
+##################
+
+test_dir = backend_dir + '/tests'
+test_build_dir = src_dir + '/build/tests'
+test_include = src_dir + '/backend/third-party/mut'
+testenv = env.Clone()
+testenv.Tool('test')
+testenv.Append(CPPPATH=[test_include])
+testenv.Append(CFLAGS='-g')
+testenv.Append(CFLAGS='-DHAVE_PTHREAD_RWLOCK=1')
+testenv.Append(CFLAGS='-DHAVE_GETOPT_LONG')
+
+grouter_test_dir = test_dir + '/grouter'
+grouter_test_src_dir = test_build_dir + '/grouter-src'
+grouter_test_build_dir = test_build_dir + '/grouter'
+grouter_test_env = testenv.Clone()
+grouter_test_env.Append(CPPPATH=[grouter_include])
+VariantDir(grouter_test_build_dir,grouter_test_dir, duplicate=0)
+VariantDir(grouter_test_src_dir,grouter_dir, duplicate=0)
+grouter_test_env.addAllTests(grouter_test_build_dir, grouter_test_src_dir, ['grouter.c', 'cli.c'], LIBS=grouter_libs)
