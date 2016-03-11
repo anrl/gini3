@@ -91,7 +91,6 @@ class Node(DropItem, Item):
         name = self.device_type + "_%d" % index
         self.properties = {}
         self.setProperty("Name", name)
-        self.setProperty("name", name)
         self.interfaces = []
         
         self.newPos = QtCore.QPointF()
@@ -152,7 +151,6 @@ class Node(DropItem, Item):
             itemTypes[self.device_type] = index
         name = self.device_type + "_%d" % index
         self.setProperty("Name", name)
-        self.setProperty("name", name)
         self.setToolTip(name)
         
     def setStatus(self, status):
@@ -226,7 +224,7 @@ class Node(DropItem, Item):
         painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform, options["smoothing"])
         painter.drawImage(QtCore.QPoint(-self.image.width()/2, -self.image.height()/2), self.image)
         if options["names"]:
-            painter.drawText(QtCore.QRectF(-90, self.image.height()/2, 180, 60), self.getProperty("name"), QtGui.QTextOption(QtCore.Qt.AlignHCenter))
+            painter.drawText(QtCore.QRectF(-90, self.image.height()/2, 180, 60), self.getProperty("Name"), QtGui.QTextOption(QtCore.Qt.AlignHCenter))
 
         if self.status:
             painter.setBrush(self.color)

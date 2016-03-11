@@ -19,3 +19,4 @@ tags
 .cproject*
 .project*
 .pydevproject*
+.settings

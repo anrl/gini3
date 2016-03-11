@@ -31,7 +31,7 @@ class Attachable(Device):
             
         command = ""
         
-        window_name = str(self.getProperty("name"))  # the strcast is necessary for cloning
+        window_name = str(self.getProperty("Name"))  # the strcast is necessary for cloning
         if(self.getName() != window_name):
             window_name += " (" + self.getName() + ")"
         if environ["os"] == "Windows":

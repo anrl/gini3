@@ -44,7 +44,7 @@ typedef struct
 {
 	// Action header
 	ofp_action_header header;
-	// The rest of the OpenFLow action; this wrapper struct should be cast
+	// The rest of the OpenFlow action; this wrapper struct should be cast
 	// to something else to get at this data
 	uint8_t	action[OPENFLOW_MAX_ACTION_SIZE - sizeof(ofp_action_header)];
 } openflow_flowtable_action_wrapper_type;
@@ -128,5 +128,10 @@ void openflow_flowtable_handle_packet(gpacket_t *packet,
 */
 int32_t openflow_flowtable_modify(ofp_flow_mod *flow_mod,
 	ofp_error_msg *error_msg);
+
+/**
+ * Prints the OpenFlow flowtable to the console.
+ */
+void openflow_flowtable_print();
 
 #endif // ifndef __OPENFLOW_FLOWTABLE_H_

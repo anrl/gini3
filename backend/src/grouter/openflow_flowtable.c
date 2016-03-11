@@ -27,6 +27,9 @@
 // OpenFlow flowtable
 static openflow_flowtable_type *flowtable;
 
+// Router configuration
+extern router_config rconfig;
+
 /**
  * Creates a new packet identical to the specified packet but with a VLAN
  * header.
@@ -1513,5 +1516,65 @@ int32_t openflow_flowtable_modify(ofp_flow_mod *flow_mod,
 		error_msg->type = htons(OFPET_FLOW_MOD_FAILED);
 		error_msg->code = htons(OFPFMFC_BAD_COMMAND);
 		return -1;
+	}
+}
+
+
+void openflow_flowtable_print_match(ofp_match *match)
+{
+	printf("\tWildcards: %" PRIX32 "\n", ntohl(match->wildcards));
+	printf("\tInput port: %" PRIu16 "\n", ntohs(match->in_port));
+
+	char dl_src[50];
+	MAC2Colon(dl_src, match->dl_src);
+	printf("\tEthernet source address: %s\n", dl_src);
+
+	char dl_dst[50];
+	MAC2Colon(dl_dst, match->dl_dst);
+	printf("\tEthernet destination address: %s\n", dl_dst);
+
+	printf("\tInput VLAN ID: %" PRIu16 "\n", ntohs(match->dl_vlan));
+	printf("\tInput VLAN priority: %" PRIu8 "\n", match->dl_vlan_pcp);
+	printf("\tEthernet frame type: %" PRIu16 "\n", ntohs(match->dl_type));
+	printf("\tIP type of service: %" PRIu8 "\n", match->nw_tos);
+	printf("\tIP protocol: %" PRIu8 "\n", match->nw_proto);
+
+	char nw_src[50];
+	uint32_t nw_src_raw = ntohl(match->nw_src);
+	IP2Dot(nw_src, (uint8_t *)&nw_src_raw);
+	printf("\tIP source address: %s\n", nw_src);
+
+	char nw_dst[50];
+	uint32_t nw_dst_raw = ntohl(match->nw_dst);
+	IP2Dot(nw_dst, (uint8_t *)&nw_dst_raw);
+	printf("\tIP destination address: %s\n", nw_dst);
+
+	printf("\tTCP/UDP source port: %" PRIu16 "\n", ntohs(match->tp_src));
+	printf("\tTCP/UDP destination port: %" PRIu16 "\n", ntohs(match->tp_dst));
+}
+
+/**
+ * Prints the OpenFlow flowtable to the console.
+ */
+void openflow_flowtable_print()
+{
+	if (!rconfig.openflow) {
+		printf("OpenFlow not enabled\n");
+		return;
+	}
+	uint32_t i;
+
+	printf("OpenFlow flowtable\n");
+
+	for(i = 0; i < OPENFLOW_MAX_FLOWTABLE_ENTRIES; i++) {
+		openflow_flowtable_entry_type entry = flowtable->entries[i];
+		if (entry.active) {
+			printf("\n");
+			printf("Entry %d\n", i);
+			printf("===========\n");
+
+			printf("Match:\n");
+			openflow_flowtable_print_match(&entry.match);
+		}
 	}
 }

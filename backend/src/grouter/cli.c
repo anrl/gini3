@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include "openflow_flowtable.h"
 
 
 Map *cli_map;
@@ -91,7 +92,7 @@ int CLIInit(router_config *rarg)
 	registerCLI("spolicy", spolicyCmd, SHELP_SPOLICY, USAGE_SPOLICY, LHELP_SPOLICY); // Check
 	registerCLI("class", classCmd, SHELP_CLASS, USAGE_CLASS, LHELP_CLASS);
 	registerCLI("filter", filterCmd, SHELP_FILTER, USAGE_FILTER, LHELP_FILTER);
-
+	registerCLI("flowtable", flowtableCmd, SHELP_FLOWTABLE, USAGE_FLOWTABLE, LHELP_FLOWTABLE);
 
 	if (rarg->config_dir != NULL)
 		chdir(rarg->config_dir);                  // change to the configuration directory
@@ -1186,4 +1187,14 @@ void spolicyCmd()
 
 	if (!strcmp(next_tok, "show"))
 		printf("Scheduling policy: rr (round robin)\n");
+}
+
+void flowtableCmd()
+{
+	char *next_tok = strtok(NULL, " \n");
+
+	if (!strcmp(next_tok, "show"))
+	{
+		openflow_flowtable_print();
+	}
 }
