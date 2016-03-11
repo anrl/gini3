@@ -5,7 +5,7 @@
 #
 # Scons compile script for creating GINI installation
 #
-import os.path,stat
+import os,os.path,stat
 import shutil
 import sys
 import py_compile
@@ -183,7 +183,21 @@ symlink_builder = Builder(action = symlink,
     single_source = True,
     emitter = symlink_emitter)
 
-env.Append(BUILDERS = {'SymLink':symlink_builder})
+env.Append(BUILDERS = {'Symlink':symlink_builder})
+
+##########################
+# Recursive installation #
+##########################
+
+def recursive_install(target, source, env):
+    targets = []
+    for root, dirnames, filenames in os.walk(source):
+        for filename in filenames:
+            tgt = env.Install(os.path.join(
+                target, os.path.relpath(root, os.path.dirname(source))),
+                os.path.join(root, filename))
+            targets.append(tgt)
+    return targets
 
 ##################
 # Library checks #
@@ -209,26 +223,21 @@ Export('env')
 
 backend_dir = src_dir + "/backend"
 
-###########
-# POX
-###########
+#######
+# POX #
+#######
 
 pox_dir = src_dir + "/backend/third-party/pox"
 pox_ext_dir = src_dir + "/backend/src/pox/ext"
 lib_pox_dir = libdir + "/pox"
-lib_pox_ext_dir = lib_pox_dir + "/ext"
 
-gpox = env.Command(bindir + "/gpox", libdir,
-                   "ln -f -s " + lib_pox_dir + "/pox.py" + " $TARGET")
-env.Depends(gpox, libdir)
+pox_targets = recursive_install(libdir, pox_dir, env)
 
-env.Install(libdir, pox_dir)
-env.Install(lib_pox_dir, pox_ext_dir)
-
-# Scons won't notice changes to the POX directories for some reason, so always
-# copy them; there is a small performance penalty but it's not that significant
-env.AlwaysBuild(lib_pox_dir)
-env.AlwaysBuild(lib_pox_ext_dir)
+gpox = env.Symlink(bindir + "/gpox", lib_pox_dir + "/pox.py")
+for target in pox_targets:
+	env.Depends(gpox, target)
+	
+recursive_install(lib_pox_dir, pox_ext_dir, env)
 
 ###########
 # grouter #
