@@ -52,6 +52,6 @@ class Attachable(Device):
                 command += base
             command += " -m \"" + startpath + "\""
         else:
-            command += "xterm -T \"" + window_name + "\" -e \"" + base + screen + "\""
+            command += "rxvt -T \"" + window_name + "\" -e " + base + screen
 
         self.shell = subprocess.Popen(str(command), shell=True)

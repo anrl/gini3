@@ -424,7 +424,7 @@ class MainWindow(Systray):
                 command += base
             command += tunnel + " -m \"" + startpath + "\""
         else:
-            command += "xterm -T \"" + gserver + "\" -e " + base + tunnel + " \" " + server + "\""
+            command += "rxvt -T \"" + gserver + "\" -e " + base + tunnel + " \" " + server + "\""
 
         self.server = subprocess.Popen(str(command), shell=True,preexec_fn=os.setpgrp)
 

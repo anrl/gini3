@@ -1,3 +1,7 @@
+/**
+ * openflow_flowtable.h - OpenFlow flowtable
+ */
+
 #ifndef __OPENFLOW_FLOWTABLE_H_
 #define __OPENFLOW_FLOWTABLE_H_
 
