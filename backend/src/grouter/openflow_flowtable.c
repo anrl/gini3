@@ -544,8 +544,7 @@ void openflow_flowtable_perform_action(
 			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
 				" OFPP_TABLE. Forwarding attached packet to OpenFlow"
 				" packet processor.");
-			// TODO: Implement this
-
+			openflow_pkt_proc_handle_packet(packet, packet_core);
 		}
 		else if (port == OFPP_NORMAL)
 		{
