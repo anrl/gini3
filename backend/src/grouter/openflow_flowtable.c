@@ -30,6 +30,38 @@ static pthread_mutex_t flowtable_mutex;
 extern router_config rconfig;
 
 /**
+ * Set flowtable defaults.
+ */
+static void openflow_flowtable_set_defaults(void) {
+	// Default flowtable entry (send all packets to normal router processing)
+	flowtable->entries[0].active = 1;
+	flowtable->entries[0].match.wildcards = htonl(OFPFW_ALL);
+	flowtable->entries[0].priority = htonl(1);
+	flowtable->entries[0].flags = htons(OFPFF_EMERG);
+	flowtable->entries[0].actions[0].active = 1;
+	ofp_action_output output_action;
+	output_action.type = htons(OFPAT_OUTPUT);
+	output_action.len = htons(8);
+	output_action.port = htons(OFPP_NORMAL);
+	memcpy(&flowtable->entries[0].actions[0].action, &output_action,
+		sizeof(ofp_action_output));
+}
+
+/**
+ * Initializes the flowtable.
+ */
+void openflow_flowtable_init(void)
+{
+	pthread_mutex_lock(&flowtable_mutex);
+
+	flowtable = malloc(sizeof(openflow_flowtable_type));
+	memset(flowtable, 0, sizeof(openflow_flowtable_type));
+	openflow_flowtable_set_defaults();
+
+	pthread_mutex_unlock(&flowtable_mutex);
+}
+
+/**
  * Creates a new packet identical to the specified packet but with a VLAN
  * header.
  *
@@ -820,38 +852,6 @@ void openflow_flowtable_perform_action(
 		verbose(2, "[openflow_flowtable_perform_action]:: Unrecognized"
 			" action %" PRIu16 ".", header_type);
 	}
-
-	pthread_mutex_unlock(&flowtable_mutex);
-}
-
-/**
- * Set flowtable defaults.
- */
-static void openflow_flowtable_set_defaults(void) {
-	// Default flowtable entry (send all packets to normal router processing)
-	flowtable->entries[0].active = 1;
-	flowtable->entries[0].match.wildcards = htonl(OFPFW_ALL);
-	flowtable->entries[0].priority = htonl(1);
-	flowtable->entries[0].flags = htons(OFPFF_EMERG);
-	flowtable->entries[0].actions[0].active = 1;
-	ofp_action_output output_action;
-	output_action.type = htons(OFPAT_OUTPUT);
-	output_action.len = htons(8);
-	output_action.port = htons(OFPP_NORMAL);
-	memcpy(&flowtable->entries[0].actions[0].action, &output_action,
-		sizeof(ofp_action_output));
-}
-
-/**
- * Initializes the flowtable.
- */
-void openflow_flowtable_init(void)
-{
-	pthread_mutex_lock(&flowtable_mutex);
-
-	flowtable = malloc(sizeof(openflow_flowtable_type));
-	memset(flowtable, 0, sizeof(openflow_flowtable_type));
-	openflow_flowtable_set_defaults();
 
 	pthread_mutex_unlock(&flowtable_mutex);
 }
@@ -1920,6 +1920,23 @@ int32_t openflow_flowtable_modify(ofp_flow_mod *flow_mod,
 
 	pthread_mutex_unlock(&flowtable_mutex);
 	return status;
+}
+
+/**
+ * Deletes all non-emergency entries in the OpenFlow flowtable.
+ */
+void openflow_flowtable_delete_non_emergency_entries()
+{
+	pthread_mutex_lock(&flowtable_mutex);
+	uint32_t i;
+	for (i = 0; i < OPENFLOW_MAX_FLOWTABLE_ENTRIES; i++)
+	{
+		if (!(flowtable->entries[i].flags & OFPFF_EMERG))
+		{
+			flowtable->entries[i].active = 0;
+		}
+	}
+	pthread_mutex_unlock(&flowtable_mutex);
 }
 
 /**

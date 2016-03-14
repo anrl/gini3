@@ -147,6 +147,11 @@ int32_t openflow_flowtable_modify(ofp_flow_mod *flow_mod,
 	ofp_error_msg *error_msg);
 
 /**
+ * Deletes all non-emergency entries in the OpenFlow flowtable.
+ */
+void openflow_flowtable_delete_non_emergency_entries();
+
+/**
  * Prints the OpenFlow flowtable to the console.
  */
 void openflow_flowtable_print_entries();
