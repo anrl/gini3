@@ -2174,6 +2174,10 @@ static void openflow_flowtable_print_action(
 		{
 			printf("\t\tOutput port: OFPP_IN_PORT\n");
 		}
+		else if (port == OFPP_TABLE)
+		{
+			printf("\t\tOutput port: OFPP_TABLE\n");
+		}
 		else if (port == OFPP_NORMAL)
 		{
 			printf("\t\tOutput port: OFPP_NORMAL\n");
@@ -2193,6 +2197,15 @@ static void openflow_flowtable_print_action(
 		else if (port == OFPP_LOCAL)
 		{
 			printf("\t\tOutput port: OFPP_LOCAL\n");
+		}
+		else if (port == OFPP_NONE)
+		{
+			printf("\t\tOutput port: OFPP_NONE\n");
+		}
+		else if (port > OFPP_MAX)
+		{
+			printf("\t\tOutput port: %" PRIu16
+					" (invalid physical port)\n", port);
 		}
 		else
 		{
