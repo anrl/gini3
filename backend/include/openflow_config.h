@@ -1,8 +1,5 @@
 /**
  * openflow_config.h - OpenFlow switch configuration
- *
- * Author: Michael Kourlas
- * Date: November 27, 2015
  */
 
 #ifndef __OPENFLOW_CONFIG_H_

@@ -1,8 +1,5 @@
 /**
- * openflow_ctrl_iface.h - OpenFlow controller interface
- *
- * Author: Michael Kourlas
- * Date: November 26, 2015
+ * openflow_ctrl_iface.h - OpenFlow controller-switch interface
  */
 
 #ifndef __OPENFLOW_CTRL_IFACE_H_
@@ -51,8 +48,8 @@ void openflow_ctrl_iface_parse_packet(gpacket_t *packet);
 void openflow_ctrl_iface_send_to_ctrl(gpacket_t *packet);
 
 /**
- * OpenFlow controller thread. Connects to controller and passes incoming packets to
- * handlers.
+ * OpenFlow controller thread. Connects to controller and passes incoming
+ * packets to handlers.
  *
  * @param pn Pointer to the controller TCP port number.
  */
@@ -62,6 +59,8 @@ void openflow_ctrl_iface(void *pn);
  * Initializes the OpenFlow controller-switch interface.
  *
  * @param port_num The TCP port number of the OpenFlow controller.
+ *
+ * @return The thread associated with the controller interface.
  */
 pthread_t openflow_ctrl_iface_init(int32_t port_num);
 

@@ -113,12 +113,25 @@ typedef struct
 void openflow_flowtable_init(void);
 
 /**
- * Processes the specified packet using the OpenFlow pipeline.
+ * Retrieves the matching flowtable entry for the specified packet.
  *
- * @param packet       The packet to be handled.
+ * @param packet    The specified packet.
+ * @param emergency Whether the controller is in emergency mode.
+ *
+ * @return The matching flowtable entry.
+ */
+openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
+	gpacket_t *packet);
+
+/**
+ * Performs the specified action on the specified packet.
+ *
+ * @param action       The specified action.
+ * @param packet       The specified packet.
  * @param packet_core  The grouter packet core.
  */
-void openflow_flowtable_handle_packet(gpacket_t *packet,
+void openflow_flowtable_perform_action(
+	openflow_flowtable_action_type *action, gpacket_t *packet,
 	pktcore_t *packet_core);
 
 /**
@@ -136,6 +149,6 @@ int32_t openflow_flowtable_modify(ofp_flow_mod *flow_mod,
 /**
  * Prints the OpenFlow flowtable to the console.
  */
-void openflow_flowtable_print();
+void openflow_flowtable_print_entries();
 
 #endif // ifndef __OPENFLOW_FLOWTABLE_H_

@@ -1,8 +1,5 @@
 /**
  * openflow_config.c - OpenFlow switch configuration
- *
- * Author: Michael Kourlas
- * Date: November 27, 2015
  */
 
 #include "gnet.h"
@@ -86,22 +83,22 @@ void openflow_config_set_phy_port_defaults()
  */
 void openflow_config_update_phy_port(int32_t openflow_port_num)
 {
-	// TODO: Call this function whenever an interface is added, removed or
-	// changed.
+	int32_t gnet_port_num = openflow_config_of_to_gnet_port_num(
+			openflow_port_num);
 
-	interface_t *iface = findInterface(openflow_port_num - 1);
+	interface_t *iface = findInterface(gnet_port_num);
 	if (iface == NULL)
 	{
-		memset(phy_ports[openflow_port_num - 1].hw_addr, 0, OFP_ETH_ALEN);
-		phy_ports[openflow_port_num - 1].state |= htonl(OFPPS_LINK_DOWN);
+		memset(phy_ports[gnet_port_num].hw_addr, 0, OFP_ETH_ALEN);
+		phy_ports[gnet_port_num].state |= htonl(OFPPS_LINK_DOWN);
 	}
 	else
 	{
-		COPY_MAC(phy_ports[openflow_port_num - 1].hw_addr,
+		COPY_MAC(phy_ports[gnet_port_num].hw_addr,
             iface->mac_addr);
 	}
 
-	openflow_ctrl_iface_send_port_status(&phy_ports[openflow_port_num - 1]);
+	openflow_ctrl_iface_send_port_status(&phy_ports[gnet_port_num]);
 }
 
 /**
@@ -176,8 +173,14 @@ ofp_switch_features openflow_config_get_switch_features()
 {
     ofp_switch_features switch_features;
 
-	// TODO: Fix datapath ID by using the MAC address of the first interface.
 	switch_features.datapath_id = 0;
+	interface_t *iface = findInterface(0);
+	if (iface != NULL)
+	{
+		COPY_MAC(((uint8_t *)&switch_features.datapath_id) + 2,
+				iface->mac_addr);
+	}
+
 	switch_features.n_buffers = htonl(0);
 	switch_features.n_tables = 1;
 	switch_features.capabilities = htonl(OFPC_FLOW_STATS |

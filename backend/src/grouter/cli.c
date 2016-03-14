@@ -1193,8 +1193,8 @@ void flowtableCmd()
 {
 	char *next_tok = strtok(NULL, " \n");
 
-	if (!strcmp(next_tok, "show"))
+	if (!strcmp(next_tok, "entries"))
 	{
-		openflow_flowtable_print();
+		openflow_flowtable_print_entries();
 	}
 }

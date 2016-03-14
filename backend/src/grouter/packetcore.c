@@ -26,7 +26,7 @@
 #include "message.h"
 #include "classifier.h"
 #include "grouter.h"
-#include "openflow_flowtable.h"
+#include "openflow_pkt_proc.h"
 #include "filter.h"
 
 extern classlist_t *classifier;
@@ -414,7 +414,7 @@ void *openflowPacketProcessor(void *pc) {
 		verbose(2, "[openflowPacketProcessor]:: Got a packet for further"
 			" processing..");
 
-		openflow_flowtable_handle_packet(in_pkt, pcore);
+		openflow_pkt_proc_handle_packet(in_pkt, pcore);
 	}
 }
 

@@ -23,6 +23,7 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 #include "routetable.h"
+#include "openflow_config.h"
 
 #define MAX_MTU 1500
 #define BASEPORTNUM 60000
@@ -159,6 +160,12 @@ void GNETInsertInterface(interface_t *iface)
 	}
 	netarray.elem[ifid] = iface;
 	netarray.count++;
+
+	if (rconfig.openflow)
+	{
+		openflow_config_update_phy_port(
+				openflow_config_gnet_to_of_port_num(ifid));
+	}
 }
 
 
@@ -181,6 +188,12 @@ int deleteInterface(int indx)
 	// delete slot...
 	netarray.elem[indx] = NULL;
 	if (netarray.count > 0) netarray.count--;
+
+	if (rconfig.openflow)
+	{
+		openflow_config_update_phy_port(
+				openflow_config_gnet_to_of_port_num(indx));
+	}
 
 	return EXIT_SUCCESS;
 }
@@ -649,7 +662,13 @@ int upInterface(int index)
 		return EXIT_FAILURE;
 	}
 
-	return upThisInterface(iface);
+	int status = upThisInterface(iface);
+	if (rconfig.openflow)
+	{
+		openflow_config_update_phy_port(
+				openflow_config_gnet_to_of_port_num(index));
+	}
+	return status;
 }
 
 
@@ -667,7 +686,13 @@ int downInterface(int index)
 		return EXIT_FAILURE;
 	}
 
-	return downThisInterface(iface);
+	int status = downThisInterface(iface);
+	if (rconfig.openflow)
+	{
+		openflow_config_update_phy_port(
+				openflow_config_gnet_to_of_port_num(index));
+	}
+	return status;
 }
 
 

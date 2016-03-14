@@ -1,8 +1,5 @@
 /**
  * openflow_ctrl_iface.c - OpenFlow controller interface
- *
- * Author: Michael Kourlas
- * Date: November 26, 2015
  */
 
 #include <arpa/inet.h>
@@ -625,7 +622,8 @@ int32_t openflow_ctrl_iface_send_packet_in(gpacket_t *packet)
 	// TODO: Implement this.
 }
 
-int32_t openflow_ctrl_iface_send_flow_removed(ofp_flow_mod *flow_mod)
+int32_t openflow_ctrl_iface_send_flow_removed(
+		openflow_flowtable_entry_type *entry, uint8_t reason)
 {
 	// TODO: Implement this.
 }
@@ -829,6 +827,8 @@ void openflow_ctrl_iface(void *pn)
  * Initializes the OpenFlow controller-switch interface.
  *
  * @param port_num The TCP port number of the OpenFlow controller.
+ *
+ * @return The thread associated with the controller interface.
  */
 pthread_t openflow_ctrl_iface_init(int32_t port_num)
 {
