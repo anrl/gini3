@@ -5,55 +5,60 @@
 #ifndef __OPENFLOW_CTRL_IFACE_H_
 #define __OPENFLOW_CTRL_IFACE_H_
 
+#include <pthread.h>
 #include <stdint.h>
 
+#include "openflow_defs.h"
 #include "message.h"
-
-#define OPENFLOW_CTRL_IFACE_SEND_TIMEOUT       10
-#define OPENFLOW_ERROR_MSG_SIZE                12
-
-#define OPENFLOW_CTRL_IFACE_ERR_UNKNOWN        ((int32_t)-1)
-#define OPENFLOW_CTRL_IFACE_ERR_CONN_CLOSED    ((int32_t)-2)
-#define OPENFLOW_CTRL_IFACE_ERR_SEND_TIMEOUT   ((int32_t)-3)
-#define OPENFLOW_CTRL_IFACE_ERR_OPENFLOW       ((int32_t)-3)
-
-// OpenFlow struct typedefs
-typedef struct ofp_header ofp_header;
-typedef struct ofp_hello ofp_hello;
-typedef struct ofp_error_msg ofp_error_msg;
-typedef struct ofp_switch_features ofp_switch_features;
-typedef struct ofp_phy_port	ofp_phy_port;
-typedef struct ofp_switch_config ofp_switch_config;
-typedef struct ofp_flow_mod ofp_flow_mod;
 
 /**
  * Gets the current controller connection state.
  *
- * @return The current controller connection state.
+ * @return 1 if the switch is currently connected to the controller, 0 if not.
  */
 uint8_t openflow_ctrl_iface_get_conn_state();
+
+/**
+ * Sends a packet in message to the OpenFlow controller containing the
+ * specified packet.
+ *
+ * @param packet A pointer to the packet to send to the OpenFlow controller.
+ * @param reason The reason the packet is being sent to the controller.
+ *
+ * @return The number of bytes sent, or a negative value if an error occurred.
+ */
+int32_t openflow_ctrl_iface_send_packet_in(gpacket_t *packet, uint8_t reason);
+
+/**
+ * Sends a flow removed message to the OpenFlow controller.
+ *
+ * @param entry  A pointer to the flowtable entry that is being removed from
+ *               the flowtable.
+ * @param reason The reason the flow is being removed.
+ *
+ * @return The number of bytes sent, or a negative value if an error occurred.
+ */
+int32_t openflow_ctrl_iface_send_flow_removed(
+        openflow_flowtable_entry_type *entry, uint8_t reason);
+
+/**
+ * Sends a port status message to the OpenFlow controller.
+ *
+ * @param phy_port A pointer to the physical port that was added, removed or
+ *                 changed.
+ * @param reason   A value indicating what has changed about the physical port.
+ *
+ * @return The number of bytes sent, or a negative value if an error occurred.
+ */
+int32_t openflow_ctrl_iface_send_port_status(ofp_phy_port *phy_port,
+        uint8_t reason);
 
 /**
  * Parses a packet as though it came from the OpenFlow controller.
  *
  * @param packet The packet to parse.
  */
-void openflow_ctrl_iface_parse_packet(gpacket_t *packet);
-
-/**
- * Sends a packet to the OpenFlow controller via a packet in message.
- *
- * @param packet The packet to send the OpenFlow controller.
- */
-void openflow_ctrl_iface_send_to_ctrl(gpacket_t *packet);
-
-/**
- * OpenFlow controller thread. Connects to controller and passes incoming
- * packets to handlers.
- *
- * @param pn Pointer to the controller TCP port number.
- */
-void openflow_ctrl_iface(void *pn);
+int32_t openflow_ctrl_iface_parse_packet(gpacket_t *packet);
 
 /**
  * Initializes the OpenFlow controller-switch interface.

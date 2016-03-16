@@ -12,6 +12,8 @@
 #include <time.h>
 #include <slack/err.h>
 #include <netinet/in.h>
+#include <stdint.h>
+#include <arpa/inet.h>
 
 
 /*
@@ -189,8 +191,19 @@ void printTimeVal(struct timeval *v)
 	printf("Time val = %d sec, %d usec \n", (int)v->tv_sec, (int)v->tv_usec);
 }
 
+uint64_t __builtin_bswap64(uint64_t x);
 
+uint64_t htonll(uint64_t arg)
+{
+	if (htons(0xFE) == 0xEF) return __builtin_bswap64(arg);
+	else return arg;
+}
 
+uint64_t ntohll(uint64_t arg)
+{
+	if (ntohs(0xFE) == 0xEF) return __builtin_bswap64(arg);
+	else return arg;
+}
 
 
 

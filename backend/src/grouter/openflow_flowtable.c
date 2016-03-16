@@ -2,6 +2,8 @@
  * openflow_flowtable.c - OpenFlow flowtable
  */
 
+#include "openflow_flowtable.h"
+
 #include <inttypes.h>
 #include <time.h>
 
@@ -19,8 +21,6 @@
 #include "simplequeue.h"
 #include "tcp.h"
 #include "udp.h"
-
-#include "openflow_flowtable.h"
 
 // OpenFlow flowtable
 static openflow_flowtable_type *flowtable;
@@ -43,7 +43,7 @@ static void openflow_flowtable_set_defaults(void) {
 	output_action.type = htons(OFPAT_OUTPUT);
 	output_action.len = htons(8);
 	output_action.port = htons(OFPP_NORMAL);
-	memcpy(&flowtable->entries[0].actions[0].action, &output_action,
+	memcpy(&flowtable->entries[0].actions[0].header, &output_action,
 		sizeof(ofp_action_output));
 }
 
@@ -59,79 +59,6 @@ void openflow_flowtable_init(void)
 	openflow_flowtable_set_defaults();
 
 	pthread_mutex_unlock(&flowtable_mutex);
-}
-
-/**
- * Creates a new packet identical to the specified packet but with a VLAN
- * header.
- *
- * @param packet The packet to add a VLAN header to.
- *
- * @return The packet with the VLAN header.
- */
-static gpacket_t openflow_flowtable_add_vlan_header_to_packet(gpacket_t *packet)
-{
-	gpacket_t new_packet;
-	new_packet.frame = packet->frame;
-	pkt_data_vlan_t vlan_data;
-	COPY_MAC(&vlan_data.header.src, &packet->data.header.src);
-	COPY_MAC(&vlan_data.header.dst, &packet->data.header.dst);
-	vlan_data.header.tpid = htons(ETHERTYPE_IEEE_802_1Q);
-	vlan_data.header.tci = 0;
-	vlan_data.header.prot = packet->data.header.prot;
-	memcpy(&vlan_data.data, &packet->data.data, DEFAULT_MTU);
-	memcpy(&new_packet.data, &vlan_data, sizeof(vlan_data));
-	return new_packet;
-}
-
-/**
- * Creates a new packet identical to the specified packet but without a VLAN
- * header.
- *
- * @param packet The packet to remove the VLAN header from.
- *
- * @return The packet without the VLAN header.
- */
-static gpacket_t openflow_flowtable_remove_vlan_header_from_packet(
-		gpacket_t *packet)
-{
-	gpacket_t new_packet;
-	new_packet.frame = packet->frame;
-	pkt_data_vlan_t *vlan_data = (pkt_data_vlan_t *) &packet->data;
-	COPY_MAC(&new_packet.data.header.src, &vlan_data->header.src);
-	COPY_MAC(&new_packet.data.header.dst, &vlan_data->header.dst);
-	new_packet.data.header.prot = vlan_data->header.prot;
-	memcpy(&new_packet.data.data, &vlan_data->data, DEFAULT_MTU);
-	return new_packet;
-}
-
-/**
- * Updates the IP (and, if applicable, the TCP or UDP) checksums in a packet.
- *
- * @param packet The packet with the checksums to be updated.
- */
-static void openflow_flowtable_update_checksums(ip_packet_t *ip_packet) {
-	// IP packet
-	ip_packet->ip_cksum = 0;
-	ip_packet->ip_cksum = htons(checksum((void *)ip_packet,
-		ip_packet->ip_hdr_len * 2));
-
-	if (ip_packet->ip_prot == TCP_PROTOCOL)
-	{
-		// TCP packet
-		uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
-		tcp_packet_type *tcp_packet = (tcp_packet_type *)
-			((uint8_t *) ip_packet + ip_header_length);
-		tcp_packet->checksum = tcp_checksum(ip_packet);
-	}
-	else if (ip_packet->ip_prot == UDP_PROTOCOL)
-	{
-		// UDP packet
-		uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
-		udp_packet_type *udp_packet = (udp_packet_type *)
-			((uint8_t *) ip_packet + ip_header_length);
-		udp_packet->checksum = udp_checksum(ip_packet);
-	}
 }
 
 /**
@@ -536,327 +463,6 @@ openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
 }
 
 /**
- * Performs the specified action on the specified packet.
- *
- * @param action       The specified action.
- * @param packet       The specified packet.
- * @param packet_core  The grouter packet core.
- */
-void openflow_flowtable_perform_action(
-	openflow_flowtable_action_type *action, gpacket_t *packet,
-	pktcore_t *packet_core)
-{
-	pthread_mutex_lock(&flowtable_mutex);
-
-	int32_t i;
-	uint16_t header_type = ntohs(action->action.header.type);
-	if (header_type == OFPAT_OUTPUT)
-	{
-		// Send packet to output port
-		verbose(2, "[openflow_flowtable_perform_action]:: Action is"
-			" OFPAT_OUTPUT.");
-		ofp_action_output *output_action =
-			(ofp_action_output *) &action->action;
-		uint16_t port = ntohs(output_action->port);
-		if (port == OFPP_IN_PORT)
-		{
-			// Send packet to input interface
-			uint16_t openflow_port_num =
-				openflow_config_gnet_to_of_port_num(
-					packet->frame.src_interface);
-			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
-				" OFPP_IN_PORT. Sending to physical port number %" PRIu16 ".",
-				openflow_port_num);
-			openflow_pkt_proc_forward_packet_to_port(packet, openflow_port_num,
-				packet_core, 0);
-		}
-		else if (port == OFPP_TABLE)
-		{
-			// OpenFlow pipeline handling
-			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
-				" OFPP_TABLE. Forwarding attached packet to OpenFlow"
-				" packet processor.");
-			openflow_pkt_proc_handle_packet(packet, packet_core);
-		}
-		else if (port == OFPP_NORMAL)
-		{
-			// Normal router handling
-			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
-				" OFPP_NORMAL. Forwarding to normal packet processor.");
-			gpacket_t *new_packet = malloc(sizeof(gpacket_t));
-			memcpy(new_packet, packet, sizeof(gpacket_t));
-			enqueuePacket(packet_core, new_packet, sizeof(gpacket_t), 0);
-		}
-		else if (port == OFPP_FLOOD)
-		{
-			// Forward packet to all ports with flooding enabled except source
-			// port
-			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
-				" OFPP_FLOOD. Sending to all physical ports with flooding"
-				" enabled except input port.");
-			for (i = 1; i <= OPENFLOW_MAX_PHYSICAL_PORTS; i++)
-			{
-				uint16_t gnet_port_num = openflow_config_of_to_gnet_port_num(i);
-				if (gnet_port_num != packet->frame.src_interface)
-				{
-					openflow_pkt_proc_forward_packet_to_port(packet, i,
-						packet_core, 1);
-				}
-			}
-		}
-		else if (port == OFPP_ALL)
-		{
-			// Forward packet to all ports except source port
-			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
-				" OFPP_ALL. Sending to all physical ports except input port.");
-			for (i = 1; i <= OPENFLOW_MAX_PHYSICAL_PORTS; i++)
-			{
-				uint16_t gnet_port_num = openflow_config_of_to_gnet_port_num(i);
-				if (gnet_port_num != packet->frame.src_interface)
-				{
-					openflow_pkt_proc_forward_packet_to_port(packet, i,
-						packet_core, 0);
-				}
-			}
-		}
-		else if (port == OFPP_CONTROLLER)
-		{
-			// Forward packet to controller
-			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
-				" OFPP_CONTROLLER. Sending to controller.");
-			openflow_ctrl_iface_send_packet_in(packet);
-		}
-		else if (port == OFPP_LOCAL)
-		{
-			// Forward packet to controller packet processing
-			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
-				" OFPP_LOCAL. Sending to controller processing.");
-			openflow_ctrl_iface_parse_packet(packet);
-		}
-		else
-		{
-			// Forward packet to specified port
-			verbose(2, "[openflow_flowtable_perform_action]:: Port is"
-				" %" PRIu16 ". Sending to that physical port number.", port);
-			openflow_pkt_proc_forward_packet_to_port(packet, port,
-					packet_core, 0);
-		}
-	}
-	else if (header_type == OFPAT_SET_VLAN_VID)
-	{
-		// Modify VLAN ID
-		verbose(2, "[openflow_flowtable_perform_action]:: Action is"
-				   " OFPAT_SET_VLAN_VID.");
-		ofp_action_vlan_vid *vlan_vid_action =
-			(ofp_action_vlan_vid *) &action->action;
-		if (ntohs(packet->data.header.prot) == ETHERTYPE_IEEE_802_1Q)
-		{
-			// Existing VLAN header
-			pkt_data_vlan_t *vlan_data = (pkt_data_vlan_t *) &packet->data;
-			vlan_data->header.tci = vlan_vid_action->vlan_vid;
-		}
-		else
-		{
-			// No VLAN header
-			gpacket_t new_packet =
-				openflow_flowtable_add_vlan_header_to_packet(packet);
-			memcpy(packet, &new_packet, sizeof(gpacket_t));
-			pkt_data_vlan_t *vlan_data = (pkt_data_vlan_t *) &packet->data;
-			vlan_data->header.tci = vlan_vid_action->vlan_vid;
-		}
-	}
-	else if (header_type == OFPAT_SET_VLAN_PCP)
-	{
-		// Modify VLAN priority
-		verbose(2, "[openflow_flowtable_perform_action]:: Action is"
-				   " OFPAT_SET_VLAN_PCP.");
-		ofp_action_vlan_pcp *vlan_pcp_action =
-			(ofp_action_vlan_pcp *) &action->action;
-		if (ntohs(packet->data.header.prot) == ETHERTYPE_IEEE_802_1Q)
-		{
-			// Existing VLAN header
-			pkt_data_vlan_t *vlan_data = (pkt_data_vlan_t *) &packet->data;
-			vlan_data->header.tci = htons(ntohs(
-				vlan_data->header.tci) & 0x1fff);
-			vlan_data->header.tci = htons((ntohs(
-				vlan_pcp_action->vlan_pcp) << 13) |
-				ntohs(vlan_data->header.prot));
-		}
-		else
-		{
-			// No VLAN header
-			gpacket_t new_packet =
-				openflow_flowtable_add_vlan_header_to_packet(packet);
-			memcpy(packet, &new_packet, sizeof(gpacket_t));
-			pkt_data_vlan_t *vlan_data = (pkt_data_vlan_t *) &packet->data;
-			vlan_data->header.tci = htons(ntohs(
-				vlan_pcp_action->vlan_pcp) << 13);
-		}
-	}
-	else if (header_type == OFPAT_STRIP_VLAN)
-	{
-		// Remove VLAN header
-		verbose(2, "[openflow_flowtable_perform_action]:: Action is"
-				   " OFPAT_STRIP_VLAN.");
-		if (ntohs(packet->data.header.prot) == ETHERTYPE_IEEE_802_1Q)
-		{
-			gpacket_t new_packet =
-				openflow_flowtable_remove_vlan_header_from_packet(packet);
-			memcpy(packet, &new_packet, sizeof(gpacket_t));
-		}
-	}
-	else if (header_type == OFPAT_SET_DL_SRC)
-	{
-		// Modify Ethernet source MAC address
-		verbose(2, "[openflow_flowtable_perform_action]:: Action is"
-				   " OFPAT_SET_DL_SRC.");
-		ofp_action_dl_addr *dl_addr_action =
-			(ofp_action_dl_addr *) &action->action;
-		COPY_MAC(&packet->data.header.dst, &dl_addr_action->dl_addr);
-	}
-	else if (header_type == OFPAT_SET_DL_DST)
-	{
-		// Modify Ethernet destination MAC address
-		verbose(2, "[openflow_flowtable_perform_action]:: Action is"
-				   " OFPAT_SET_DL_DST.");
-		ofp_action_dl_addr *dl_addr_action =
-			(ofp_action_dl_addr *) &action->action;
-		COPY_MAC(&packet->data.header.dst, &dl_addr_action->dl_addr);
-	}
-	else if (header_type == OFPAT_SET_NW_SRC)
-	{
-		// Modify IP source address
-		verbose(2, "[openflow_flowtable_perform_action]:: Action is"
-				   " OFPAT_SET_NW_SRC.");
-		ofp_action_nw_addr *nw_addr_action =
-			(ofp_action_nw_addr *) &action->action;
-		if (ntohs(packet->data.header.prot) == IP_PROTOCOL)
-		{
-			ip_packet_t *ip_packet = (ip_packet_t *) &packet->data.data;
-			if (!(ntohs(ip_packet->ip_frag_off) & 0x1fff) &&
-				!(ntohs(ip_packet->ip_frag_off) & 0x2000))
-			{
-				// IP packet is not fragmented
-				COPY_IP(&ip_packet->ip_src, &nw_addr_action->nw_addr);
-				openflow_flowtable_update_checksums(ip_packet);
-			}
-		}
-	}
-	else if (header_type == OFPAT_SET_NW_DST)
-	{
-		// Modify IP destination address
-		verbose(2, "[openflow_flowtable_perform_action]:: Action is"
-				   " OFPAT_SET_NW_DST.");
-		ofp_action_nw_addr *nw_addr_action =
-			(ofp_action_nw_addr *) &action->action;
-		if (ntohs(packet->data.header.prot) == IP_PROTOCOL)
-		{
-			ip_packet_t *ip_packet = (ip_packet_t *) &packet->data.data;
-			if (!(ntohs(ip_packet->ip_frag_off) & 0x1fff) &&
-				!(ntohs(ip_packet->ip_frag_off) & 0x2000))
-			{
-				// IP packet is not fragmented
-				COPY_IP(&ip_packet->ip_dst, &nw_addr_action->nw_addr);
-				openflow_flowtable_update_checksums(ip_packet);
-			}
-		}
-	}
-	else if (header_type == OFPAT_SET_NW_TOS)
-	{
-		// Modify IP type of service
-		verbose(2, "[openflow_flowtable_perform_action]:: Action is"
-				   " OFPAT_SET_NW_TOS.");
-		ofp_action_nw_tos *nw_tos_action =
-			(ofp_action_nw_tos *) &action->action;
-		if (ntohs(packet->data.header.prot) == IP_PROTOCOL)
-		{
-			ip_packet_t *ip_packet = (ip_packet_t *) &packet->data.data;
-			if (!(ntohs(ip_packet->ip_frag_off) & 0x1fff) &&
-				!(ntohs(ip_packet->ip_frag_off) & 0x2000))
-			{
-				// IP packet is not fragmented
-				ip_packet->ip_tos = nw_tos_action->nw_tos;
-				openflow_flowtable_update_checksums(ip_packet);
-			}
-		}
-	}
-	else if (header_type == OFPAT_SET_TP_SRC)
-	{
-		// Modify TCP/UDP source port
-		verbose(2, "[openflow_flowtable_perform_action]:: Action is"
-				   " OFPAT_SET_TP_SRC.");
-		ofp_action_tp_port *tp_port_action =
-			(ofp_action_tp_port *) &action->action;
-		if (ntohs(packet->data.header.prot) == IP_PROTOCOL)
-		{
-			ip_packet_t *ip_packet = (ip_packet_t *) &packet->data.data;
-			if (!(ntohs(ip_packet->ip_frag_off) & 0x1fff) &&
-				!(ntohs(ip_packet->ip_frag_off) & 0x2000))
-			{
-				// IP packet is not fragmented
-				if (ip_packet->ip_prot == TCP_PROTOCOL)
-				{
-					uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
-					tcp_packet_type *tcp_packet = (tcp_packet_type *)
-						((uint8_t *) ip_packet + ip_header_length);
-					tcp_packet->src_port = tp_port_action->tp_port;
-					openflow_flowtable_update_checksums(ip_packet);
-				}
-				else if (ip_packet->ip_prot == UDP_PROTOCOL)
-				{
-					uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
-					udp_packet_type *udp_packet = (udp_packet_type *)
-					((uint8_t *) ip_packet + ip_header_length);
-					udp_packet->src_port = tp_port_action->tp_port;
-					openflow_flowtable_update_checksums(ip_packet);
-				}
-			}
-
-		}
-	}
-	else if (header_type == OFPAT_SET_TP_DST)
-	{
-		// Modify TCP/UDP destination port
-		verbose(2, "[openflow_flowtable_perform_action]:: Action is"
-				   " OFPAT_SET_TP_DST.");
-		ofp_action_tp_port *tp_port_action =
-			(ofp_action_tp_port *) &action->action;
-		if (ntohs(packet->data.header.prot) == IP_PROTOCOL)
-		{
-			ip_packet_t *ip_packet = (ip_packet_t *) &packet->data.data;
-			if (!(ntohs(ip_packet->ip_frag_off) & 0x1fff) &&
-				!(ntohs(ip_packet->ip_frag_off) & 0x2000))
-			{
-				// IP packet is not fragmented
-				if (ip_packet->ip_prot == TCP_PROTOCOL)
-				{
-					uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
-					tcp_packet_type *tcp_packet = (tcp_packet_type *)
-						((uint8_t *) ip_packet + ip_header_length);
-					tcp_packet->dst_port = tp_port_action->tp_port;
-					openflow_flowtable_update_checksums(ip_packet);
-				}
-				else if (ip_packet->ip_prot == UDP_PROTOCOL)
-				{
-					uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
-					udp_packet_type *udp_packet = (udp_packet_type *)
-					((uint8_t *) ip_packet + ip_header_length);
-					udp_packet->dst_port = tp_port_action->tp_port;
-					openflow_flowtable_update_checksums(ip_packet);
-				}
-			}
-		}
-	}
-	else
-	{
-		verbose(2, "[openflow_flowtable_perform_action]:: Unrecognized"
-			" action %" PRIu16 ".", header_type);
-	}
-
-	pthread_mutex_unlock(&flowtable_mutex);
-}
-
-/**
  * Determines whether there is an entry in the flowtable that overlaps the
  * specified entry. An entry overlaps another entry if a single packet may
  * match both, and both entries have the same priority.
@@ -1123,15 +729,14 @@ static uint8_t openflow_flowtable_find_overlapping_entry(ofp_flow_mod *flow_mod,
  *                    matching entry, if any.
  * @param start_index The index at which to begin matching comparisons.
  * @param out_port    The output port which entries are required to have an
- *                    action for to be matched.
+ *                    action for to be matched, in host byte order.
  *
  * @return 1 if a match is found, 0 otherwise.
  */
-static uint8_t openflow_flowtable_find_matching_entry(ofp_flow_mod* flow_mod,
+static uint8_t openflow_flowtable_find_matching_entry(ofp_match *flow_mod_match,
 	uint32_t *index, uint32_t start_index, uint16_t out_port)
 {
 	uint32_t i, j;
-	ofp_match *flow_mod_match = &flow_mod->match;
 	for (i = start_index; i < OPENFLOW_MAX_FLOWTABLE_ENTRIES; i++)
 	{
 		// Reject match for inactive entries
@@ -1151,7 +756,7 @@ static uint8_t openflow_flowtable_find_matching_entry(ofp_flow_mod* flow_mod,
 				if (flowtable->entries[i].actions[j].active)
 				{
 					ofp_action_output *action = (ofp_action_output *)
-						&flowtable->entries[i].actions[j].action;
+						&flowtable->entries[i].actions[j].header;
 					if (ntohs(action->type) == OFPAT_OUTPUT &&
 						ntohs(action->port) == out_port)
 					{
@@ -1465,7 +1070,7 @@ static uint8_t openflow_flowtable_find_identical_entry(ofp_flow_mod* flow_mod,
 static int32_t openflow_flowtable_modify_entry_at_index(ofp_flow_mod *flow_mod,
 	uint32_t index, ofp_error_msg *error_msg, uint8_t reset)
 {
-	openflow_flowtable_action_wrapper_type actions[OPENFLOW_MAX_ACTIONS];
+	openflow_flowtable_action_type actions[OPENFLOW_MAX_ACTIONS];
 	uint32_t i;
 
 	if ((ntohs(flow_mod->flags) & OFPFF_EMERG) &&
@@ -1490,7 +1095,7 @@ static int32_t openflow_flowtable_modify_entry_at_index(ofp_flow_mod *flow_mod,
 		tmp_ptr += action_block_index;
 		action_header = (ofp_action_header *)tmp_ptr;
 
-		memcpy(&actions[actions_index], action_header,
+		memcpy(&actions[actions_index].header, action_header,
 			ntohs(action_header->len));
 
 		if (ntohs(actions[actions_index].header.type) == OFPAT_ENQUEUE)
@@ -1639,8 +1244,8 @@ static int32_t openflow_flowtable_modify_entry_at_index(ofp_flow_mod *flow_mod,
 	{
 		if (i < actions_index)
 		{
+			flowtable->entries[index].actions[i] = actions[i];
 			flowtable->entries[index].actions[i].active = 1;
-			flowtable->entries[index].actions[i].action = actions[i];
 		}
 		else
 		{
@@ -1733,7 +1338,7 @@ static int32_t openflow_flowtable_edit(ofp_flow_mod *flow_mod,
 	uint8_t found_match = 0;
 	while (start_index < OPENFLOW_MAX_FLOWTABLE_ENTRIES)
 	{
-		if (openflow_flowtable_find_matching_entry(flow_mod, &i, start_index,
+		if (openflow_flowtable_find_matching_entry(&flow_mod->match, &i, start_index,
 			OFPP_NONE))
 		{
 			verbose(2, "[openflow_flowtable_edit]:: Editing flowtable entry at"
@@ -1806,7 +1411,7 @@ static int32_t openflow_flowtable_delete(ofp_flow_mod *flow_mod,
 	uint8_t found_match = 0;
 	while (start_index < OPENFLOW_MAX_FLOWTABLE_ENTRIES)
 	{
-		if (openflow_flowtable_find_matching_entry(flow_mod, &i, start_index,
+		if (openflow_flowtable_find_matching_entry(&flow_mod->match, &i, start_index,
 			ntohs(flow_mod->out_port)))
 		{
 			verbose(2, "[openflow_flowtable_delete]:: Deleting flowtable entry"
@@ -1814,8 +1419,8 @@ static int32_t openflow_flowtable_delete(ofp_flow_mod *flow_mod,
 
 			if (ntohs(flowtable->entries[i].flags) & OFPFF_SEND_FLOW_REM)
 			{
-				openflow_ctrl_iface_send_flow_removed(flowtable->entries[i],
-									OFPRR_DELETE);
+				openflow_ctrl_iface_send_flow_removed(&flowtable->entries[i],
+						OFPRR_DELETE);
 			}
 
 			memset(&flowtable->entries[i], 0,
@@ -1852,7 +1457,7 @@ static int32_t openflow_flowtable_delete_strict(ofp_flow_mod *flow_mod,
 
 		if (ntohs(flowtable->entries[i].flags) & OFPFF_SEND_FLOW_REM)
 		{
-			openflow_ctrl_iface_send_flow_removed(flowtable->entries[i],
+			openflow_ctrl_iface_send_flow_removed(&flowtable->entries[i],
 					OFPRR_DELETE);
 		}
 
@@ -1937,6 +1542,87 @@ void openflow_flowtable_delete_non_emergency_entries()
 		}
 	}
 	pthread_mutex_unlock(&flowtable_mutex);
+}
+
+/**
+ * Retrieves the flow statistics for the first matching flow.
+ *
+ * @param match             A pointer to the match to match entries against.
+ *                          The flow statistics for the first matching entry
+ *                          will be returned.
+ * @param out_port          The output port which entries are required to have
+ *                          an action for to be matched, in network byte order.
+ * @param index             The index at which to begin searching the
+ *                          flowtable.
+ * @param match_index       A pointer to a variable used to store the index of
+ *                          the matching entry, if any.
+ * @param table_index       The index of the table to read from.
+ * @param ptr_to_flow_stats A pointer to an ofp_flow_stats struct pointer. The
+ *                          inner pointer will be replaced by a pointer to the
+ *                          matching ofp_flow_stats struct if one is found.
+ *
+ * @return 1 if a match is found, 0 otherwise.
+ */
+int32_t openflow_flowtable_get_flow_stats(ofp_match *match, uint16_t out_port,
+		uint32_t index, uint32_t *match_index, uint8_t table_index,
+		ofp_flow_stats **ptr_to_flow_stats)
+{
+	if (table_index != 0 && table_index < 254) return 0;
+
+	pthread_mutex_lock(&flowtable_mutex);
+	while (index < OPENFLOW_MAX_FLOWTABLE_ENTRIES)
+	{
+		if (openflow_flowtable_find_matching_entry(match, match_index, index,
+				ntohs(out_port)))
+		{
+			uint8_t emergency =
+			        (ntohs(&flowtable->entries[*match_index].flags)
+			                & OFPFF_EMERG) ? 1 : 0;
+			if ((table_index == 0 && !emergency)
+					|| (table_index == 254 && emergency)
+					|| table_index == 255)
+			{
+				verbose(2, "[openflow_flowtable_get_flow_stats]:: Retrieving"
+						" flow statistics for entry at index %" PRIu32 ".",
+						*match_index);
+				*ptr_to_flow_stats = &flowtable->entries[*match_index].stats;
+				pthread_mutex_unlock(&flowtable_mutex);
+				return 1;
+			}
+			index = *match_index + 1;
+		}
+	}
+
+	pthread_mutex_unlock(&flowtable_mutex);
+	return 0;
+}
+
+/**
+ * Gets the table statistics for the OpenFlow flowtable.
+ *
+ * @return The table statistics for the OpenFlow flowtable.
+ */
+ofp_table_stats *openflow_flowtable_get_table_stats()
+{
+	pthread_mutex_lock(&flowtable_mutex);
+	ofp_table_stats *stats = &flowtable->stats;
+	pthread_mutex_unlock(&flowtable_mutex);
+	return stats;
+}
+
+/**
+ * Gets the table statistics for the emergency entries in the OpenFlow
+ * flowtable.
+ *
+ * @return The table statistics for the emergency entries in the OpenFlow
+ *         flowtable.
+ */
+ofp_table_stats *openflow_flowtable_get_emerg_table_stats()
+{
+	pthread_mutex_lock(&flowtable_mutex);
+	ofp_table_stats *stats = &flowtable->stats_emerg;
+	pthread_mutex_unlock(&flowtable_mutex);
+	return stats;
 }
 
 /**
@@ -2179,13 +1865,12 @@ static void openflow_flowtable_print_match(ofp_match *match)
 /**
  * Prints the specified action to the CLI.
  */
-static void openflow_flowtable_print_action(
-		openflow_flowtable_action_wrapper_type *action)
+static void openflow_flowtable_print_action(ofp_action_header *action)
 {
-	if (ntohs(action->header.type) == OFPAT_OUTPUT)
+	if (ntohs(action->type) == OFPAT_OUTPUT)
 	{
 		printf("\t\tType: OFPAT_OUTPUT\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->header.len));
+		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		uint16_t port = ntohs(((ofp_action_output *) action)->port);
 		if (port == OFPP_IN_PORT)
 		{
@@ -2231,84 +1916,84 @@ static void openflow_flowtable_print_action(
 		printf("\t\tMaximum length to send to controller (bytes): %"
 				PRIu16 "\n", ntohs(((ofp_action_output *) action)->max_len));
 	}
-	else if (ntohs(action->header.type) == OFPAT_SET_VLAN_VID)
+	else if (ntohs(action->type) == OFPAT_SET_VLAN_VID)
 	{
 		printf("\t\tType: OFPAT_SET_VLAN_VID\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->header.len));
+		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		printf("\t\tEthernet VLAN ID: %" PRIu16 "\n",
 				ntohs(((ofp_action_vlan_vid *) action)->vlan_vid));
 	}
-	else if (ntohs(action->header.type) == OFPAT_SET_VLAN_PCP)
+	else if (ntohs(action->type) == OFPAT_SET_VLAN_PCP)
 	{
 		printf("\t\tType: OFPAT_SET_VLAN_PCP\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->header.len));
+		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		printf("\t\tEthernet VLAN priority: %" PRIu16 "\n",
 				ntohs(((ofp_action_vlan_pcp *) action)->vlan_pcp));
 	}
-	else if (ntohs(action->header.type) == OFPAT_STRIP_VLAN)
+	else if (ntohs(action->type) == OFPAT_STRIP_VLAN)
 	{
 		printf("\t\tType: OFPAT_STRIP_VLAN\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->header.len));
+		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 	}
-	else if (ntohs(action->header.type) == OFPAT_SET_DL_SRC)
+	else if (ntohs(action->type) == OFPAT_SET_DL_SRC)
 	{
 		printf("\t\tType: OFPAT_SET_DL_SRC\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->header.len));
+		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		char dl_src[50];
 		MAC2Colon(dl_src, ((ofp_action_dl_addr *) action)->dl_addr);
 		printf("\t\tEthernet source MAC address: %s\n", dl_src);
 	}
-	else if (ntohs(action->header.type) == OFPAT_SET_DL_DST)
+	else if (ntohs(action->type) == OFPAT_SET_DL_DST)
 	{
 		printf("\t\tType: OFPAT_SET_DL_DST\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->header.len));
+		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		char dl_dst[50];
 		MAC2Colon(dl_dst, ((ofp_action_dl_addr *) action)->dl_addr);
 		printf("\t\tEthernet destination MAC address: %s\n", dl_dst);
 	}
-	else if (ntohs(action->header.type) == OFPAT_SET_NW_SRC)
+	else if (ntohs(action->type) == OFPAT_SET_NW_SRC)
 	{
 		printf("\t\tType: OFPAT_SET_NW_SRC\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->header.len));
+		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		char nw_src[50];
 		uint32_t nw_src_raw = ntohl(((ofp_action_nw_addr *) action)->nw_addr);
 		IP2Dot(nw_src, (uint8_t *)&nw_src_raw);
 		printf("\t\tIP source address: %s\n", nw_src);
 	}
-	else if (ntohs(action->header.type) == OFPAT_SET_NW_DST)
+	else if (ntohs(action->type) == OFPAT_SET_NW_DST)
 	{
 		printf("\t\tType: OFPAT_SET_NW_DST\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->header.len));
+		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		char nw_dst[50];
 		uint32_t nw_dst_raw = ntohl(((ofp_action_nw_addr *) action)->nw_addr);
 		IP2Dot(nw_dst, (uint8_t *)&nw_dst_raw);
 		printf("\t\tIP source address: %s\n", nw_dst);
 	}
-	else if (ntohs(action->header.type) == OFPAT_SET_NW_TOS)
+	else if (ntohs(action->type) == OFPAT_SET_NW_TOS)
 	{
 		printf("\t\tType: OFPAT_SET_NW_TOS\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->header.len));
+		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		printf("\t\tIP type of service: %" PRIu8 "\n",
 				((ofp_action_nw_tos *) action)->nw_tos);
 	}
-	else if (ntohs(action->header.type) == OFPAT_SET_TP_SRC)
+	else if (ntohs(action->type) == OFPAT_SET_TP_SRC)
 	{
 		printf("\t\tType: OFPAT_SET_TP_SRC\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->header.len));
+		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		printf("\t\tTCP/UDP source port or ICMP type: %" PRIu16 "\n",
 				ntohs(((ofp_action_tp_port *) action)->tp_port));
 	}
-	else if (ntohs(action->header.type) == OFPAT_SET_TP_DST)
+	else if (ntohs(action->type) == OFPAT_SET_TP_DST)
 	{
 		printf("\t\tType: OFPAT_SET_TP_DST\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->header.len));
+		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		printf("\t\tTCP/UDP destination port or ICMP code: %" PRIu16 "\n",
 				ntohs(((ofp_action_tp_port *) action)->tp_port));
 	}
 	else
 	{
-		printf("\t\tType: %" PRIu16 "\n", ntohs(action->header.type));
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->header.len));
+		printf("\t\tType: %" PRIu16 "\n", ntohs(action->type));
+		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 	}
 }
 
@@ -2384,7 +2069,7 @@ void openflow_flowtable_print_entries()
 			{
 				if (entry.actions[i].active) {
 					printf("\tAction %" PRIu32 ":\n", i);
-					openflow_flowtable_print_action(&entry.actions[i].action);
+					openflow_flowtable_print_action(&entry.actions[i].header);
 				}
 			}
 		}

@@ -406,6 +406,8 @@ void *openflowPacketProcessor(void *pc) {
 	int pktsize;
 
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+
+	openflow_pkt_proc_init(pcore);
 	while (1)
 	{
 		verbose(2, "[openflowPacketProcessor]:: Waiting for a packet...");
@@ -414,7 +416,7 @@ void *openflowPacketProcessor(void *pc) {
 		verbose(2, "[openflowPacketProcessor]:: Got a packet for further"
 			" processing..");
 
-		openflow_pkt_proc_handle_packet(in_pkt, pcore);
+		openflow_pkt_proc_handle_packet(in_pkt);
 	}
 }
 

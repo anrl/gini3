@@ -2,35 +2,45 @@
  * openflow_ctrl_iface.c - OpenFlow controller interface
  */
 
+#include "openflow_ctrl_iface.h"
+
 #include <arpa/inet.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <slack/err.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include "gnet.h"
-#include "message.h"
+#include "grouter.h"
 #include "ip.h"
+#include "message.h"
 #include "openflow.h"
 #include "openflow_config.h"
+#include "openflow_defs.h"
 #include "openflow_flowtable.h"
 #include "protocols.h"
 #include "tcp.h"
-
-#include "openflow_ctrl_iface.h"
 
 // Controller socket file descriptor
 static int32_t ofc_socket_fd;
 pthread_mutex_t ofc_socket_mutex;
 
 // Transaction ID counter
-static uint32_t txid = 0;
+static uint32_t xid = 0;
+pthread_mutex_t xid_mutex;
 
 // Connection status
 static uint8_t connection_status = 0;
 pthread_mutex_t connection_status_mutex;
+
+// Router configuration
+extern router_config rconfig;
 
 /**
  * Gets a transaction ID. This transaction ID will not have been used to send
@@ -39,17 +49,21 @@ pthread_mutex_t connection_status_mutex;
  * @return A transaction ID that probably has not been used to send data from
  *         the switch before.
  */
-static uint32_t openflow_ctrl_iface_get_txid()
+static uint32_t openflow_ctrl_iface_get_xid()
 {
-	return txid++;
+	pthread_mutex_lock(&xid_mutex);
+	uint32_t next_xid = xid++;
+	pthread_mutex_unlock(&xid_mutex);
+	return next_xid;
 }
 
 /**
  * Gets the current controller connection state.
  *
- * @return The current controller connection state.
+ * @return 1 if the switch is currently connected to the controller, 0 if not.
  */
-uint8_t openflow_ctrl_iface_get_conn_state() {
+uint8_t openflow_ctrl_iface_get_conn_state()
+{
 	pthread_mutex_lock(&connection_status_mutex);
 	uint8_t status = connection_status;
 	pthread_mutex_unlock(&connection_status_mutex);
@@ -67,15 +81,33 @@ static void openflow_ctrl_iface_conn_up()
 }
 
 /**
- * Sets the current controller connection state to down.
+ * Sets the current controller connection state to down. All non-emergency flow
+ * table entries are deleted.
  */
 static void openflow_ctrl_iface_conn_down()
 {
 	pthread_mutex_lock(&connection_status_mutex);
 	connection_status = 0;
 	pthread_mutex_unlock(&connection_status_mutex);
+	openflow_flowtable_delete_non_emergency_entries();
+}
 
-	// TODO: Delete all non-emergency entries in flowtable.
+/**
+ * Gets a template for an OpenFlow message. The message is created using
+ * dynamically-allocated memory and must be freed when no longer needed.
+ *
+ * @param type   The type of the message.
+ * @param length The length of the message in host byte order.
+ *
+ * @return A pointer to an OpenFlow message template.
+ */
+static ofp_header *openflow_ctrl_iface_create_msg(uint8_t type, uint16_t length)
+{
+	ofp_header *msg = malloc(length);
+	msg->version = OFP_VERSION;
+	msg->type = type;
+	msg->length = htons(length);
+	return msg;
 }
 
 /**
@@ -84,14 +116,13 @@ static void openflow_ctrl_iface_conn_down()
  *
  * @return A pointer to an OpenFlow error message template.
  */
-static ofp_error_msg* openflow_ctrl_iface_create_error_msg()
+static ofp_error_msg *openflow_ctrl_iface_create_error_msg()
 {
-	// Prepare error message
-	ofp_error_msg* error_msg = malloc(sizeof(ofp_error_msg) + 64);
-	error_msg->header.version = OFP_VERSION;
-	error_msg->header.type = OFPT_ERROR;
-	error_msg->header.length = htons(OPENFLOW_ERROR_MSG_SIZE);
-
+	ofp_error_msg *error_msg = (ofp_error_msg *) openflow_ctrl_iface_create_msg(
+	        OFPT_ERROR,
+	        sizeof(ofp_error_msg) + OPENFLOW_ERROR_MSG_MIN_DATA_SIZE);
+	error_msg->header.length = htons(sizeof(ofp_error_msg));
+	memset(error_msg->data, 0, OPENFLOW_ERROR_MSG_MIN_DATA_SIZE);
 	return error_msg;
 }
 
@@ -107,8 +138,7 @@ static int32_t openflow_ctrl_iface_send(void *data, uint32_t len)
 {
 	uint8_t counter = 0;
 	uint32_t sent = 0;
-	verbose(2, "[openflow_ctrl_iface_send]:: Sending message to controller.");
-	while (sent < len && counter < 10)
+	while (sent < len && counter < OPENFLOW_CTRL_IFACE_SEND_TIMEOUT)
 	{
 		pthread_mutex_lock(&ofc_socket_mutex);
 		int32_t ret = send(ofc_socket_fd, data + sent, len - sent, 0);
@@ -116,7 +146,8 @@ static int32_t openflow_ctrl_iface_send(void *data, uint32_t len)
 
 		if (ret < 0)
 		{
-			verbose(2, "[openflow_ctrl_iface_send]:: Unknown error occurred.");
+			verbose(1, "[openflow_ctrl_iface_send]:: Unknown error occurred"
+					" while sending message.");
 			return OPENFLOW_CTRL_IFACE_ERR_UNKNOWN;
 		}
 		else if (ret == 0)
@@ -134,12 +165,48 @@ static int32_t openflow_ctrl_iface_send(void *data, uint32_t len)
 
 	if (sent < len)
 	{
-		verbose(2, "[openflow_ctrl_iface_send]:: Send timeout reached.");
-		return OPENFLOW_CTRL_IFACE_SEND_TIMEOUT;
+		verbose(1, "[openflow_ctrl_iface_send]:: Send timeout reached"
+				" while sending message.");
+		return OPENFLOW_CTRL_IFACE_ERR_SEND_TIMEOUT;
 	}
 
-	verbose(2, "[openflow_ctrl_iface_send]:: Message sent to controller.");
 	return sent;
+}
+
+/**
+ * Sends an error message with the specified transaction ID, error type and
+ * error code.
+ *
+ * @param type     The error type in host byte order.
+ * @param code     The error code in host byte order.
+ * @param orig_msg A pointer to the OpenFlow message which caused the error.
+ *                 The transaction ID for the error message will be the same as
+ *                 that of this message.
+ *
+ * @return 0, or a negative value if an error occurred.
+ */
+static int32_t openflow_ctrl_iface_send_error(uint16_t type, uint16_t code,
+        ofp_header *orig_msg)
+{
+	ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
+	error_msg->header.xid = orig_msg->xid;
+	error_msg->type = htons(type);
+	error_msg->code = htons(code);
+
+	if (orig_msg->length > 64)
+	{
+		error_msg->header.length += 64;
+		memcpy(error_msg->data, orig_msg, 64);
+	}
+	else
+	{
+		error_msg->header.length += orig_msg->length;
+		memcpy(error_msg->data, orig_msg, orig_msg->length);
+	}
+
+	int32_t ret = openflow_ctrl_iface_send(error_msg, sizeof(ofp_error_msg));
+	free(error_msg);
+	return ret;
 }
 
 /**
@@ -147,74 +214,48 @@ static int32_t openflow_ctrl_iface_send(void *data, uint32_t len)
  * is created using dynamically-allocated memory and must be freed when no
  * longer needed.
  *
- * @param A pointer to a void pointer. The void pointer will be replaced with a
- *        pointer to the message if one is received.
+ * @param ptr_to_msg A pointer to a void pointer. The void pointer will be
+ *                   replaced with a pointer to the message if one is received.
  *
  * @return The number of bytes in the message, 0 if no message was received,
  *         or a negative value if an error occurred.
  */
-static int32_t openflow_ctrl_iface_recv(void **ptr_to_msg)
+static int32_t openflow_ctrl_iface_recv(ofp_header **ptr_to_msg)
 {
 	ofp_header header;
 	pthread_mutex_lock(&ofc_socket_mutex);
 	int32_t ret = recv(ofc_socket_fd, &header, sizeof(header), MSG_DONTWAIT);
 	pthread_mutex_unlock(&ofc_socket_mutex);
-	if (ret == 0) {
-		verbose(2, "[openflow_ctrl_iface_recv]:: Controller connection"
-			" closed.");
+	if (ret == 0)
+	{
+		verbose(1, "[openflow_ctrl_iface_recv]:: Controller connection"
+				" closed while receiving message header.");
 		return OPENFLOW_CTRL_IFACE_ERR_CONN_CLOSED;
 	}
 	else if (ret == -1)
 	{
-		if (errno == EAGAIN)
-		{
-			return 0;
-		}
-		else
-		{
-			verbose(2, "[openflow_ctrl_iface_recv]:: Unknown error.");
-			return OPENFLOW_CTRL_IFACE_ERR_UNKNOWN;
-		}
+		if (errno == EAGAIN) return 0;
+		verbose(1, "[openflow_ctrl_iface_recv]:: Unknown error occurred"
+				" while receiving message header.");
+		return OPENFLOW_CTRL_IFACE_ERR_UNKNOWN;
 	}
 
-	verbose(2, "[openflow_ctrl_iface_recv]:: Header of message received from"
-		" controller.");
 	if (header.version != OFP_VERSION)
 	{
-		verbose(2, "[openflow_ctrl_iface_recv]:: Bad OpenFlow version number.");
-
-		ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
-		error_msg->header.xid = header.xid;
-		error_msg->type = htons(OFPET_BAD_REQUEST);
-		error_msg->code = htons(OFPBRC_BAD_VERSION);
-		memcpy(&error_msg->data, &header, sizeof(ofp_header));
-
-		int32_t ret = openflow_ctrl_iface_send(error_msg,
-			OPENFLOW_ERROR_MSG_SIZE);
-		free(error_msg);
-		if (ret < 0)
-		{
-			return ret;
-		}
+		verbose(1, "[openflow_ctrl_iface_recv]:: Bad OpenFlow version number"
+				" found in message header.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+		        OFPBRC_BAD_VERSION, &header);
+		if (ret < 0) return ret;
 		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
 	}
-	else if (header.type > OFPT_QUEUE_GET_CONFIG_REPLY)
+	else if (header.type > OPENFLOW_MAX_MSG_TYPE)
 	{
-		verbose(2, "[openflow_ctrl_iface_recv]:: Unsupported message type.");
-
-		ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
-		error_msg->header.xid = header.xid;
-		error_msg->type = htons(OFPET_BAD_REQUEST);
-		error_msg->code = htons(OFPBRC_BAD_TYPE);
-		memcpy(&error_msg->data, &header, sizeof(ofp_header));
-
-		int32_t ret = openflow_ctrl_iface_send(error_msg,
-			OPENFLOW_ERROR_MSG_SIZE);
-		free(error_msg);
-		if (ret < 0)
-		{
-			return ret;
-		}
+		verbose(1, "[openflow_ctrl_iface_recv]:: Unsupported message type"
+				" found in message header.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+		        OFPBRC_BAD_TYPE, &header);
+		if (ret < 0) return ret;
 		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
 	}
 
@@ -225,417 +266,911 @@ static int32_t openflow_ctrl_iface_recv(void **ptr_to_msg)
 	{
 		pthread_mutex_lock(&ofc_socket_mutex);
 		ret = recv(ofc_socket_fd, msg + sizeof(header),
-			ntohs(header.length) - sizeof(header), 0);
+		        ntohs(header.length) - sizeof(header), 0);
 		pthread_mutex_unlock(&ofc_socket_mutex);
-		if (ret == 0) {
-			verbose(2, "[openflow_ctrl_iface_recv]:: Controller connection"
-				" closed.");
+		if (ret == 0)
+		{
+			verbose(1, "[openflow_ctrl_iface_recv]:: Controller connection"
+					" closed while receiving message body.");
 			return OPENFLOW_CTRL_IFACE_ERR_CONN_CLOSED;
 		}
 		else if (ret == -1)
 		{
-			if (errno == EAGAIN)
-			{
-				return 0;
-			}
-			else
-			{
-				verbose(2, "[openflow_ctrl_iface_recv]:: Unknown error.");
-				return OPENFLOW_CTRL_IFACE_ERR_UNKNOWN;
-			}
+			if (errno == EAGAIN) return 0;
+			verbose(1, "[openflow_ctrl_iface_recv]:: Unknown error occurred"
+					" while receiving message body.");
+			return OPENFLOW_CTRL_IFACE_ERR_UNKNOWN;
 		}
 	}
 
-	verbose(2, "[openflow_ctrl_iface_recv]:: Message received from"
-		" controller.");
 	*ptr_to_msg = msg;
 	return ntohs(header.length);
 }
 
 /**
- * Sends a hello message to the OpenFLow controller.
+ * Sends a hello message to the OpenFlow controller.
  *
  * @return The number of bytes sent, or a negative value if an error occurred.
  */
 static int32_t openflow_ctrl_iface_send_hello()
 {
-	verbose(2, "[openflow_ctrl_iface_send_hello]:: Preparing hello message.");
+	uint16_t msg_len = sizeof(ofp_hello);
+	ofp_hello *msg = (ofp_hello *) openflow_ctrl_iface_create_msg(OFPT_HELLO,
+	        msg_len);
+	msg->header.xid = htonl(openflow_ctrl_iface_get_xid());
 
-	ofp_hello hello_request;
-	hello_request.header.version = OFP_VERSION;
-	hello_request.header.type = OFPT_HELLO;
-	hello_request.header.length = htons(8);
-	hello_request.header.xid = htonl(openflow_ctrl_iface_get_txid());
-
-	return openflow_ctrl_iface_send(&hello_request, sizeof(hello_request));
-}
-
-/**
- * Processes a hello message from the OpenFLow controller.
- *
- * @return 0, or a negative value if an error occurred.
- */
-static int32_t openflow_ctrl_iface_recv_hello(ofp_hello* hello)
-{
-	if (hello->header.version < OFP_VERSION ||
-		hello->header.type != OFPT_HELLO ||
-		ntohs(hello->header.length) != 8)
-	{
-		verbose(2, "[openflow_ctrl_iface_recv_hello]:: Incompatible"
-			" OpenFlow controller version.");
-
-		ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
-		error_msg->header.xid = hello->header.xid;
-		error_msg->type = ntohs(OFPET_HELLO_FAILED);
-		error_msg->code = ntohs(OFPHFC_INCOMPATIBLE);
-		memcpy(&error_msg->data, hello, sizeof(ofp_hello));
-
-		int32_t ret = openflow_ctrl_iface_send(error_msg,
-			OPENFLOW_ERROR_MSG_SIZE);
-		free(error_msg);
-		if (ret < 0)
-		{
-			return ret;
-		}
-		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
-	}
-
-	verbose(2, "[openflow_ctrl_iface_recv_hello]:: OpenFlow controller"
-		" hello message valid.");
-	return 0;
-}
-
-/**
- * Performs the initial OpenFLow controller connection setup (the hello
- * request/reply mechanism).
- *
- * @return 0, or a negative value if an error occurred.
- */
-static int32_t openflow_ctrl_iface_hello_req_rep()
-{
-	verbose(2, "[openflow_ctrl_iface_hello_req_rep]:: Performing controller"
-		" hello request/reply.");
-	int32_t ret = openflow_ctrl_iface_send_hello();
-	if (ret < 0)
-	{
-		return ret;
-	}
-
-	ofp_hello* hello;
-	do
-	{
-		ret = openflow_ctrl_iface_recv((void **)&hello);
-	}
-	while (ret == 0);
-	if (ret < 0)
-	{
-		return ret;
-	}
-
-	ret = openflow_ctrl_iface_recv_hello(hello);
-	free(hello);
+	int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+	free(msg);
 	return ret;
 }
 
 /**
- * Processes a features request message from the OpenFLow controller.
+ * Processes a hello message from the OpenFlow controller.
+ *
+ * @param msg The hello message received from the OpenFlow controller.
  *
  * @return 0, or a negative value if an error occurred.
  */
-static int32_t openflow_ctrl_iface_recv_features_req(
-	ofp_header* features_request)
+static int32_t openflow_ctrl_iface_recv_hello(ofp_hello *msg)
 {
-	ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
-	error_msg->header.xid = features_request->xid;
-	error_msg->type = ntohs(OFPET_BAD_REQUEST);
-
-	if (features_request->type != OFPT_FEATURES_REQUEST)
+	if (msg->header.version < OFP_VERSION || msg->header.type != OFPT_HELLO
+	        || ntohs(msg->header.length) < 8)
 	{
-		verbose(2, "[openflow_ctrl_iface_recv_features_req]:: Unexpected"
-			" message type.");
-		error_msg->code = ntohs(OFPBRC_BAD_TYPE);
-		memcpy(&error_msg->data, features_request, sizeof(ofp_header));
-
-		int32_t ret = openflow_ctrl_iface_send(error_msg,
-			OPENFLOW_ERROR_MSG_SIZE);
-		free(error_msg);
-		if (ret < 0)
+		printf("%u\n", ntohs(msg->header.length));
+		if (msg->header.version < OFP_VERSION)
 		{
-			return ret;
+			verbose(1, "[openflow_ctrl_iface_recv_hello]:: Incompatible"
+					" OpenFlow controller version found in hello message from"
+					" controller.");
 		}
-		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
-	}
-	if (ntohs(features_request->length) != 8)
-	{
-		verbose(2, "[openflow_ctrl_iface_recv_features_req]:: Unexpected"
-			" message length.");
-		error_msg->code = ntohs(OFPBRC_BAD_LEN);
-		memcpy(&error_msg->data, features_request, sizeof(ofp_header));
-
-		int32_t ret = openflow_ctrl_iface_send(error_msg,
-			OPENFLOW_ERROR_MSG_SIZE);
-		free(error_msg);
-		if (ret < 0)
+		else if (msg->header.type != OFPT_HELLO)
 		{
-			return ret;
+			verbose(1, "[openflow_ctrl_iface_recv_hello]:: Unexpected message"
+					" type found in hello message from controller.");
 		}
+		else if (ntohs(msg->header.length) < 8)
+		{
+			verbose(1, "[openflow_ctrl_iface_recv_hello]:: Unexpected message"
+					" length found in hello message from controller.");
+		}
+
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_HELLO_FAILED,
+		        OFPHFC_INCOMPATIBLE, &msg->header);
+		if (ret < 0) return ret;
 		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
 	}
 
-	free(error_msg);
-	verbose(2, "[openflow_ctrl_iface_recv_features_req]:: OpenFlow controller"
-		" features request message valid.");
 	return 0;
 }
 
 /**
- * Sends a features reply message to the OpenFLow controller.
+ * Performs the initial OpenFlow controller connection setup, which consists
+ * of the hello request-reply exchange.
  *
  * @return The number of bytes sent, or a negative value if an error occurred.
  */
-static int32_t openflow_ctrl_iface_send_features_rep()
+static int32_t openflow_ctrl_iface_hello_req_rep()
 {
-	uint32_t i;
-	verbose(2, "[openflow_ctrl_iface_send_features_rep]:: Preparing features"
-		" reply message.");
+	verbose(2, "[openflow_ctrl_iface_hello_req_rep]:: Performing controller"
+			" hello request-reply exchange.");
+	int32_t ret = openflow_ctrl_iface_send_hello();
+	if (ret < 0) return ret;
 
-	ofp_switch_features switch_features = openflow_config_get_switch_features();
-	ofp_phy_port *phy_ports[OPENFLOW_MAX_PHYSICAL_PORTS];
-
-	switch_features.header.version = OFP_VERSION;
-	switch_features.header.type = OFPT_FEATURES_REPLY;
-	switch_features.header.length = htons(sizeof(switch_features) +
-		(OPENFLOW_MAX_PHYSICAL_PORTS * sizeof(ofp_phy_port)));
-	switch_features.header.xid = htonl(openflow_ctrl_iface_get_txid());
-
-	for (i = 0; i < OPENFLOW_MAX_PHYSICAL_PORTS; i++)
+	ofp_hello* msg;
+	do
 	{
-		phy_ports[i] = openflow_config_get_phy_port(
-			openflow_config_gnet_to_of_port_num(i));
+		ret = openflow_ctrl_iface_recv((ofp_header **) &msg);
+	}
+	while (ret == 0);
+	if (ret < 0) return ret;
+
+	ret = openflow_ctrl_iface_recv_hello(msg);
+	free(msg);
+	return ret;
+}
+
+/**
+ * Processes an echo request message from the OpenFlow controller.
+ *
+ * @param message          The echo request message received from the OpenFlow
+ *                         controller.
+ * @param ptr_to_echo_data A pointer to a unsigned 8-bit integer pointer. The
+ *                         inner pointer will be replaced with a pointer to the
+ *                         raw data associated with the echo message.
+ *
+ * @return 0, or a negative value if an error occurred.
+ */
+static int32_t openflow_ctrl_iface_recv_echo_req(ofp_header *msg,
+        uint8_t **ptr_to_echo_data)
+{
+	verbose(2, "[openflow_ctrl_iface_parse_message]:: Received"
+			" message from controller of type OFPT_ECHO_REQUEST.");
+	if (ntohs(msg->length) < 8)
+	{
+		verbose(1, "[openflow_ctrl_iface_recv_echo_req]:: Unexpected message"
+				" length found in message of type OFPT_ECHO_REQUEST from"
+				" controller.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+		        OFPBRC_BAD_LEN, msg);
+		if (ret < 0) return ret;
+		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
 	}
 
-	void *features_reply = malloc(sizeof(switch_features) +
-		(OPENFLOW_MAX_PHYSICAL_PORTS * sizeof(ofp_phy_port)));
-	memcpy(features_reply, &switch_features, sizeof(switch_features));
-	for (i = 0; i < OPENFLOW_MAX_PHYSICAL_PORTS; i++)
+	if (ntohs(msg->length) > 8) *ptr_to_echo_data = ((uint8_t *) msg) + 8;
+
+	return 0;
+}
+
+/**
+ * Sends an echo reply to the OpenFlow controller.
+ *
+ * @param echo_data     A pointer to the data to echo back to the OpenFlow
+ *                      controller.
+ * @param echo_data_len The length of the echo data in host byte order.
+ * @param xid           The transaction ID of the original request.
+ *
+ * @return The number of bytes sent, or a negative value if an error occurred.
+ */
+static int32_t openflow_ctrl_iface_send_echo_rep(uint8_t *echo_raw,
+        uint16_t echo_raw_len, uint32_t xid)
+{
+	verbose(2, "[openflow_ctrl_iface_parse_message]:: Sending"
+			" message to controller of type OFPT_ECHO_REPLY.");
+	uint16_t msg_len = sizeof(ofp_header) + echo_raw_len;
+	ofp_header *msg = openflow_ctrl_iface_create_msg(OFPT_ECHO_REPLY, msg_len);
+	msg->xid = xid;
+	memcpy(msg + sizeof(ofp_header), echo_raw, echo_raw_len);
+
+	int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+	free(msg);
+	return ret;
+}
+
+/**
+ * Processes a features request message from the OpenFlow controller.
+ *
+ * @param msg The features request message received from the OpenFlow
+ *            controller.
+ *
+ * @return 0, or a negative value if an error occurred.
+ */
+static int32_t openflow_ctrl_iface_recv_features_req(ofp_header *msg)
+{
+	if (msg->type != OFPT_FEATURES_REQUEST)
 	{
-		memcpy(features_reply + sizeof(switch_features) +
-			(i * sizeof(ofp_phy_port)), phy_ports[i], sizeof(ofp_phy_port));
+		verbose(1, "[openflow_ctrl_iface_recv_features_req]:: Unexpected"
+				" message type found in features request message from"
+				" controller.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+		        OFPBRC_BAD_TYPE, msg);
+		if (ret < 0) return ret;
+		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
 	}
-	int32_t ret = openflow_ctrl_iface_send(features_reply,
-		sizeof(switch_features) +
-		(OPENFLOW_MAX_PHYSICAL_PORTS * sizeof(ofp_phy_port)));
-	free(features_reply);
-	if (ret < 0)
+	if (ntohs(msg->length) != 8)
 	{
-		return ret;
+		verbose(1, "[openflow_ctrl_iface_recv_features_req]:: Unexpected"
+				" message length found in features request message from"
+				" controller.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+		        OFPBRC_BAD_LEN, msg);
+		if (ret < 0) return ret;
+		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
 	}
 	return 0;
 }
 
 /**
- * Performs the initial OpenFlow features request/reply.
+ * Sends a features reply message to the OpenFlow controller.
  *
- * @return 0, or a negative value if an error occurred.
+ * @param xid The transaction ID of the original request.
+ *
+ * @return The number of bytes sent, or a negative value if an error occurred.
+ */
+static int32_t openflow_ctrl_iface_send_features_rep(uint32_t xid)
+{
+	uint16_t msg_len = sizeof(ofp_switch_features)
+	        + (OPENFLOW_MAX_PHYSICAL_PORTS * sizeof(ofp_phy_port));
+	ofp_header *msg = openflow_ctrl_iface_create_msg(OFPT_FEATURES_REPLY,
+	        msg_len);
+	msg->xid = xid;
+
+	ofp_switch_features switch_features = openflow_config_get_switch_features();
+	memcpy(((uint8_t *) msg) + sizeof(ofp_header),
+	        ((uint8_t *) &switch_features) + sizeof(ofp_header),
+	        sizeof(ofp_switch_features) - sizeof(ofp_header));
+
+	uint32_t i;
+	for (i = 0; i < OPENFLOW_MAX_PHYSICAL_PORTS; i++)
+	{
+		ofp_phy_port *src = openflow_config_get_phy_port(
+		        openflow_config_get_of_port_num(i));
+		uint8_t *dest = ((uint8_t *) msg) + sizeof(switch_features)
+		        + (i * sizeof(ofp_phy_port));
+		memcpy(dest, src, sizeof(ofp_phy_port));
+	}
+
+	int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+	free(msg);
+	return ret;
+}
+
+/**
+ * Performs the initial OpenFlow features request-reply exchange.
+ *
+ * @return The number of bytes sent, or a negative value if an error occurred.
  */
 static int32_t openflow_ctrl_iface_features_req_rep()
 {
 	verbose(2, "[openflow_ctrl_iface_features_req_rep]:: Performing controller"
-		" features request/reply.");
-	ofp_header *features_request;
+			" features request-reply exchange.");
+	ofp_header *msg;
 	int32_t ret;
 	do
 	{
-		ret = openflow_ctrl_iface_recv((void **)&features_request);
+		ret = openflow_ctrl_iface_recv(&msg);
 	}
 	while (ret == 0);
-	if (ret < 0)
-	{
-		return ret;
-	}
+	if (ret < 0) return ret;
 
-	ret = openflow_ctrl_iface_recv_features_req(features_request);
-	free(features_request);
-	if (ret < 0)
-	{
-		return ret;
-	}
+	ret = openflow_ctrl_iface_recv_features_req(msg);
+	if (ret < 0) return ret;
 
-	return openflow_ctrl_iface_send_features_rep();
+	ret = openflow_ctrl_iface_send_features_rep(msg->xid);
+	free(msg);
+	return ret;
 }
 
 /**
- * Processes a set config message from the OpenFLow controller.
+ * Processes a get configuration request from the OpenFlow controller.
+ *
+ * @param msg A pointer to the get configuration message received from the
+ *            OpenFlow controller.
  *
  * @return 0, or a negative value if an error occurred.
  */
-static int32_t openflow_ctrl_iface_recv_set_config(
-	ofp_switch_config *switch_config)
+static int32_t openflow_ctrl_iface_recv_get_config_req(ofp_header *msg)
 {
-	if (ntohs(switch_config->header.length) != 12)
+	verbose(2, "[openflow_ctrl_iface_parse_message]:: Received"
+			" message from controller of type OFPT_GET_CONFIG_REQUEST.");
+
+	if (ntohs(msg->length) < 8)
 	{
-		verbose(2, "[openflow_ctrl_iface_recv_set_config]:: Unexpected"
-			" message length.");
-
-		ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
-		error_msg->header.xid = switch_config->header.xid;
-		error_msg->type = htons(OFPET_BAD_REQUEST);
-		error_msg->code = htons(OFPBRC_BAD_LEN);
-		memcpy(&error_msg->data, switch_config, sizeof(ofp_switch_config));
-
-		int32_t ret = openflow_ctrl_iface_send(error_msg,
-			OPENFLOW_ERROR_MSG_SIZE);
-		free(error_msg);
-		if (ret < 0)
-		{
-			return ret;
-		}
+		verbose(1, "[openflow_ctrl_iface_recv_get_config_req]:: Unexpected"
+				" message length found in message of type"
+				" OFPT_GET_CONFIG_REQUEST from controller.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+		        OFPBRC_BAD_LEN, msg);
+		if (ret < 0) return ret;
 		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
 	}
-
-	verbose(2, "[openflow_ctrl_iface_recv_features_req]:: OpenFlow controller"
-		" set config message valid.");
-
-	openflow_config_set_switch_config_flags(switch_config->flags);
-	openflow_config_set_miss_send_len(switch_config->miss_send_len);
-
 	return 0;
 }
 
 /**
- * Processes a barrier request message from the OpenFLow controller.
+ * Sends a get configuration reply to the OpenFlow controller.
  *
- * @return 0, or a negative value if an error occurred.
- */
-static int32_t openflow_ctrl_iface_recv_barrier_req(
-	ofp_header *barrier_request)
-{
-	if (ntohs(barrier_request->length) != 8)
-	{
-		verbose(2, "[openflow_ctrl_iface_recv_barrier_req]:: Unexpected"
-			" message length.");
-
-		ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
-		error_msg->header.xid = barrier_request->xid;
-		error_msg->type = htons(OFPET_BAD_REQUEST);
-		error_msg->code = htons(OFPBRC_BAD_LEN);
-		memcpy(&error_msg->data, barrier_request, sizeof(ofp_header));
-
-		int32_t ret = openflow_ctrl_iface_send(error_msg,
-			OPENFLOW_ERROR_MSG_SIZE);
-		free(error_msg);
-		if (ret < 0)
-		{
-			return ret;
-		}
-		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
-	}
-
-	verbose(2, "[openflow_ctrl_iface_recv_barrier_req]:: OpenFlow controller"
-		" barrier request message valid.");
-
-	return 0;
-}
-
-/**
- * Sends a barrier reply message to the OpenFLow controller.
+ * @param xid The transaction ID of the original request.
  *
  * @return The number of bytes sent, or a negative value if an error occurred.
  */
-static int32_t openflow_ctrl_iface_send_barrier_rep(uint32_t txid)
+static int32_t openflow_ctrl_iface_send_get_config_rep(uint32_t xid)
 {
-	verbose(2, "[openflow_ctrl_iface_send_barrier_rep]:: Preparing barrier"
-		" reply message.");
+	verbose(2, "[openflow_ctrl_iface_parse_message]:: Sending"
+			" message to controller of type OFPT_GET_CONFIG_REPLY.");
 
-	ofp_header barrier_response;
-	barrier_response.version = OFP_VERSION;
-	barrier_response.type = OFPT_BARRIER_REPLY;
-	barrier_response.length = htons(8);
-	barrier_response.xid = txid;
+	uint16_t msg_len = sizeof(ofp_switch_config);
+	ofp_switch_config *msg =
+	        (ofp_switch_config *) openflow_ctrl_iface_create_msg(
+	                OFPT_GET_CONFIG_REPLY, msg_len);
+	msg->header.xid = xid;
+	msg->flags = openflow_config_get_switch_config_flags();
+	// This OpenFlow implementation has no buffers, so miss_send_len is not
+	// stored and is always zero
+	msg->miss_send_len = 0;
 
-	return openflow_ctrl_iface_send(&barrier_response,
-		sizeof(barrier_response));
+	int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+	free(msg);
+	return ret;
 }
 
 /**
- * Processes a flow mod message from the OpenFLow controller.
+ * Processes a set configuration message from the OpenFlow controller.
+ *
+ * @param msg A pointer to the set configuration message received from the
+ *            OpenFlow controller.
  *
  * @return 0, or a negative value if an error occurred.
  */
-static int32_t openflow_ctrl_iface_recv_flow_mod(ofp_flow_mod *flow_mod)
+static int32_t openflow_ctrl_iface_recv_set_config(ofp_switch_config *msg)
 {
-	ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
-	error_msg->header.xid = flow_mod->header.xid;
-	error_msg->type = htons(OFPET_FLOW_MOD_FAILED);
+	verbose(2, "[openflow_ctrl_iface_parse_message]:: Received"
+			" message from controller of type OFPT_SET_CONFIG.");
+
+	if (ntohs(msg->header.length) != 12)
+	{
+		verbose(1, "[openflow_ctrl_iface_recv_set_config]:: Unexpected"
+				" message length found in message of type OFPT_SET_CONFIG from"
+				" controller.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+		        OFPBRC_BAD_LEN, &msg->header);
+		if (ret < 0) return ret;
+		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
+	}
+
+	openflow_config_set_switch_config_flags(msg->flags);
+
+	return 0;
+}
+
+/**
+ * Processes a packet out message from the OpenFlow controller.
+ *
+ * @param msg A pointer to the packet out message received from the OpenFlow
+ *            controller.
+ *
+ * @return 0, or a negative value if an error occurred.
+ */
+static int32_t openflow_ctrl_iface_recv_packet_out(ofp_packet_out *msg)
+{
+	verbose(2, "[openflow_ctrl_iface_parse_message]:: Received"
+			" message from controller of type OFPT_PACKET_OUT.");
+
+	if (ntohs(msg->header.length) != 16)
+	{
+		verbose(1, "[openflow_ctrl_iface_recv_packet_out]:: Unexpected"
+				" message length found in message of type OFPT_PACKET_OUT from"
+				" controller.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+		        OFPBRC_BAD_LEN, &msg->header);
+		if (ret < 0) return ret;
+		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
+	}
+	if (ntohl(msg->buffer_id) != -1)
+	{
+		verbose(1, "[openflow_ctrl_iface_recv_packet_out]:: Unexpected"
+				" message length found in message of type OFPT_PACKET_OUT from"
+				" controller.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+		        OFPBRC_BUFFER_UNKNOWN, &msg->header);
+		if (ret < 0) return ret;
+		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
+	}
+
+	gpacket_t packet;
+	uint16_t in_port = openflow_config_get_gnet_port_num(ntohs(msg->in_port));
+	if (in_port < MAX_INTERFACES && findInterface(in_port) != NULL)
+	{
+		packet.frame.src_interface = in_port;
+	}
+	memcpy(&packet.data, ((uint8_t *) msg->actions) + htons(msg->actions_len),
+	        ntohs(msg->header.length) - sizeof(ofp_packet_out)
+	                - ntohs(msg->actions_len));
+
+	uint32_t actions = htons(msg->actions_len) / sizeof(ofp_action_header);
+	uint32_t i;
+	for (i = 0; i < actions; i++)
+	{
+		ofp_action_header *action = &msg->actions[i];
+		openflow_pkt_proc_perform_action(action, &packet);
+	}
+	return 0;
+}
+
+/**
+ * Processes a flow modification message from the OpenFlow controller.
+ *
+ * @param msg A pointer to the flow modification message received from the
+ *            OpenFlow controller.
+ *
+ * @return 0, or a negative value if an error occurred.
+ */
+static int32_t openflow_ctrl_iface_recv_flow_mod(ofp_flow_mod *msg)
+{
+	verbose(2, "[openflow_ctrl_iface_parse_message]:: Received"
+			" message from controller of type OFPT_FLOW_MOD.");
 
 	int32_t ret;
-	if (ntohs(flow_mod->header.length) < 72)
+	if (ntohs(msg->header.length) < 72)
 	{
-		verbose(2, "[openflow_ctrl_iface_recv_flow_mod]:: Unexpected"
-			" message length.");
-
-		error_msg->type = htons(OFPET_BAD_REQUEST);
-		error_msg->code = htons(OFPBRC_BAD_LEN);
-		memcpy(&error_msg->data, flow_mod, 64);
-
-		ret = openflow_ctrl_iface_send(error_msg, OPENFLOW_ERROR_MSG_SIZE);
-		free(error_msg);
-		if (ret < 0)
-		{
-			return ret;
-		}
+		verbose(1, "[openflow_ctrl_iface_recv_flow_mod]:: Unexpected message"
+				" length found in message of type OFPT_FLOW_MOD from"
+				" controller.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+		        OFPBRC_BAD_LEN, &msg->header);
+		if (ret < 0) return ret;
 		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
 	}
 
-	ret = openflow_flowtable_modify(flow_mod, error_msg);
+	ofp_error_msg* error_msg = openflow_ctrl_iface_create_error_msg();
+	ret = openflow_flowtable_modify(msg, error_msg);
 	if (ret < 0)
 	{
-		memcpy(&error_msg->data, flow_mod, 64);
-		ret = openflow_ctrl_iface_send(error_msg, OPENFLOW_ERROR_MSG_SIZE);
+		int32_t ret = openflow_ctrl_iface_send_error(error_msg->type,
+		        error_msg->code, &msg->header);
 		free(error_msg);
-		if (ret < 0)
-		{
-			return ret;
-		}
+		if (ret < 0) return ret;
 		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
 	}
-
-	verbose(2, "[openflow_ctrl_iface_recv_flow_mod]:: OpenFlow controller"
-		" flow mod message valid.");
-
 	free(error_msg);
 	return 0;
 }
 
-static int32_t openflow_ctrl_iface_send_echo_rep()
+/**
+ * Processes a port modification message from the OpenFlow controller.
+ *
+ * @param msg A pointer to the port modification message received from the
+ *            OpenFlow controller.
+ *
+ * @return 0, or a negative value if an error occurred.
+ */
+static int32_t openflow_ctrl_iface_recv_port_mod(ofp_port_mod *msg)
 {
-	// TODO: Implement this.
+	verbose(2, "[openflow_ctrl_iface_parse_message]:: Received"
+			" message from controller of type OFPT_PORT_MOD.");
+
+	if (ntohs(msg->header.length) != 32)
+	{
+		verbose(1, "[openflow_ctrl_iface_recv_port_mod]:: Unexpected"
+				" message length found in message of type OFPT_PORT_MOD from"
+				" controller.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+		        OFPBRC_BAD_LEN, &msg->header);
+		if (ret < 0) return ret;
+		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
+	}
+
+	ofp_phy_port *phy_port = openflow_config_get_phy_port(ntohs(msg->port_no));
+	if (phy_port == NULL)
+	{
+		verbose(1, "[openflow_ctrl_iface_recv_port_mod]:: Unexpected"
+				" port number found in message of type OFPT_PORT_MOD from"
+				" controller.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_PORT_MOD_FAILED,
+		        OFPPMFC_BAD_PORT, &msg->header);
+		if (ret < 0) return ret;
+		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
+	}
+	if (memcmp(phy_port->hw_addr, msg->hw_addr, 6))
+	{
+		verbose(1, "[openflow_ctrl_iface_recv_port_mod]:: Unexpected"
+				" MAC address found in message of type OFPT_PORT_MOD from"
+				" controller.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_PORT_MOD_FAILED,
+		        OFPPMFC_BAD_PORT, &msg->header);
+		if (ret < 0) return ret;
+		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
+	}
+
+	uint32_t i;
+	for (i = 0; i < 32; i++)
+	{
+		if ((msg->mask & (1 << i)))
+		{
+			if (msg->config & (1 << i)) phy_port->config |= 1 << i;
+			else phy_port->config &= ~(1 << i);
+		}
+	}
+	if (msg->advertise != 0) phy_port->advertised = msg->advertise;
+
+	return 0;
 }
 
-static int32_t openflow_ctrl_iface_send_config_rep()
+/**
+ * Sends a packet in message to the OpenFlow controller containing the
+ * specified packet.
+ *
+ * @param packet A pointer to the packet to send to the OpenFlow controller.
+ * @param reason The reason the packet is being sent to the controller.
+ *
+ * @return The number of bytes sent, or a negative value if an error occurred.
+ */
+int32_t openflow_ctrl_iface_send_packet_in(gpacket_t *packet, uint8_t reason)
 {
-	// TODO: Implement this.
+	uint16_t msg_len = sizeof(ofp_packet_in) + sizeof(gpacket_t);
+	ofp_packet_in *msg = (ofp_packet_in *) openflow_ctrl_iface_create_msg(
+	        OFPT_PACKET_IN, msg_len);
+	msg->header.xid = htonl(openflow_ctrl_iface_get_xid());
+	msg->buffer_id = htonl(-1);
+	msg->total_len = htons(sizeof(gpacket_t));
+	msg->in_port = htons(
+	        openflow_config_get_of_port_num(packet->frame.src_interface));
+	msg->reason = reason;
+	memcpy(msg->data, packet, sizeof(gpacket_t));
+
+	int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+	free(msg);
+	return ret;
 }
 
-int32_t openflow_ctrl_iface_send_packet_in(gpacket_t *packet)
-{
-	// TODO: Implement this.
-}
-
+/**
+ * Sends a flow removed message to the OpenFlow controller.
+ *
+ * @param entry  A pointer to the flowtable entry that is being removed from
+ *               the flowtable.
+ * @param reason The reason the flow is being removed.
+ *
+ * @return The number of bytes sent, or a negative value if an error occurred.
+ */
 int32_t openflow_ctrl_iface_send_flow_removed(
-		openflow_flowtable_entry_type *entry, uint8_t reason)
+        openflow_flowtable_entry_type *entry, uint8_t reason)
 {
-	// TODO: Implement this.
+	uint16_t msg_len = sizeof(ofp_flow_removed);
+	ofp_flow_removed *msg = (ofp_flow_removed *) openflow_ctrl_iface_create_msg(
+	        OFPT_FLOW_REMOVED, msg_len);
+	msg->header.xid = htonl(openflow_ctrl_iface_get_xid());
+	msg->match = entry->match;
+	msg->cookie = entry->cookie;
+	msg->priority = entry->priority;
+	msg->reason = reason;
+	msg->duration_sec = entry->stats.duration_sec;
+	msg->duration_nsec = entry->stats.duration_nsec;
+	msg->idle_timeout = entry->idle_timeout;
+	msg->packet_count = entry->stats.packet_count;
+	msg->byte_count = entry->stats.byte_count;
+
+	int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+	free(msg);
+	return ret;
 }
 
-int32_t openflow_ctrl_iface_send_port_status(ofp_phy_port *phy_port)
+/**
+ * Sends a port status message to the OpenFlow controller.
+ *
+ * @param phy_port A pointer to the physical port that was added, removed or
+ *                 changed.
+ * @param reason   A value indicating what has changed about the physical port.
+ *
+ * @return The number of bytes sent, or a negative value if an error occurred.
+ */
+int32_t openflow_ctrl_iface_send_port_status(ofp_phy_port *phy_port,
+        uint8_t reason)
 {
-	// TODO: Implement this.
+	uint16_t msg_len = sizeof(ofp_port_status);
+	ofp_port_status *msg = (ofp_port_status *) openflow_ctrl_iface_create_msg(
+	        OFPT_PORT_STATUS, msg_len);
+	msg->header.xid = htonl(openflow_ctrl_iface_get_xid());
+	msg->reason = reason;
+	msg->desc = *phy_port;
+
+	int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+	free(msg);
+	return ret;
 }
 
-static int32_t openflow_ctrl_iface_send_stats_reply()
+/**
+ * Processes a stats request message from the OpenFlow controller.
+ *
+ * @param msg A pointer to the stats request message received from the OpenFlow
+ *            controller.
+ *
+ * @return 0, or a negative value if an error occurred.
+ */
+static int32_t openflow_ctrl_iface_recv_stats_req(ofp_stats_request *msg)
 {
-	// TODO: Implement this.
+	verbose(2, "[openflow_ctrl_iface_parse_message]:: Received"
+			" message from controller of type OFPT_STATS_REQUEST.");
+
+	uint16_t type = ntohs(msg->type);
+	uint16_t expected_length;
+	if (type == OFPST_DESC)
+	{
+		expected_length = sizeof(ofp_stats_request);
+	}
+	else if (type == OFPST_FLOW)
+	{
+		expected_length = sizeof(ofp_stats_request)
+		        + sizeof(ofp_flow_stats_request);
+	}
+	else if (type == OFPST_AGGREGATE)
+	{
+		expected_length = sizeof(ofp_stats_request)
+		        + sizeof(ofp_aggregate_stats_request);
+	}
+	else if (type == OFPST_TABLE)
+	{
+		expected_length = sizeof(ofp_stats_request) + sizeof(ofp_table_stats);
+	}
+	else if (type == OFPST_PORT)
+	{
+		expected_length = sizeof(ofp_stats_request)
+		        + sizeof(ofp_port_stats_request);
+	}
+	else
+	{
+		verbose(1, "[openflow_ctrl_iface_recv_stats_req]:: Unexpected"
+				" stats type found in message of type OFPT_STATS_REQUEST"
+				" from controller.");
+		if (type == OFPST_VENDOR)
+		{
+			int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+			        OFPBRC_BAD_VENDOR, &msg->header);
+			if (ret < 0) return ret;
+			return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
+		}
+		else
+		{
+			int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+			        OFPBRC_BAD_TYPE, &msg->header);
+			if (ret < 0) return ret;
+			return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
+		}
+	}
+
+	if (expected_length != ntohs(msg->header.length))
+	{
+		verbose(1, "[openflow_ctrl_iface_recv_stats_req]:: Unexpected"
+				" message length found in message of type OFPT_STATS_REQUEST"
+				" (stats type " PRIu16 ") from controller.", type);
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+		        OFPBRC_BAD_LEN, &msg->header);
+		if (ret < 0) return ret;
+		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
+	}
+
+	return 0;
+}
+
+/**
+ * Sends a stats reply message to the OpenFlow controller.
+ *
+ * @param orig_msg A pointer to the stats request message received from the
+ *                 OpenFlow controller.
+ *
+ * @return The number of bytes sent, or a negative value if an error occurred.
+ */
+static int32_t openflow_ctrl_iface_send_stats_rep(ofp_stats_request *orig_msg)
+{
+	verbose(2, "[openflow_ctrl_iface_parse_message]:: Sending"
+			" message to controller of type OFPT_STATS_REPLY.");
+
+	uint16_t type = ntohs(orig_msg->type);
+	if (type == OFPST_DESC)
+	{
+		uint16_t msg_len = sizeof(ofp_stats_reply) + sizeof(ofp_desc_stats);
+		ofp_stats_reply *msg =
+		        (ofp_stats_reply *) openflow_ctrl_iface_create_msg(
+		                OFPT_STATS_REPLY, msg_len);
+		msg->header.xid = orig_msg->header.xid;
+		msg->type = htons(OFPST_DESC);
+		msg->flags = 0;
+
+		ofp_desc_stats body;
+		strncpy(body.mfr_desc, OPENFLOW_MFR_DESC, DESC_STR_LEN);
+		body.mfr_desc[DESC_STR_LEN - 1] = '\0';
+		strncpy(body.hw_desc, OPENFLOW_HW_DESC, DESC_STR_LEN);
+		body.hw_desc[DESC_STR_LEN - 1] = '\0';
+		strncpy(body.sw_desc, OPENFLOW_SW_DESC, DESC_STR_LEN);
+		body.sw_desc[DESC_STR_LEN - 1] = '\0';
+		strncpy(body.serial_num, rconfig.router_name, SERIAL_NUM_LEN);
+		body.serial_num[SERIAL_NUM_LEN - 1] = '\0';
+		strncpy(body.dp_desc, rconfig.router_name, DESC_STR_LEN);
+		body.dp_desc[DESC_STR_LEN - 1] = '\0';
+
+		memcpy(msg->body, &body, sizeof(body));
+
+		int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+		free(msg);
+		return ret;
+	}
+	else if (type == OFPST_FLOW)
+	{
+		ofp_flow_stats_request *orig_body =
+		        (ofp_flow_stats_request *) orig_msg->body;
+
+		int32_t bytes_sent = 0;
+		uint32_t i = 0;
+		ofp_flow_stats *stats;
+
+		while (i < OPENFLOW_MAX_FLOWTABLE_ENTRIES)
+		{
+			if (openflow_flowtable_get_flow_stats(&orig_body->match,
+			        orig_body->out_port, i, &i, orig_body->table_id, &stats))
+			{
+				uint16_t msg_len = sizeof(ofp_stats_reply)
+				        + sizeof(ofp_flow_stats);
+				ofp_stats_reply *msg =
+				        (ofp_stats_reply *) openflow_ctrl_iface_create_msg(
+				                OFPT_STATS_REPLY, msg_len);
+				msg->header.xid = orig_msg->header.xid;
+				msg->type = htons(OFPST_FLOW);
+				msg->flags = htons(OFPSF_REPLY_MORE);
+
+				memcpy(msg->body, stats, sizeof(ofp_flow_stats));
+
+				int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+				free(msg);
+				if (ret < 0) return ret;
+				bytes_sent += ret;
+
+				i += 1;
+			}
+		}
+
+		uint16_t msg_len = sizeof(ofp_stats_reply);
+		ofp_stats_reply *msg =
+		        (ofp_stats_reply *) openflow_ctrl_iface_create_msg(
+		                OFPT_STATS_REPLY, msg_len);
+		msg->header.xid = orig_msg->header.xid;
+		msg->type = htons(OFPST_FLOW);
+		msg->flags = 0;
+
+		int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+		free(msg);
+		if (ret < 0) return ret;
+		return ret + bytes_sent;
+	}
+	else if (type == OFPST_AGGREGATE)
+	{
+		ofp_flow_stats_request *orig_body =
+		        (ofp_flow_stats_request *) orig_msg->body;
+
+		uint32_t i = 0;
+		ofp_flow_stats *stats;
+
+		ofp_aggregate_stats_reply body;
+		body.byte_count = 0;
+		body.packet_count = 0;
+		body.flow_count = 0;
+
+		while (i < OPENFLOW_MAX_FLOWTABLE_ENTRIES)
+		{
+			if (openflow_flowtable_get_flow_stats(&orig_body->match,
+			        orig_body->out_port, i, &i, orig_body->table_id, &stats))
+			{
+				body.byte_count = ntohll(
+				        htonll(body.byte_count) + stats->byte_count);
+				body.packet_count = ntohll(
+				        htonll(body.packet_count) + stats->packet_count);
+				body.flow_count = ntohl(htonl(body.flow_count) + 1);
+
+				i += 1;
+			}
+		}
+
+		uint16_t msg_len = sizeof(ofp_stats_reply)
+		        + sizeof(ofp_aggregate_stats_reply);
+		ofp_stats_reply *msg =
+		        (ofp_stats_reply *) openflow_ctrl_iface_create_msg(
+		                OFPT_STATS_REPLY, msg_len);
+		msg->header.xid = orig_msg->header.xid;
+		msg->type = htons(OFPST_AGGREGATE);
+		msg->flags = 0;
+
+		memcpy(msg->body, &body, sizeof(ofp_aggregate_stats_reply));
+
+		int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+		free(msg);
+		return ret;
+	}
+	else if (type == OFPST_TABLE)
+	{
+		uint32_t msg_len = sizeof(ofp_stats_reply)
+		        + (sizeof(ofp_table_stats) * 2);
+		ofp_stats_reply *msg =
+		        (ofp_stats_reply *) openflow_ctrl_iface_create_msg(
+		                OFPT_STATS_REPLY, msg_len);
+		msg->header.xid = orig_msg->header.xid;
+		msg->type = htons(OFPST_TABLE);
+		msg->flags = 0;
+
+		memcpy(msg->body, openflow_flowtable_get_table_stats(),
+		        sizeof(ofp_table_stats));
+		memcpy(msg->body + sizeof(ofp_table_stats),
+		        openflow_flowtable_get_emerg_table_stats(),
+		        sizeof(ofp_table_stats));
+
+		int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+		free(msg);
+		return ret;
+	}
+	else if (type == OFPST_PORT)
+	{
+		ofp_port_stats_request *orig_body =
+		        (ofp_port_stats_request *) orig_msg->body;
+
+		ofp_port_stats *port_stats = openflow_config_get_port_stats(
+		        ntohs(orig_body->port_no));
+		if (port_stats != NULL)
+		{
+			uint16_t msg_len = sizeof(ofp_stats_reply) + sizeof(ofp_port_stats);
+			ofp_stats_reply *msg =
+			        (ofp_stats_reply *) openflow_ctrl_iface_create_msg(
+			                OFPT_STATS_REPLY, msg_len);
+			msg->header.xid = orig_msg->header.xid;
+			msg->type = htons(OFPST_PORT);
+			msg->flags = 0;
+
+			memcpy(msg->body, port_stats, sizeof(ofp_port_stats));
+
+			int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+			free(msg);
+			return ret;
+		}
+		else
+		{
+			uint16_t msg_len = sizeof(ofp_stats_reply);
+			ofp_stats_reply *msg =
+			        (ofp_stats_reply *) openflow_ctrl_iface_create_msg(
+			                OFPT_STATS_REPLY, msg_len);
+			msg->header.xid = orig_msg->header.xid;
+			msg->type = htons(OFPST_PORT);
+			msg->flags = 0;
+
+			int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+			free(msg);
+			return ret;
+		}
+	}
+
+	return OPENFLOW_CTRL_IFACE_ERR_UNKNOWN;
+}
+
+/**
+ * Processes a barrier request message from the OpenFlow controller.
+ *
+ * @param msg The barrier request message received from the OpenFlow
+ *            controller.
+ *
+ * @return 0, or a negative value if an error occurred.
+ */
+static int32_t openflow_ctrl_iface_recv_barrier_req(ofp_header *msg)
+{
+	verbose(2, "[openflow_ctrl_iface_parse_message]:: Received"
+			" message from controller of type OFPT_BARRIER_REQUEST.");
+
+	if (ntohs(msg->length) != 8)
+	{
+		verbose(1, "[openflow_ctrl_iface_recv_barrier_req]:: Unexpected"
+				" message length found in message of type OFPT_BARRIER_REQUEST"
+				" from controller.");
+		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+		        OFPBRC_BAD_LEN, msg);
+		if (ret < 0) return ret;
+		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
+	}
+	return 0;
+}
+
+/**
+ * Sends a barrier reply message to the OpenFlow controller.
+ *
+ * @param xid The transaction ID of the barrier request.
+ *
+ * @return The number of bytes sent, or a negative value if an error occurred.
+ */
+static int32_t openflow_ctrl_iface_send_barrier_rep(uint32_t xid)
+{
+	verbose(2, "[openflow_ctrl_iface_parse_message]:: Sending"
+			" message to controller of type OFPT_BARRIER_REPLY.");
+
+	uint16_t msg_len = 8;
+	ofp_header *msg = openflow_ctrl_iface_create_msg(OFPT_BARRIER_REPLY,
+	        msg_len);
+	msg->xid = xid;
+
+	int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
+	free(msg);
+	return ret;
+}
+
+/**
+ * Prints an error message to the console.
+ *
+ * @param msg The error message to print to the console.
+ */
+static void openflow_ctrl_iface_print_error(ofp_error_msg *msg)
+{
+	if (ntohs(msg->header.length) < 12)
+	{
+		verbose(1, "[openflow_ctrl_iface_print_error]:: Unexpected message"
+				" length found in message of type OFPT_ERROR from"
+				" controller.");
+		return;
+	}
+
+	verbose(1, "[openflow_ctrl_iface_print_error]:: Unexpected"
+			" error message received from controller of type " PRIu16
+	" and code " PRIu16 ".", ntohs(msg->type), ntohs(msg->code));
 }
 
 /**
@@ -645,68 +1180,92 @@ static int32_t openflow_ctrl_iface_send_stats_reply()
  *
  * @return 0, or a negative value if an error occurred.
  */
-static int32_t openflow_ctrl_iface_parse_message(ofp_header *message)
+static int32_t openflow_ctrl_iface_parse_message(ofp_header *msg)
 {
-	int32_t ret;
-	switch(message->type)
+	int32_t ret = 0;
+	switch (msg->type)
 	{
-		case OFPT_ECHO_REQUEST:
+		case OFPT_ERROR:
 		{
-			// TODO: Implement this.
+			openflow_ctrl_iface_print_error((ofp_error_msg *) msg);
 			break;
 		}
-		case OFPT_SET_CONFIG:
+		case OFPT_ECHO_REQUEST:
 		{
-			ofp_switch_config *switch_config = (ofp_switch_config *)message;
-			ret = openflow_ctrl_iface_recv_set_config(switch_config);
+			uint8_t *echo_data;
+			ret = openflow_ctrl_iface_recv_echo_req(msg, &echo_data);
+			if (ret < 0) return ret;
+			ret = openflow_ctrl_iface_send_echo_rep(echo_data,
+			        msg->length - sizeof(ofp_header), msg->xid);
 			break;
 		}
 		case OFPT_GET_CONFIG_REQUEST:
 		{
-			// TODO: Implement this.
+			ret = openflow_ctrl_iface_recv_get_config_req(msg);
+			if (ret < 0) return ret;
+			ret = openflow_ctrl_iface_send_get_config_rep(msg->xid);
+			break;
+		}
+		case OFPT_SET_CONFIG:
+		{
+			ofp_switch_config *switch_config = (ofp_switch_config *) msg;
+			ret = openflow_ctrl_iface_recv_set_config(switch_config);
 			break;
 		}
 		case OFPT_PACKET_OUT:
 		{
-			// TODO: Implement this.
+			ofp_packet_out *packet_out = (ofp_packet_out *) msg;
+			ret = openflow_ctrl_iface_recv_packet_out(packet_out);
 			break;
 		}
 		case OFPT_FLOW_MOD:
 		{
-			ofp_flow_mod *flow_mod = (ofp_flow_mod *)message;
+			ofp_flow_mod *flow_mod = (ofp_flow_mod *) msg;
 			ret = openflow_ctrl_iface_recv_flow_mod(flow_mod);
 			break;
 		}
 		case OFPT_PORT_MOD:
 		{
-			// TODO: Implement this.
+			ofp_port_mod *port_mod = (ofp_port_mod *) msg;
+			ret = openflow_ctrl_iface_recv_port_mod(port_mod);
 			break;
 		}
 		case OFPT_STATS_REQUEST:
 		{
-			// TODO: Implement this.
+			ofp_stats_request *stats_request = (ofp_stats_request *) msg;
+			ret = openflow_ctrl_iface_recv_stats_req(stats_request);
+			if (ret < 0) return ret;
+			ret = openflow_ctrl_iface_send_stats_rep(stats_request);
 			break;
 		}
 		case OFPT_BARRIER_REQUEST:
 		{
-			ofp_header *barrier_request = message;
+			ofp_header *barrier_request = msg;
 			ret = openflow_ctrl_iface_recv_barrier_req(barrier_request);
-			if (ret < 0)
-			{
-				return ret;
-			}
+			if (ret < 0) return ret;
 			ret = openflow_ctrl_iface_send_barrier_rep(barrier_request->xid);
 			break;
 		}
 		default:
 		{
+			verbose(1, "[openflow_ctrl_iface_parse_message]:: Unexpected"
+					" message type " PRIu8 "found in message from controller.",
+			        msg->type);
+			if (msg->type == OFPT_VENDOR)
+			{
+				ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+				        OFPBRC_BAD_VENDOR, msg);
+			}
+			else
+			{
+				ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
+				        OFPBRC_BAD_TYPE, msg);
+			}
 			break;
 		}
 	}
 
-	if (ret < 0) {
-		return ret;
-	}
+	if (ret < 0) return ret;
 	return 0;
 }
 
@@ -715,52 +1274,54 @@ static int32_t openflow_ctrl_iface_parse_message(ofp_header *message)
  *
  * @param packet The packet to parse.
  */
-void openflow_ctrl_iface_parse_packet(gpacket_t *packet)
+int32_t openflow_ctrl_iface_parse_packet(gpacket_t *packet)
 {
 	if (ntohs(packet->data.header.prot) == IP_PROTOCOL)
 	{
 		ip_packet_t *ip_packet = (ip_packet_t *) &packet->data.data;
-		if (!(ntohs(ip_packet->ip_frag_off) & 0x1fff) &&
-			!(ntohs(ip_packet->ip_frag_off) & 0x2000))
+		if (!(ntohs(ip_packet->ip_frag_off) & 0x1fff)
+		        && !(ntohs(ip_packet->ip_frag_off) & 0x2000))
 		{
 			if (ip_packet->ip_prot == TCP_PROTOCOL)
 			{
 				uint32_t ip_header_length = ip_packet->ip_hdr_len * 4;
-				tcp_packet_type *tcp_packet = (tcp_packet_type *)
-					((uint8_t *) ip_packet + ip_header_length);
+				tcp_packet_type *tcp_packet =
+				        (tcp_packet_type *) ((uint8_t *) ip_packet
+				                + ip_header_length);
 
-				ofp_header *message = (ofp_header *) (tcp_packet +
-					sizeof(tcp_packet_type));
-				openflow_ctrl_iface_parse_message(message);
+				ofp_header *message = (ofp_header *) (tcp_packet
+				        + sizeof(tcp_packet_type));
+				return openflow_ctrl_iface_parse_message(message);
 			}
 		}
 	}
+	return 0;
 }
 
 /**
  * OpenFlow controller thread. Connects to controller and passes incoming
  * packets to handlers.
  *
- * @param pn Pointer to the controller TCP port number.
+ * @param port Pointer to the controller TCP port number.
  */
-void openflow_ctrl_iface(void *pn)
+static void openflow_ctrl_iface(void *port)
 {
+	int32_t *port_num = (int32_t *) port;
+	if (*port_num < 1 || *port_num > 65535)
+	{
+		fatal("[openflow_ctrl_iface]:: Invalid controller TCP port number"
+				" %" PRId32 ".", *port_num);
+		exit(1);
+	}
+
+	verbose(2, "[openflow_ctrl_iface]:: Sleeping for 15 seconds to allow"
+			" interfaces to be configured before connecting to controller.");
+	sleep(15);
+
+	openflow_config_set_phy_port_defaults();
+
 	while (1)
 	{
-		int32_t *port_num = (int32_t *)pn;
-		if (*port_num < 1 || *port_num > 65535)
-		{
-			fatal("[openflow_ctrl_iface]:: Invalid controller TCP port number"
-				" %d.", *port_num);
-			exit(1);
-		}
-
-		verbose(2, "[openflow_ctrl_iface]:: Sleeping for 15 seconds to allow"
-			" interfaces to be configured before connecting to controller.");
-		sleep(15);
-
-		openflow_config_set_phy_port_defaults();
-
 		verbose(2, "[openflow_ctrl_iface]:: Connecting to controller.");
 
 		struct sockaddr_in ofc_sock_addr;
@@ -771,41 +1332,34 @@ void openflow_ctrl_iface(void *pn)
 		pthread_mutex_lock(&ofc_socket_mutex);
 		ofc_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 		int32_t status = connect(ofc_socket_fd,
-			(struct sockaddr*)&ofc_sock_addr, sizeof(ofc_sock_addr));
+		        (struct sockaddr*) &ofc_sock_addr, sizeof(ofc_sock_addr));
 		if (status != 0)
 		{
-			fatal("[openflow_ctrl_iface]:: Failed to connect to controller"
-				" socket.");
-			exit(1);
+			verbose(2, "[openflow_ctrl_iface]:: Failed to connect to"
+					" controller socket. Retrying...");
+			continue;
 		}
 		pthread_mutex_unlock(&ofc_socket_mutex);
-
-		verbose(2, "[openflow_ctrl_iface]:: Connected to controller. Starting"
-			" connection setup.");
 
 		openflow_ctrl_iface_hello_req_rep();
 		openflow_ctrl_iface_features_req_rep();
 		openflow_ctrl_iface_conn_up();
 
-		verbose(2, "[openflow_ctrl_iface]:: Connection setup complete. Now"
-			" receiving messages.");
+		verbose(2, "[openflow_ctrl_iface]:: Receiving messages.");
 
 		while (1)
 		{
 			// Receive a message from controller
-			ofp_header *message = NULL;
+			ofp_header *msg = NULL;
 			int32_t ret;
 			do
 			{
-				ret = openflow_ctrl_iface_recv((void **)&message);
-				if (ret == 0)
-				{
-					sleep(1);
-				}
+				ret = openflow_ctrl_iface_recv(&msg);
+				if (ret == 0) sleep(1);
 			}
 			while (ret == 0);
 
-			if (message == NULL)
+			if (msg == NULL)
 			{
 				// Controller connection lost
 				openflow_ctrl_iface_conn_down();
@@ -814,13 +1368,13 @@ void openflow_ctrl_iface(void *pn)
 			else
 			{
 				// Process received message
-				openflow_ctrl_iface_parse_message(message);
-				free(message);
+				openflow_ctrl_iface_parse_message(msg);
+				free(msg);
 			}
 		}
 	}
 
-	free(pn);
+	free(port);
 }
 
 /**
@@ -837,7 +1391,7 @@ pthread_t openflow_ctrl_iface_init(int32_t port_num)
 
 	int32_t *pn = malloc(sizeof(int));
 	*pn = port_num;
-	threadstat = pthread_create((pthread_t *)&threadid, NULL,
-		(void *)openflow_ctrl_iface, pn);
+	threadstat = pthread_create((pthread_t *) &threadid, NULL,
+	        (void *) openflow_ctrl_iface, pn);
 	return threadid;
 }

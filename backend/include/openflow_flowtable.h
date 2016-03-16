@@ -8,104 +8,10 @@
 #include <stdint.h>
 #include <time.h>
 
-#include "openflow.h"
-#include "openflow_config.h"
+#include "openflow_defs.h"
 #include "message.h"
 #include "packetcore.h"
 #include "simplequeue.h"
-
-// OpenFlow constants
-#define OPENFLOW_NUM_TABLES					((uint32_t) 1)
-#define OPENFLOW_MAX_FLOWTABLE_ENTRIES		((uint32_t) 10)
-#define OPENFLOW_MAX_ACTIONS				((uint32_t) 10)
-#define OPENFLOW_MAX_ACTION_SIZE			((uint32_t) 16)
-
-// Ethernet constants not used anywhere else
-#define IEEE_802_2_DSAP_SNAP	0xAA
-#define IEEE_802_2_CTRL_8_BITS	0x03
-#define ETHERTYPE_IEEE_802_1Q	0x8100
-
-// OpenFlow struct typedefs
-typedef struct ofp_action_header	ofp_action_header;
-typedef struct ofp_action_output	ofp_action_output;
-typedef struct ofp_action_vlan_vid	ofp_action_vlan_vid;
-typedef struct ofp_action_vlan_pcp	ofp_action_vlan_pcp;
-typedef struct ofp_action_dl_addr	ofp_action_dl_addr;
-typedef struct ofp_action_nw_addr	ofp_action_nw_addr;
-typedef struct ofp_action_tp_port	ofp_action_tp_port;
-typedef struct ofp_action_nw_tos	ofp_action_nw_tos;
-typedef struct ofp_table_stats		ofp_table_stats;
-typedef struct ofp_flow_stats		ofp_flow_stats;
-typedef struct ofp_match			ofp_match;
-typedef struct ofp_flow_mod			ofp_flow_mod;
-typedef struct ofp_error_msg		ofp_error_msg;
-
-/**
- * Represents an OpenFlow action. This struct wraps the ofp_action_header and
- * associated data.
- */
-typedef struct
-{
-	// Action header
-	ofp_action_header header;
-	// The rest of the OpenFlow action; this wrapper struct should be cast
-	// to something else to get at this data
-	uint8_t	action[OPENFLOW_MAX_ACTION_SIZE - sizeof(ofp_action_header)];
-} openflow_flowtable_action_wrapper_type;
-
-/**
- * Represents an OpenFlow action.
- */
-typedef struct
-{
-	// 1 if this entry is active (i.e. not empty), 0 otherwise
-	uint8_t									active;
-	// The actual OpenFlow action (ofp_action_header and associated data)
-	openflow_flowtable_action_wrapper_type	action;
-} openflow_flowtable_action_type;
-
-/**
- * Represents an entry in an OpenFlow flowtable.
- */
-typedef struct
-{
-	// 1 if this entry is active (i.e. not empty), 0 otherwise
-	uint8_t active;
-	// Match headers
-	ofp_match match;
-	// Cookie (opaque data) from controller
-	uint64_t cookie;
-	// The last time this entry was matched against a packet
-	time_t last_matched;
-	// The last time this entry was modified by the controller
-	time_t last_modified;
-	// Number of seconds since last match before expiration of this entry;
-	// stored in network byte format
-	uint16_t idle_timeout;
-	// Number of seconds since last modification before expiration of this
-	// entry; stored in network byte format
-	uint16_t hard_timeout;
-	// Entry priority (only relevant for wildcards); stored in network byte
-	// format
-	uint32_t priority;
-	// Entry flags (see ofp_flow_mod_flags); stored in network byte format
-	uint16_t flags;
-	// Entry actions
-	openflow_flowtable_action_type actions[OPENFLOW_MAX_ACTIONS];
-	// Entry stats
-	ofp_flow_stats stats;
-} openflow_flowtable_entry_type;
-
-/**
- * Represents an OpenFlow flowtable.
- */
-typedef struct
-{
-	// Table entries
-	openflow_flowtable_entry_type	entries[OPENFLOW_MAX_FLOWTABLE_ENTRIES];
-	// Table stats
-	ofp_table_stats					stats;
-} openflow_flowtable_type;
 
 /**
  * Initializes the flowtable.
@@ -121,35 +27,63 @@ void openflow_flowtable_init(void);
  * @return The matching flowtable entry.
  */
 openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
-	gpacket_t *packet);
+        gpacket_t *packet);
 
 /**
- * Performs the specified action on the specified packet.
+ * Applies the specified modification to the flowtables.
  *
- * @param action       The specified action.
- * @param packet       The specified packet.
- * @param packet_core  The grouter packet core.
+ * @param modify_info The modification to apply to the flowtables.
+ * @param error_msg   A pointer to an empty ofp_error_msg struct that will be
+ *                    populated if an error occurs.
+ *
+ * @return 0 if no error occurred, -1 otherwise.
  */
-void openflow_flowtable_perform_action(
-	openflow_flowtable_action_type *action, gpacket_t *packet,
-	pktcore_t *packet_core);
-
-/**
-* Applies the specified modification to the flowtables.
-*
-* @param modify_info The modification to apply to the flowtables.
-* @param error_msg   A pointer to an empty ofp_error_msg struct that will be
-*                    populated if an error occurs.
-*
-* @return 0 if no error occurred, -1 otherwise.
-*/
 int32_t openflow_flowtable_modify(ofp_flow_mod *flow_mod,
-	ofp_error_msg *error_msg);
+        ofp_error_msg *error_msg);
 
 /**
  * Deletes all non-emergency entries in the OpenFlow flowtable.
  */
 void openflow_flowtable_delete_non_emergency_entries();
+
+/**
+ * Gets the table statistics for the OpenFlow flowtable.
+ *
+ * @return The table statistics for the OpenFlow flowtable.
+ */
+ofp_table_stats *openflow_flowtable_get_table_stats();
+
+/**
+ * Gets the table statistics for the emergency entries in the OpenFlow
+ * flowtable.
+ *
+ * @return The table statistics for the emergency entries in the OpenFlow
+ *         flowtable.
+ */
+ofp_table_stats *openflow_flowtable_get_emerg_table_stats();
+
+/**
+ * Retrieves the flow statistics for the first matching flow.
+ *
+ * @param match             A pointer to the match to match entries against.
+ *                          The flow statistics for the first matching entry
+ *                          will be returned.
+ * @param out_port          The output port which entries are required to have
+ *                          an action for to be matched, in network byte order.
+ * @param index             The index at which to begin searching the
+ *                          flowtable.
+ * @param match_index       A pointer to a variable used to store the index of
+ *                          the matching entry, if any.
+ * @param table_index       The index of the table to read from.
+ * @param ptr_to_flow_stats A pointer to an ofp_flow_stats struct pointer. The
+ *                          inner pointer will be replaced by a pointer to the
+ *                          matching ofp_flow_stats struct if one is found.
+ *
+ * @return 1 if a match is found, 0 otherwise.
+ */
+int32_t openflow_flowtable_get_flow_stats(ofp_match *match, uint16_t out_port,
+        uint32_t index, uint32_t *match_index, uint8_t table_index,
+        ofp_flow_stats **ptr_to_flow_stats);
 
 /**
  * Prints the OpenFlow flowtable to the console.

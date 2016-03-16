@@ -164,7 +164,7 @@ void GNETInsertInterface(interface_t *iface)
 	if (rconfig.openflow)
 	{
 		openflow_config_update_phy_port(
-				openflow_config_gnet_to_of_port_num(ifid));
+				openflow_config_get_of_port_num(ifid));
 	}
 }
 
@@ -192,7 +192,7 @@ int deleteInterface(int indx)
 	if (rconfig.openflow)
 	{
 		openflow_config_update_phy_port(
-				openflow_config_gnet_to_of_port_num(indx));
+				openflow_config_get_of_port_num(indx));
 	}
 
 	return EXIT_SUCCESS;
@@ -666,7 +666,7 @@ int upInterface(int index)
 	if (rconfig.openflow)
 	{
 		openflow_config_update_phy_port(
-				openflow_config_gnet_to_of_port_num(index));
+				openflow_config_get_of_port_num(index));
 	}
 	return status;
 }
@@ -690,7 +690,7 @@ int downInterface(int index)
 	if (rconfig.openflow)
 	{
 		openflow_config_update_phy_port(
-				openflow_config_gnet_to_of_port_num(index));
+				openflow_config_get_of_port_num(index));
 	}
 	return status;
 }

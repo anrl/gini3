@@ -92,11 +92,6 @@ int main(int ac, char *av[])
 	classifier = createClassifier();
 	filter = createFilter(classifier, 0);
 
-	if (rconfig.openflow) {
-		openflow_pkt_proc_init();
-		openflow_ctrl_iface_init(rconfig.openflow);
-	}
-
 	pcore = createPacketCore(rconfig.router_name, outputQ, workQ,
 							 openflowWorkQ);
 
@@ -105,6 +100,8 @@ int main(int ac, char *av[])
 	addPktCoreQueue(pcore, "default", "taildrop", 1.0, 2.0, 0);
 	rconfig.scheduler = PktCoreSchedulerInit(pcore);
 	rconfig.worker = PktCoreWorkerInit(pcore);
+
+	// Initialize OpenFlow packet processor
 	if (rconfig.openflow) {
 		rconfig.openflow_worker = PktCoreOpenflowWorkerInit(pcore);
 	}
@@ -116,6 +113,12 @@ int main(int ac, char *av[])
 		addTarget("Default Queue", qtoa);
 	else
 		printf("Error .. found null queue for default\n");
+
+	// Initialize OpenFlow controller interface
+	if (rconfig.openflow) {
+		rconfig.openflow_controller_iface = openflow_ctrl_iface_init(
+				rconfig.openflow);
+	}
 
 	// start the CLI..
 	CLIInit(&(rconfig));

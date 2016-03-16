@@ -19,4 +19,9 @@
 #define TCP_PROTOCOL			6
 #define UDP_PROTOCOL			17
 
+// Other constants
+#define IEEE_802_2_DSAP_SNAP	0xAA
+#define IEEE_802_2_CTRL_8_BITS	0x03
+#define ETHERTYPE_IEEE_802_1Q	0x8100
+
 #endif
