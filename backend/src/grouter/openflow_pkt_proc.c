@@ -189,7 +189,7 @@ int32_t openflow_pkt_proc_handle_packet(gpacket_t *packet)
 {
 	// Update statistics for input port
 	uint16_t of_port = openflow_config_get_of_port_num(
-			packet->frame.src_interface);
+	        packet->frame.src_interface);
 	ofp_port_stats *stats = openflow_config_get_port_stats(of_port);
 	stats->rx_packets += htonll(ntohll(stats->rx_packets) + 1);
 	stats->rx_bytes += htonll(ntohll(stats->rx_bytes) + DEFAULT_MTU);
@@ -246,7 +246,7 @@ int32_t openflow_pkt_proc_handle_packet(gpacket_t *packet)
 	else
 	{
 		verbose(2, "[openflow_pkt_proc_handle_packet]:: Forwarding packet"
-			" with no flowtable match to controller.");
+				" with no flowtable match to controller.");
 		int32_t ret = openflow_ctrl_iface_send_packet_in(packet, OFPR_NO_MATCH);
 		free(packet);
 		return ret;

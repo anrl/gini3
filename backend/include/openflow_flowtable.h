@@ -39,8 +39,8 @@ openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
  *
  * @return 0 if no error occurred, -1 otherwise.
  */
-int32_t openflow_flowtable_modify(ofp_flow_mod *flow_mod,
-        uint16_t *error_type, uint16_t *error_code);
+int32_t openflow_flowtable_modify(ofp_flow_mod *flow_mod, uint16_t *error_type,
+        uint16_t *error_code);
 
 /**
  * Gets the table statistics for the OpenFlow flowtable.

@@ -569,3 +569,4 @@ int redDiscard(simplequeue_t *thisq, gpacket_t *ipkt)
 	return discarded;
 }
 
+

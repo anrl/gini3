@@ -359,7 +359,7 @@ void openflow_config_print_port_stat(uint32_t index)
 	}
 
 	ofp_port_stats *stats = &phy_port_stats[openflow_config_get_gnet_port_num(
-			index)];
+	        index)];
 
 	printf("\n");
 	printf("=========\n");

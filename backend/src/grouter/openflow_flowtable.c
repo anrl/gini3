@@ -458,8 +458,8 @@ openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
 		}
 	}
 
-	flowtable->stats.lookup_count +=
-			htonll(ntohll(flowtable->stats.lookup_count) + 1);
+	flowtable->stats.lookup_count += htonll(
+	        ntohll(flowtable->stats.lookup_count) + 1);
 
 	if (current_entry == NULL)
 	{
@@ -471,12 +471,12 @@ openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
 	else
 	{
 		// Increment stats
-		flowtable->stats.matched_count += htonll(ntohll(
-				flowtable->stats.matched_count) + 1);
-		current_entry->stats.packet_count += htonll(ntohll(
-				current_entry->stats.packet_count) + 1);
-		current_entry->stats.byte_count += htonll(ntohll(
-				current_entry->stats.byte_count) + DEFAULT_MTU);
+		flowtable->stats.matched_count += htonll(
+		        ntohll(flowtable->stats.matched_count) + 1);
+		current_entry->stats.packet_count += htonll(
+		        ntohll(current_entry->stats.packet_count) + 1);
+		current_entry->stats.byte_count += htonll(
+		        ntohll(current_entry->stats.byte_count) + DEFAULT_MTU);
 
 		// Make copy of entry for use outside this function
 		openflow_flowtable_entry_type *return_entry = malloc(
@@ -1351,8 +1351,8 @@ static int32_t openflow_flowtable_add(ofp_flow_mod* flow_mod,
 	{
 		if (!flowtable->entries[i].active)
 		{
-			flowtable->stats.active_count += htonl(ntohl(
-					flowtable->stats.active_count) + 1);
+			flowtable->stats.active_count += htonl(
+			        ntohl(flowtable->stats.active_count) + 1);
 
 			verbose(2, "[openflow_flowtable_add]:: Adding flowtable entry at"
 					" index %" PRIu32 ".", i);

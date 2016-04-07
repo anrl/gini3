@@ -27,7 +27,6 @@ uint16_t openflow_config_get_of_port_num(uint16_t gnet_port_num);
  */
 uint16_t openflow_config_get_gnet_port_num(uint16_t openflow_port_num);
 
-
 /**
  * Initializes the OpenFlow physical ports.
  */

@@ -12,20 +12,15 @@
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
-#include <pthread.h>
 
 #include "packetcore.h"
 #include "classifier.h"
 #include "filter.h"
+#include <pthread.h>
 #include "openflow_ctrl_iface.h"
 #include "openflow_pkt_proc.h"
 
-router_config rconfig = {
-	.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL,
-	.config_dir=NULL, .openflow=0, .ghandler=0, .clihandler= 0, .scheduler=0, 
-	.worker=0, .openflow_worker=0, .openflow_controller_iface=0, 
-	.schedcycle=10000
-};
+router_config rconfig = {.router_name=NULL, .gini_home=NULL, .cli_flag=0, .config_file=NULL, .config_dir=NULL, .openflow=0, .ghandler=0, .clihandler= 0, .scheduler=0, .worker=0, .openflow_worker=0, .openflow_controller_iface=0, .schedcycle=10000};
 pktcore_t *pcore;
 classlist_t *classifier;
 filtertab_t *filter;
@@ -259,3 +254,5 @@ int isPIDAlive(int pid)
 	}
 	return TRUE;
 }
+
+
