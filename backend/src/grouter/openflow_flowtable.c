@@ -26,59 +26,6 @@
 static openflow_flowtable_type *flowtable;
 static pthread_mutex_t flowtable_mutex;
 
-static void openflow_flowtable_timeout()
-{
-	while (1)
-	{
-		pthread_mutex_lock(&flowtable_mutex);
-
-		uint32_t i;
-		for (i = 0; i < OPENFLOW_MAX_FLOWTABLE_ENTRIES; i++)
-		{
-			time_t now;
-			time(&now);
-
-			uint32_t idle_diff = difftime(now,
-					flowtable->entries[i].last_matched);
-			if (flowtable->entries[i].idle_timeout != 0)
-			{
-				if (idle_diff - flowtable->entries[i].idle_timeout > 0)
-				{
-					openflow_flowtable_delete_entry_at_index(i);
-					continue;
-				}
-			}
-
-			uint32_t hard_diff = difftime(now,
-					flowtable->entries[i].last_modified);
-			if (flowtable->entries[i].hard_timeout != 0)
-			{
-				if (hard_diff - flowtable->entries[i].hard_timeout > 0)
-				{
-					openflow_flowtable_delete_entry_at_index(i);
-					continue;
-				}
-			}
-		}
-
-		pthread_mutex_unlock(&flowtable_mutex);
-		sleep(10);
-	}
-}
-
-/**
- * Initializes the OpenFlow flowtable timeout thread.
- */
-pthread_t openflow_flowtable_timeout_init()
-{
-	int32_t threadstat;
-	pthread_t threadid;
-
-	threadstat = pthread_create((pthread_t *) &threadid, NULL,
-	        (void *) openflow_flowtable_timeout, NULL);
-	return threadid;
-}
-
 /**
  * Set the specified ofp_flow_stats struct to its defaults.
  */
@@ -2328,4 +2275,60 @@ void openflow_flowtable_print_table_stats()
 	        ntohll(flowtable->stats.matched_count));
 
 	pthread_mutex_unlock(&flowtable_mutex);
+}
+
+/**
+ * OpenFlow timeout thread.
+ */
+static void openflow_flowtable_timeout()
+{
+	while (1)
+	{
+		pthread_mutex_lock(&flowtable_mutex);
+
+		uint32_t i;
+		for (i = 0; i < OPENFLOW_MAX_FLOWTABLE_ENTRIES; i++)
+		{
+			time_t now;
+			time(&now);
+
+			uint32_t idle_diff = difftime(now,
+					flowtable->entries[i].last_matched);
+			if (flowtable->entries[i].idle_timeout != 0)
+			{
+				if (idle_diff - flowtable->entries[i].idle_timeout > 0)
+				{
+					openflow_flowtable_delete_entry_at_index(i);
+					continue;
+				}
+			}
+
+			uint32_t hard_diff = difftime(now,
+					flowtable->entries[i].last_modified);
+			if (flowtable->entries[i].hard_timeout != 0)
+			{
+				if (hard_diff - flowtable->entries[i].hard_timeout > 0)
+				{
+					openflow_flowtable_delete_entry_at_index(i);
+					continue;
+				}
+			}
+		}
+
+		pthread_mutex_unlock(&flowtable_mutex);
+		sleep(10);
+	}
+}
+
+/**
+ * Initializes the OpenFlow flowtable timeout thread.
+ */
+pthread_t openflow_flowtable_timeout_init()
+{
+	int32_t threadstat;
+	pthread_t threadid;
+
+	threadstat = pthread_create((pthread_t *) &threadid, NULL,
+	        (void *) openflow_flowtable_timeout, NULL);
+	return threadid;
 }
