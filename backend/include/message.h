@@ -66,7 +66,7 @@ typedef struct _pkt_frame_t
 } pkt_frame_t;
 
 
-typedef struct _gpacket_t
+typedef struct _gpacket_t 
 {
 	pkt_frame_t frame;
 	pkt_data_t data;

@@ -83,15 +83,13 @@ int deleteCnameCache(pktcorecnamecache_t *pcache, char *cname)
 
 
 
-pktcore_t *createPacketCore(char *rname, simplequeue_t *outQ,
-	                        simplequeue_t *workQ, simplequeue_t *openflowWorkQ)
+pktcore_t *createPacketCore(char *rname, simplequeue_t *outQ, simplequeue_t *workQ, simplequeue_t *openflowWorkQ)
 {
 	pktcore_t *pcore;
 
 	if ((pcore = (pktcore_t *) malloc(sizeof(pktcore_t))) == NULL)
 	{
-		fatal("[createPktCore]:: Could not allocate memory for packet core"
-		      " structure");
+		fatal("[createPktCore]:: Could not allocate memory for packet core structure");
 		return NULL;
 	}
 
@@ -328,22 +326,22 @@ pthread_t PktCoreSchedulerInit(pktcore_t *pcore)
 	return threadid;
 }
 
+
 int PktCoreWorkerInit(pktcore_t *pcore)
 {
 	int threadstat, threadid;
 
-	threadstat = pthread_create((pthread_t *)&threadid, NULL,
-								(void *)packetProcessor,
-								(void *)pcore);
+	threadstat = pthread_create((pthread_t *)&threadid, NULL, (void *)packetProcessor, (void *)pcore);
 
 	if (threadstat != 0)
 	{
-		verbose(1, "[PktCoreWorkerInit]:: unable to create thread.. ");
+		verbose(1, "[PKTCoreWorkerInit]:: unable to create thread.. ");
 		return -1;
 	}
 
 	return threadid;
 }
+
 
 void *packetProcessor(void *pc)
 {
@@ -357,26 +355,22 @@ void *packetProcessor(void *pc)
 		verbose(2, "[packetProcessor]:: Waiting for a packet...");
 		readQueue(pcore->workQ, (void **)&in_pkt, &pktsize);
 		pthread_testcancel();
-		verbose(2, "[packetProcessor]:: Got a packet for further"
-			" processing..");
+		verbose(2, "[packetProcessor]:: Got a packet for further processing..");
 
 		// get the protocol field within the packet... and switch it accordingly
 		switch (ntohs(in_pkt->data.header.prot))
 		{
 		case IP_PROTOCOL:
-			verbose(2, "[packetProcessor]:: Packet sent to IP routine"
-				" for further processing.. ");
+			verbose(2, "[packetProcessor]:: Packet sent to IP routine for further processing.. ");
 
 			IPIncomingPacket(in_pkt);
 			break;
 		case ARP_PROTOCOL:
-			verbose(2, "[packetProcessor]:: Packet sent to ARP module"
-				" for further processing.. ");
+			verbose(2, "[packetProcessor]:: Packet sent to ARP module for further processing.. ");
 			ARPProcess(in_pkt);
 			break;
 		default:
-			verbose(1, "[packetProcessor]:: Packet discarded: Unknown"
-				" protocol protocol");
+			verbose(1, "[packetProcessor]:: Packet discarded: Unknown protocol protocol");
 			// TODO: should we generate ICMP errors here.. check router RFCs
 			free(in_pkt);
 			break;
@@ -574,3 +568,4 @@ int redDiscard(simplequeue_t *thisq, gpacket_t *ipkt)
 
 	return discarded;
 }
+

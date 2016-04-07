@@ -383,12 +383,12 @@ void ifconfigCmd()
 	{
 
 		next_tok = strtok(NULL, " \n");
-
-		if ( (next_tok == NULL) || (findDeviceDriver(next_tok) == NULL) )
+        
+		if ( (next_tok == NULL) || (findDeviceDriver(next_tok) == NULL) ) 
 		{
 			printf("ifconfig:: missing or invalid interface spec ..\n");
 			return;
-		}
+		}		
 
 		strcpy(dev_name, next_tok);
 		sscanf(dev_name, "%[a-z]", dev_type);
@@ -407,7 +407,7 @@ void ifconfigCmd()
 		} else if(strcmp(dev_type, "tun") == 0)
 		{
 			GET_NEXT_PARAMETER("-dstip", "ifconfig:: missing -dstip spec ..");
-			Dot2IP(next_tok, dst_ip);
+			Dot2IP(next_tok, dst_ip);  
 			GET_NEXT_PARAMETER("-dstport", "ifconfig:: missing -dstport spec ..");
 			dst_port = (short int)atoi(next_tok);
 		}

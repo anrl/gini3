@@ -123,6 +123,7 @@ int main(int ac, char *av[])
 	// start the CLI..
 	CLIInit(&(rconfig));
 
+
 	wait4thread(rconfig.scheduler);
 	wait4thread(rconfig.worker);
 	if (rconfig.openflow) {

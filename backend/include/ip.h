@@ -28,25 +28,25 @@
 typedef struct _ip_packet_t
 {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-	uint8_t ip_hdr_len:4;                   // header length
-	uint8_t ip_version:4;                   // version
+	uint8_t ip_hdr_len:4;                   // header length 
+	uint8_t ip_version:4;                   // version 
 #endif
 #if __BYTE_ORDER == __BIG_ENDIAN
-	uint8_t ip_version:4;                   // version
-	uint8_t ip_hdr_len:4;                   // header length
+	uint8_t ip_version:4;                   // version 
+	uint8_t ip_hdr_len:4;                   // header length 
 #endif
-	uint8_t ip_tos;                         // type of service
-	uint16_t ip_pkt_len;                    // total length
-	uint16_t ip_identifier;                 // identification
-	uint16_t ip_frag_off;                   // fragment offset field
-#define IP_RF 0x8000                            // reserved fragment flag
-#define IP_DF 0x4000                            // dont fragment flag
-#define IP_MF 0x2000                            // more fragments flag
-#define IP_OFFMASK 0x1fff                       // mask for fragmenting bits
-	uint8_t ip_ttl;                         // time to live
-	uint8_t ip_prot;                        // protocol
-	uint16_t ip_cksum;                      // checksum
-	uchar ip_src[4], ip_dst[4];             // source and dest address
+	uint8_t ip_tos;                         // type of service 
+	uint16_t ip_pkt_len;                    // total length 
+	uint16_t ip_identifier;                 // identification 
+	uint16_t ip_frag_off;                   // fragment offset field 
+#define IP_RF 0x8000                            // reserved fragment flag 
+#define IP_DF 0x4000                            // dont fragment flag 
+#define IP_MF 0x2000                            // more fragments flag 
+#define IP_OFFMASK 0x1fff                       // mask for fragmenting bits 
+	uint8_t ip_ttl;                         // time to live 
+	uint8_t ip_prot;                        // protocol 
+	uint16_t ip_cksum;                      // checksum 
+	uchar ip_src[4], ip_dst[4];             // source and dest address 
 } ip_packet_t;
 
 #define TEST_DF_BITS(X)                 ( (X & IP_DF) >> 14)

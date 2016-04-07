@@ -359,7 +359,7 @@ interface_t *GNETMakeEthInterface(char *vsock_name, char *device,
 		device, MAC2Colon(tmpbuf, mac_addr), IP2Dot((tmpbuf+20), nw_addr));
 
 	iface_id = gAtoi(device);
-
+	
 	if (findInterface(iface_id) != NULL)
 	{
 		verbose(1, "[GNETMakeEthInterface]:: device %s already defined.. ", device);
@@ -491,21 +491,21 @@ interface_t *GNETMakeTunInterface(char *device, uchar *mac_addr, uchar *nw_addr,
 	device, MAC2Colon(tmpbuf, mac_addr), IP2Dot((tmpbuf+20), nw_addr));
 
     iface_id = gAtoi(device);
-
+        
     if (findInterface(iface_id) != NULL)
     {
 	verbose(1, "[GNETMakeTunInterface]:: device %s already defined.. ", device);
 	return NULL;
     }
-
+    
     // setup the interface..
     iface = newInterfaceStructure(device, device,
                                   mac_addr, nw_addr, MAX_MTU);
-
+    
     verbose(2, "[GNETMakeTunInterface]:: trying to connect to %s..", device);
-
-    vcon = tun_connect((short int)(BASEPORTNUM+iface_id+gAtoi(rconfig.router_name)*100), NULL, (short int)(BASEPORTNUM+dst_port+gAtoi(rconfig.router_name)*100), dst_ip);
-
+    
+    vcon = tun_connect((short int)(BASEPORTNUM+iface_id+gAtoi(rconfig.router_name)*100), NULL, (short int)(BASEPORTNUM+dst_port+gAtoi(rconfig.router_name)*100), dst_ip); 
+    
     if(vcon == NULL)
     {
         verbose(1, "[GNETMakeTunInterface]:: unable to connect to %s", device);
@@ -514,7 +514,7 @@ interface_t *GNETMakeTunInterface(char *device, uchar *mac_addr, uchar *nw_addr,
 
     iface->iface_fd = vcon->data;
     iface->vpl_data = vcon;
-
+    
     upThisInterface(iface);
     return iface;
 }
@@ -867,5 +867,6 @@ void *GNETHandler(void *outq)
 		}
 
 		iface->devdriver->todev((void *)in_pkt);
+
 	}
 }

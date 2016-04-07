@@ -24,7 +24,7 @@
 /*
  * MTU table entry
  */
-typedef struct _mtu_entry_t
+typedef struct _mtu_entry_t 
 {
 	bool is_empty;                     // indicate entry used or not
 	int mtu;                           // mtu value

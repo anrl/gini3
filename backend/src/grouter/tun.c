@@ -1,6 +1,6 @@
 /*
- * This is the low level driver for the tun interface.
- *
+ * This is the low level driver for the tun interface. 
+ * 
  * Copyright (C) 2015 Ahmed Youssef (ahmed.youssef@mail.mcgill.ca)
  * Licensed under the GPL.
  */
@@ -67,7 +67,7 @@ void* fromTunDev(void *arg)
     gpacket_t *in_pkt;
     int pktsize;
     char tmpbuf[MAX_TMPBUF_LEN];
-
+    
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);		// die as soon as cancelled
     while (1)
     {
@@ -81,9 +81,9 @@ void* fromTunDev(void *arg)
         bzero(in_pkt, sizeof(gpacket_t));
         pktsize = tun_recvfrom(iface->vpl_data, &(in_pkt->data), sizeof(pkt_data_t));
         pthread_testcancel();
-
+        
         verbose(2, "[fromTunDev]:: Destination MAC is %s ", MAC2Colon(tmpbuf, in_pkt->data.header.dst));
-
+      
         if ((COMPARE_MAC(in_pkt->data.header.dst, iface->mac_addr) != 0) &&
                 (COMPARE_MAC(in_pkt->data.header.dst, bcast_mac) != 0))
         {
@@ -122,8 +122,8 @@ vpl_data_t *tun_connect(short int src_port, uchar* src_IP,
     int dst_ip;
     verbose(2, "[tun_connect]:: starting connection.. ");
     vpl_data_t *pri = (vpl_data_t *)malloc(sizeof(vpl_data_t));
-    bzero(pri, sizeof(sizeof(vpl_data_t)));
-
+    bzero(pri, sizeof(sizeof(vpl_data_t))); 
+    
     COPY_IP(&dst_ip, dst_IP);
     // initialize the vpl_data structure.. much of it is unused here.
     // we are reusing vpl_data_t to minimize the changes for other code.
@@ -135,9 +135,9 @@ vpl_data_t *tun_connect(short int src_port, uchar* src_IP,
     pri->data = -1;
     pri->control = -1;
 
-    fd = socket(AF_INET,SOCK_DGRAM,0);
+    fd = socket(AF_INET,SOCK_DGRAM,0);	
     if (fd == -1) {
-            verbose(2, "[tun_connect]:: Creating UDP socket failed, error = %s", strerror(errno));
+            verbose(2, "[tun_connect]:: Creating UDP socket failed, error = %s", strerror(errno));		
             return NULL;
     }
 
@@ -148,7 +148,7 @@ vpl_data_t *tun_connect(short int src_port, uchar* src_IP,
     srcaddr->sin_port=htons(src_port);
     if(bind(fd,(struct sockaddr *)srcaddr,sizeof(*srcaddr))== -1)
     {
-        verbose(2, "[tun_connect]:: Binding UDP Socket Failed, error = %s", strerror(errno));
+        verbose(2, "[tun_connect]:: Binding UDP Socket Failed, error = %s", strerror(errno));		
         free(srcaddr);
         return NULL;
     }
@@ -173,37 +173,39 @@ int tun_recvfrom(vpl_data_t *vpl, void *buf, int len)
     struct sockaddr_in* dstaddr = (struct sockaddr_in*)vpl->data_addr;
     struct sockaddr_in rcvaddr;
     char tmpbuf[100];
-
+    
     rcv_addr_len = sizeof(rcvaddr);
     n=recvfrom(vpl->data,buf,len,0,(struct sockaddr *)&rcvaddr,&rcv_addr_len);
-    if (n == -1)
+    if (n == -1) 
     {
-        verbose(2, "[tun_recvfrom]:: unable to receive packet, error = %s", strerror(errno));
+        verbose(2, "[tun_recvfrom]:: unable to receive packet, error = %s", strerror(errno));		
         return EXIT_FAILURE;
-    } else if((rcvaddr.sin_addr.s_addr != dstaddr->sin_addr.s_addr) ||
+    } else if((rcvaddr.sin_addr.s_addr != dstaddr->sin_addr.s_addr) || 
                rcvaddr.sin_port != dstaddr->sin_port)
-    {
+    { 
         verbose(2, "[tun_recvfrom]:: source IP or port does not match interface router");
         return EXIT_FAILURE;
     }
-
+    
     verbose(2, "[tun_recvfrom]:: Destination MAC is %s ", MAC2Colon(tmpbuf, buf));
     return EXIT_SUCCESS;
-
+        
 }
 
 int tun_sendto(vpl_data_t *vpl, void *buf, int len)
 {
     int n;
     struct sockaddr_in* dstaddr = (struct sockaddr_in*)vpl->data_addr;
-
+    
     n = sendto(vpl->data,buf,len,0,
              (struct sockaddr*)dstaddr,sizeof(*dstaddr));
-    if (n == -1)
+    if (n == -1) 
     {
-	verbose(2, "[tun_sendto]:: unable to send packet, error = %s", strerror(errno));
+	verbose(2, "[tun_sendto]:: unable to send packet, error = %s", strerror(errno));		
 	return EXIT_FAILURE;
     }
-
+       
     return EXIT_SUCCESS;
 }
+
+
