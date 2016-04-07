@@ -95,6 +95,7 @@ typedef struct _router_config
 	pthread_t worker;
 	pthread_t openflow_worker;
 	pthread_t openflow_controller_iface;
+	pthread_t openflow_flowtable_timeout;
 	int schedcycle;
 } router_config;
 

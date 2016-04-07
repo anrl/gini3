@@ -14,6 +14,11 @@
 #include "simplequeue.h"
 
 /**
+ * Initializes the OpenFlow flowtable timeout thread.
+ */
+pthread_t openflow_flowtable_timeout_init();
+
+/**
  * Initializes the flowtable.
  */
 void openflow_flowtable_init(void);

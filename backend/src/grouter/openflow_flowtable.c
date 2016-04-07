@@ -26,6 +26,59 @@
 static openflow_flowtable_type *flowtable;
 static pthread_mutex_t flowtable_mutex;
 
+static void openflow_flowtable_timeout()
+{
+	while (1)
+	{
+		pthread_mutex_lock(&flowtable_mutex);
+
+		uint32_t i;
+		for (i = 0; i < OPENFLOW_MAX_FLOWTABLE_ENTRIES; i++)
+		{
+			time_t now;
+			time(&now);
+
+			uint32_t idle_diff = difftime(now,
+					flowtable->entries[i].last_matched);
+			if (flowtable->entries[i].idle_timeout != 0)
+			{
+				if (idle_diff - flowtable->entries[i].idle_timeout > 0)
+				{
+					openflow_flowtable_delete_entry_at_index(i);
+					continue;
+				}
+			}
+
+			uint32_t hard_diff = difftime(now,
+					flowtable->entries[i].last_modified);
+			if (flowtable->entries[i].hard_timeout != 0)
+			{
+				if (hard_diff - flowtable->entries[i].hard_timeout > 0)
+				{
+					openflow_flowtable_delete_entry_at_index(i);
+					continue;
+				}
+			}
+		}
+
+		pthread_mutex_unlock(&flowtable_mutex);
+		sleep(10);
+	}
+}
+
+/**
+ * Initializes the OpenFlow flowtable timeout thread.
+ */
+pthread_t openflow_flowtable_timeout_init()
+{
+	int32_t threadstat;
+	pthread_t threadid;
+
+	threadstat = pthread_create((pthread_t *) &threadid, NULL,
+	        (void *) openflow_flowtable_timeout, NULL);
+	return threadid;
+}
+
 /**
  * Set the specified ofp_flow_stats struct to its defaults.
  */
@@ -477,6 +530,7 @@ openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
 		        ntohll(current_entry->stats.packet_count) + 1);
 		current_entry->stats.byte_count += htonll(
 		        ntohll(current_entry->stats.byte_count) + DEFAULT_MTU);
+		time(&current_entry->last_matched);
 
 		// Make copy of entry for use outside this function
 		openflow_flowtable_entry_type *return_entry = malloc(
@@ -1086,6 +1140,24 @@ static uint8_t openflow_flowtable_find_identical_entry(ofp_flow_mod* flow_mod,
 }
 
 /**
+ * Deletes the entry with the specified index from the flowtable.
+ *
+ * @param i The index of the entry to remove.
+ */
+static void openflow_flowtable_delete_entry_at_index(uint32_t i)
+{
+	if (ntohs(flowtable->entries[i].flags) & OFPFF_SEND_FLOW_REM)
+	{
+		openflow_ctrl_iface_send_flow_removed(&flowtable->entries[i],
+				OFPRR_DELETE);
+	}
+
+	flowtable->stats.active_count -= 1;
+	memset(&flowtable->entries[i], 0,
+			sizeof(openflow_flowtable_entry_type));
+}
+
+/**
  * Applies the specified flow modification to the flowtable entry at the
  * specified index.
  *
@@ -1358,6 +1430,7 @@ static int32_t openflow_flowtable_add(ofp_flow_mod* flow_mod,
 					" index %" PRIu32 ".", i);
 			memset(&flowtable->entries[i], 0,
 			        sizeof(openflow_flowtable_entry_type));
+			time(&flowtable->entries[i].added);
 			return openflow_flowtable_modify_entry_at_index(flow_mod, i,
 			        error_type, error_code, 1);
 		}
@@ -1471,16 +1544,7 @@ static int32_t openflow_flowtable_delete(ofp_flow_mod *flow_mod,
 		{
 			verbose(2, "[openflow_flowtable_delete]:: Deleting flowtable entry"
 					" at index %" PRIu32 ".", i);
-
-			if (ntohs(flowtable->entries[i].flags) & OFPFF_SEND_FLOW_REM)
-			{
-				openflow_ctrl_iface_send_flow_removed(&flowtable->entries[i],
-				        OFPRR_DELETE);
-			}
-
-			flowtable->stats.active_count -= 1;
-			memset(&flowtable->entries[i], 0,
-			        sizeof(openflow_flowtable_entry_type));
+			openflow_flowtable_delete_entry_at_index(i);
 			start_index = i + 1;
 		}
 		else
@@ -1510,18 +1574,9 @@ static int32_t openflow_flowtable_delete_strict(ofp_flow_mod *flow_mod,
 
 	if (openflow_flowtable_find_identical_entry(flow_mod, &i))
 	{
-		verbose(2, "[openflow_flowtable_edit_strict]:: Deleting flowtable"
+		verbose(2, "[openflow_flowtable_delete_strict]:: Deleting flowtable"
 				" entry at index %" PRIu32 ".", i);
-
-		if (ntohs(flowtable->entries[i].flags) & OFPFF_SEND_FLOW_REM)
-		{
-			openflow_ctrl_iface_send_flow_removed(&flowtable->entries[i],
-			        OFPRR_DELETE);
-		}
-
-		flowtable->stats.active_count -= 1;
-		memset(&flowtable->entries[i], 0,
-		        sizeof(openflow_flowtable_entry_type));
+		openflow_flowtable_delete_entry_at_index(i);
 	}
 
 	return 0;
