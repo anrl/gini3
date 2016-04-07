@@ -57,13 +57,15 @@ typedef struct ofp_port_stats ofp_port_stats;
 #define OPENFLOW_HW_DESC                         "GINI"
 #define OPENFLOW_SW_DESC                         "gRouter"
 
+#define OPENFLOW_TABLE_NAME                      "Standard"
+
 #define OPENFLOW_NUM_TABLES                      ((uint32_t) 1)
 #define OPENFLOW_ERROR_MSG_MIN_DATA_SIZE         64
 #define OPENFLOW_CTRL_IFACE_SEND_TIMEOUT         10
 
 #define OPENFLOW_MAX_PHYSICAL_PORTS              MAX_INTERFACES
-#define OPENFLOW_MAX_FLOWTABLE_ENTRIES           ((uint32_t) 10)
-#define OPENFLOW_MAX_ACTIONS                     ((uint32_t) 10)
+#define OPENFLOW_MAX_FLOWTABLE_ENTRIES           ((uint32_t) 100)
+#define OPENFLOW_MAX_ACTIONS                     ((uint32_t) 25)
 #define OPENFLOW_MAX_ACTION_SIZE                 ((uint32_t) 16)
 #define OPENFLOW_MAX_MSG_TYPE                    OFPT_QUEUE_GET_CONFIG_REPLY
 
@@ -95,6 +97,8 @@ typedef struct
 	time_t last_matched;
 	// The last time this entry was modified by the controller
 	time_t last_modified;
+	// The time this entry was added
+	time_t added;
 	// Number of seconds since last match before expiration of this entry;
 	// stored in network byte format
 	uint16_t idle_timeout;
@@ -121,8 +125,6 @@ typedef struct
 	openflow_flowtable_entry_type entries[OPENFLOW_MAX_FLOWTABLE_ENTRIES];
 	// Table stats
 	ofp_table_stats stats;
-	// Emergency table stats
-	ofp_table_stats stats_emerg;
 } openflow_flowtable_type;
 
 #endif // ifndef __OPENFLOW_DEFS_H_

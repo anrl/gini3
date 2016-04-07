@@ -1191,10 +1191,90 @@ void spolicyCmd()
 
 void flowtableCmd()
 {
-	char *next_tok = strtok(NULL, " \n");
-
-	if (!strcmp(next_tok, "entries"))
+	if (!rconfig.openflow)
 	{
-		openflow_flowtable_print_entries();
+		printf("OpenFlow not enabled\n");
+		return;
 	}
+
+	char *next_tok = strtok(NULL, " \n");
+	if (next_tok != NULL && !strcmp(next_tok, "entries"))
+	{
+		next_tok = strtok(NULL, " \n");
+		if (next_tok != NULL && !strcmp(next_tok, "all"))
+		{
+			openflow_flowtable_print_entries();
+		}
+		else if (next_tok != NULL) {
+			char *endptr;
+			uint32_t num = strtol(next_tok, &endptr, 10);
+			if (endptr != next_tok)
+			{
+				openflow_flowtable_print_entry(num);
+			}
+		}
+	}
+	else if (next_tok != NULL && !strcmp(next_tok, "stats"))
+	{
+		next_tok = strtok(NULL, " \n");
+		if (next_tok != NULL && !strcmp(next_tok, "desc"))
+		{
+			openflow_config_print_desc_stats();
+		}
+		else if (next_tok != NULL && !strcmp(next_tok, "entry"))
+		{
+			next_tok = strtok(NULL, " \n");
+			if (next_tok != NULL && !strcmp(next_tok, "all"))
+			{
+				openflow_flowtable_print_entry_stats();
+			}
+			else if (next_tok != NULL)
+			{
+				char *endptr;
+				uint32_t num = strtol(next_tok, &endptr, 10);
+				if (endptr != next_tok)
+				{
+					openflow_flowtable_print_entry_stat(num);
+				}
+			}
+		}
+		else if (next_tok != NULL && !strcmp(next_tok, "table"))
+		{
+			openflow_flowtable_print_table_stats();
+		}
+		else if (next_tok != NULL && !strcmp(next_tok, "port"))
+		{
+			next_tok = strtok(NULL, " \n");
+			if (next_tok != NULL && !strcmp(next_tok, "all"))
+			{
+				openflow_config_print_port_stats();
+			}
+			else if (next_tok != NULL) {
+				char *endptr;
+				uint32_t num = strtol(next_tok, &endptr, 10);
+				if (endptr != next_tok)
+				{
+					openflow_config_print_port_stat(num);
+				}
+			}
+		}
+	}
+	else if (next_tok != NULL && !strcmp(next_tok, "ports"))
+	{
+		next_tok = strtok(NULL, " \n");
+		if (next_tok != NULL && !strcmp(next_tok, "all"))
+		{
+			openflow_config_print_ports();
+		}
+		else if (next_tok != NULL) {
+			char *endptr;
+			uint32_t num = strtol(next_tok, &endptr, 10);
+			if (endptr != next_tok)
+			{
+				openflow_config_print_port(num);
+			}
+		}
+	}
+
+	printf("Unrecognized flowtable command\n");
 }

@@ -24,6 +24,7 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <string.h>
+#include <inttypes.h>
 
 /*
  * global definitions.... this is stuff that could not be
@@ -113,6 +114,10 @@ int gAtoi(char *str);
 unsigned char *gHtonl(uchar tval[], uchar val[]);
 unsigned char *gNtohl(uchar tval[], uchar val[]);
 ushort checksum(uchar *buf, int iwords);
+
+uint64_t __builtin_bswap64(uint64_t x);
+uint64_t ntohll(uint64_t arg);
+uint64_t htonll(uint64_t arg);
 
 
 // function prototypes for code in router.c

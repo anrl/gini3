@@ -136,12 +136,32 @@ static int32_t openflow_pkt_proc_forward_packet_to_port(gpacket_t *packet,
 	// Return if port is administratively down or packet is a flood packet but
 	// flooding is disabled for this port
 	uint32_t config = ntohl(port->config);
-	if (config & OFPPC_PORT_DOWN) return 0;
-	if (flood && (config & OFPPC_NO_FLOOD)) return 0;
+	if (config & OFPPC_PORT_DOWN)
+	{
+		free(port);
+		return 0;
+	}
+	if (flood && (config & OFPPC_NO_FLOOD))
+	{
+		free(port);
+		return 0;
+	}
 
 	// Return if port is physically down
 	uint32_t state = ntohl(port->state);
-	if (state & OFPPS_LINK_DOWN) return 0;
+	if (state & OFPPS_LINK_DOWN)
+	{
+		free(port);
+		return 0;
+	}
+
+	free(port);
+
+	ofp_port_stats *stats = openflow_config_get_port_stats(of_port);
+	stats->tx_packets += htonll(ntohll(stats->tx_packets) + 1);
+	stats->tx_bytes += htonll(ntohll(stats->tx_bytes) + DEFAULT_MTU);
+	openflow_config_set_port_stats(of_port, stats);
+	free(stats);
 
 	uint32_t gnet_port_num = openflow_config_get_gnet_port_num(of_port);
 	packet->frame.dst_interface = gnet_port_num;
@@ -167,6 +187,15 @@ void openflow_pkt_proc_init(pktcore_t *core)
  */
 int32_t openflow_pkt_proc_handle_packet(gpacket_t *packet)
 {
+	// Update statistics for input port
+	uint16_t of_port = openflow_config_get_of_port_num(
+			packet->frame.src_interface);
+	ofp_port_stats *stats = openflow_config_get_port_stats(of_port);
+	stats->rx_packets += htonll(ntohll(stats->rx_packets) + 1);
+	stats->rx_bytes += htonll(ntohll(stats->rx_bytes) + DEFAULT_MTU);
+	openflow_config_set_port_stats(of_port, stats);
+	free(stats);
+
 	if (ntohs(packet->data.header.prot) == IP_PROTOCOL)
 	{
 		ip_packet_t *ip_packet = (ip_packet_t *) &packet->data.data;
@@ -203,20 +232,25 @@ int32_t openflow_pkt_proc_handle_packet(gpacket_t *packet)
 				if (ret >= 0) action_performed = 1;
 			}
 		}
+
 		if (!action_performed)
 		{
 			verbose(2, "[openflow_pkt_proc_handle_packet]:: Dropping packet"
 					" with no valid actions.");
-			free(packet);
-			return 0;
 		}
-	}
 
-	verbose(2, "[openflow_pkt_proc_handle_packet]:: Forwarding packet"
+		free(matching_entry);
+		free(packet);
+		return 0;
+	}
+	else
+	{
+		verbose(2, "[openflow_pkt_proc_handle_packet]:: Forwarding packet"
 			" with no flowtable match to controller.");
-	int32_t ret = openflow_ctrl_iface_send_packet_in(packet, OFPR_NO_MATCH);
-	free(packet);
-	return ret;
+		int32_t ret = openflow_ctrl_iface_send_packet_in(packet, OFPR_NO_MATCH);
+		free(packet);
+		return ret;
+	}
 }
 
 /**

@@ -12,13 +12,6 @@
 #include "message.h"
 
 /**
- * Gets the current controller connection state.
- *
- * @return 1 if the switch is currently connected to the controller, 0 if not.
- */
-uint8_t openflow_ctrl_iface_get_conn_state();
-
-/**
  * Sends a packet in message to the OpenFlow controller containing the
  * specified packet.
  *
