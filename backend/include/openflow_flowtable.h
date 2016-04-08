@@ -24,6 +24,11 @@ pthread_t openflow_flowtable_timeout_init();
 void openflow_flowtable_init(void);
 
 /**
+ * Frees the flow table, avoiding memory leaks.
+ */
+void openflow_flowtable_release(void);
+
+/**
  * Retrieves the matching flowtable entry for the specified packet.
  *
  * @param packet    The specified packet.

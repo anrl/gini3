@@ -81,6 +81,23 @@ void openflow_flowtable_init(void)
 }
 
 /**
+ * Frees the flow table, avoiding memory leaks.
+ */
+void openflow_flowtable_release(void)
+{
+	pthread_mutex_lock(&flowtable_mutex);
+
+	flowtable = malloc(sizeof(openflow_flowtable_type));
+	if(flowtable)
+	{
+		free(flowtable);
+	}
+	flowtable = NULL;
+
+	pthread_mutex_unlock(&flowtable_mutex);
+}
+
+/**
  * Compares two IP addresses.
  *
  * @param ip_1   The first IP address to compare.
