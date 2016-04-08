@@ -15,10 +15,13 @@ TEST_BEGIN("Flowtable Modification")
 	openflow_flowtable_init();
 	ofp_flow_mod mod;
   uint16_t error_code, error_type;
-  mod.flags = OFPFF_SEND_FLOW_REM;
-	mod.command = OFPFC_ADD;
-	mod.match.wildcards = OFPFW_ALL;
-	mod.out_port = OFPP_NONE;
+  memset(&mod, 0, sizeof(ofp_flow_mod));
+  mod.flags = htons(OFPFF_SEND_FLOW_REM);
+	mod.command = htons(OFPFC_ADD);
+	mod.match.wildcards = htons(OFPFW_ALL);
+	mod.out_port = htons(OFPP_NONE);
+  mod.header.length = htons(0);
+  mod.priority = htons(19);
 
 	openflow_flowtable_modify(&mod, &error_type, &error_code);
 	openflow_flowtable_release();
