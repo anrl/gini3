@@ -63,7 +63,7 @@ static void openflow_flowtable_set_defaults(void)
 	strncpy(flowtable->stats.name, OPENFLOW_TABLE_NAME,
 	OFP_MAX_TABLE_NAME_LEN);
 	flowtable->stats.name[OFP_MAX_TABLE_NAME_LEN - 1] = '\0';
-	flowtable->stats.max_entries = OPENFLOW_MAX_FLOWTABLE_ENTRIES;
+	flowtable->stats.max_entries = htonl(OPENFLOW_MAX_FLOWTABLE_ENTRIES);
 	flowtable->stats.wildcards = htonl(OFPFW_ALL);
 }
 
@@ -475,7 +475,7 @@ openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
 		}
 	}
 
-	flowtable->stats.lookup_count += htonll(
+	flowtable->stats.lookup_count = htonll(
 	        ntohll(flowtable->stats.lookup_count) + 1);
 
 	if (current_entry == NULL)
@@ -488,11 +488,11 @@ openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
 	else
 	{
 		// Increment stats
-		flowtable->stats.matched_count += htonll(
+		flowtable->stats.matched_count = htonll(
 		        ntohll(flowtable->stats.matched_count) + 1);
-		current_entry->stats.packet_count += htonll(
+		current_entry->stats.packet_count = htonll(
 		        ntohll(current_entry->stats.packet_count) + 1);
-		current_entry->stats.byte_count += htonll(
+		current_entry->stats.byte_count = htonll(
 		        ntohll(current_entry->stats.byte_count) + DEFAULT_MTU);
 		time(&current_entry->last_matched);
 
@@ -1116,7 +1116,8 @@ static void openflow_flowtable_delete_entry_at_index(uint32_t i)
 				OFPRR_DELETE);
 	}
 
-	flowtable->stats.active_count -= 1;
+	flowtable->stats.active_count = htonl(ntohl(
+			flowtable->stats.active_count) - 1);
 	memset(&flowtable->entries[i], 0,
 			sizeof(openflow_flowtable_entry_type));
 }
@@ -1387,7 +1388,7 @@ static int32_t openflow_flowtable_add(ofp_flow_mod* flow_mod,
 	{
 		if (!flowtable->entries[i].active)
 		{
-			flowtable->stats.active_count += htonl(
+			flowtable->stats.active_count = htonl(
 			        ntohl(flowtable->stats.active_count) + 1);
 
 			verbose(2, "[openflow_flowtable_add]:: Adding flowtable entry at"
@@ -2086,15 +2087,15 @@ void openflow_flowtable_print_entry(uint32_t index)
 		return;
 	}
 
+	printf("\n");
+	printf("=========\n");
+	printf("Entry %d\n", index);
+	printf("=========\n");
+	printf("\n");
+
 	openflow_flowtable_entry_type entry = flowtable->entries[index];
 	if (entry.active)
 	{
-		printf("\n");
-		printf("=========\n");
-		printf("Entry %d\n", index);
-		printf("=========\n");
-		printf("\n");
-
 		printf("Match:\n");
 		openflow_flowtable_print_match(&entry.match);
 
@@ -2174,16 +2175,16 @@ void openflow_flowtable_print_entry_stat(uint32_t index)
 		return;
 	}
 
+	printf("\n");
+	printf("=========\n");
+	printf("Entry %d\n", index);
+	printf("=========\n");
+	printf("\n");
+
 	openflow_flowtable_entry_type *entry = &flowtable->entries[index];
 	if (entry->active)
 	{
 		openflow_flowtable_update_entry_stats(index);
-
-		printf("\n");
-		printf("=========\n");
-		printf("Entry %d\n", index);
-		printf("=========\n");
-		printf("\n");
 
 		printf("Table ID: %" PRIu8 "\n", entry->stats.table_id);
 
@@ -2229,8 +2230,12 @@ void openflow_flowtable_print_entry_stats()
 void openflow_flowtable_print_table_stats()
 {
 	pthread_mutex_lock(&flowtable_mutex);
+	printf("\n");
+	printf("=========\n");
+	printf("Table %d\n", flowtable->stats.table_id);
+	printf("=========\n");
+	printf("\n");
 
-	printf("Table ID: %" PRIu8 "\n", flowtable->stats.table_id);
 	printf("Name: %s\n", flowtable->stats.name);
 
 	if (ntohl(flowtable->stats.wildcards) == OFPFW_ALL)

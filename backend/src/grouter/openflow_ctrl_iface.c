@@ -169,9 +169,9 @@ static int32_t openflow_ctrl_iface_send(void *data, uint32_t len)
 
 		if (ret < 0)
 		{
+			pthread_mutex_unlock(&ofc_socket_mutex);
 			verbose(1, "[openflow_ctrl_iface_send]:: Unknown error occurred"
 					" while sending message.");
-			pthread_mutex_unlock(&ofc_socket_mutex);
 			return OPENFLOW_CTRL_IFACE_ERR_UNKNOWN;
 		}
 		else if (ret == 0)
@@ -189,9 +189,9 @@ static int32_t openflow_ctrl_iface_send(void *data, uint32_t len)
 
 	if (sent < len)
 	{
+		pthread_mutex_unlock(&ofc_socket_mutex);
 		verbose(1, "[openflow_ctrl_iface_send]:: Send timeout reached"
 				" while sending message.");
-		pthread_mutex_unlock(&ofc_socket_mutex);
 		return OPENFLOW_CTRL_IFACE_ERR_SEND_TIMEOUT;
 	}
 
@@ -254,37 +254,37 @@ static int32_t openflow_ctrl_iface_recv(ofp_header **ptr_to_msg)
 	int32_t ret = recv(ofc_socket_fd, &header, sizeof(header), MSG_DONTWAIT);
 	if (ret == 0)
 	{
+		pthread_mutex_unlock(&ofc_socket_mutex);
 		verbose(1, "[openflow_ctrl_iface_recv]:: Controller connection"
 				" closed while receiving message header.");
-		pthread_mutex_unlock(&ofc_socket_mutex);
 		return OPENFLOW_CTRL_IFACE_ERR_CONN_CLOSED;
 	}
 	else if (ret == -1)
 	{
+		pthread_mutex_unlock(&ofc_socket_mutex);
 		if (errno == EAGAIN) return 0;
 		verbose(1, "[openflow_ctrl_iface_recv]:: Unknown error occurred"
 				" while receiving message header.");
-		pthread_mutex_unlock(&ofc_socket_mutex);
 		return OPENFLOW_CTRL_IFACE_ERR_UNKNOWN;
 	}
 
 	if (header.version != OFP_VERSION)
 	{
+		pthread_mutex_unlock(&ofc_socket_mutex);
 		verbose(1, "[openflow_ctrl_iface_recv]:: Bad OpenFlow version number"
 				" found in message header.");
 		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
 		        OFPBRC_BAD_VERSION, &header);
-		pthread_mutex_unlock(&ofc_socket_mutex);
 		if (ret < 0) return ret;
 		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
 	}
 	else if (header.type > OPENFLOW_MAX_MSG_TYPE)
 	{
+		pthread_mutex_unlock(&ofc_socket_mutex);
 		verbose(1, "[openflow_ctrl_iface_recv]:: Unsupported message type"
 				" found in message header.");
 		int32_t ret = openflow_ctrl_iface_send_error(OFPET_BAD_REQUEST,
 		        OFPBRC_BAD_TYPE, &header);
-		pthread_mutex_unlock(&ofc_socket_mutex);
 		if (ret < 0) return ret;
 		return OPENFLOW_CTRL_IFACE_ERR_OPENFLOW;
 	}
@@ -298,17 +298,17 @@ static int32_t openflow_ctrl_iface_recv(ofp_header **ptr_to_msg)
 		        ntohs(header.length) - sizeof(header), 0);
 		if (ret == 0)
 		{
+			pthread_mutex_unlock(&ofc_socket_mutex);
 			verbose(1, "[openflow_ctrl_iface_recv]:: Controller connection"
 					" closed while receiving message body.");
-			pthread_mutex_unlock(&ofc_socket_mutex);
 			return OPENFLOW_CTRL_IFACE_ERR_CONN_CLOSED;
 		}
 		else if (ret == -1)
 		{
+			pthread_mutex_unlock(&ofc_socket_mutex);
 			if (errno == EAGAIN) return 0;
 			verbose(1, "[openflow_ctrl_iface_recv]:: Unknown error occurred"
 					" while receiving message body.");
-			pthread_mutex_unlock(&ofc_socket_mutex);
 			return OPENFLOW_CTRL_IFACE_ERR_UNKNOWN;
 		}
 	}
@@ -1023,7 +1023,7 @@ static int32_t openflow_ctrl_iface_send_stats_rep(ofp_stats_request *orig_msg)
 					if (actions[j].active)
 					{
 						msg_len += ntohs(actions[j].header.len);
-						stats->length += htons(
+						stats->length = htons(
 						        ntohs(stats->length)
 						                + ntohs(actions[j].header.len));
 					}

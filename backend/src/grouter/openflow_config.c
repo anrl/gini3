@@ -221,7 +221,7 @@ void openflow_config_print_port(uint32_t index)
 
 	if (index <= 0 || index > OPENFLOW_MAX_PHYSICAL_PORTS)
 	{
-		printf("Entry index invalid\n");
+		printf("Port index invalid\n");
 		pthread_mutex_unlock(&phy_ports_mutex);
 		return;
 	}
@@ -261,17 +261,13 @@ void openflow_config_print_port(uint32_t index)
 		}
 	}
 
-	if (ntohl(port->state) == 0)
+	if (ntohl(port->state) & OFPPS_LINK_DOWN)
 	{
-		printf("State: None\n");
+		printf("State: Down\n");
 	}
 	else
 	{
-		printf("State:\n");
-		if (ntohl(port->config) & OFPPS_LINK_DOWN)
-		{
-			printf("\tOFPPS_LINK_DOWN");
-		}
+		printf("State: Up\n");
 	}
 
 	pthread_mutex_unlock(&phy_ports_mutex);
@@ -353,7 +349,7 @@ void openflow_config_print_port_stat(uint32_t index)
 
 	if (index <= 0 || index > OPENFLOW_MAX_PHYSICAL_PORTS)
 	{
-		printf("Entry index invalid\n");
+		printf("Port index invalid\n");
 		pthread_mutex_unlock(&phy_port_stats_mutex);
 		return;
 	}

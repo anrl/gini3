@@ -1204,6 +1204,7 @@ void flowtableCmd()
 		if (next_tok != NULL && !strcmp(next_tok, "all"))
 		{
 			openflow_flowtable_print_entries();
+			return;
 		}
 		else if (next_tok != NULL) {
 			char *endptr;
@@ -1211,6 +1212,7 @@ void flowtableCmd()
 			if (endptr != next_tok)
 			{
 				openflow_flowtable_print_entry(num);
+				return;
 			}
 		}
 	}
@@ -1220,6 +1222,7 @@ void flowtableCmd()
 		if (next_tok != NULL && !strcmp(next_tok, "desc"))
 		{
 			openflow_config_print_desc_stats();
+			return;
 		}
 		else if (next_tok != NULL && !strcmp(next_tok, "entry"))
 		{
@@ -1227,6 +1230,7 @@ void flowtableCmd()
 			if (next_tok != NULL && !strcmp(next_tok, "all"))
 			{
 				openflow_flowtable_print_entry_stats();
+				return;
 			}
 			else if (next_tok != NULL)
 			{
@@ -1235,12 +1239,14 @@ void flowtableCmd()
 				if (endptr != next_tok)
 				{
 					openflow_flowtable_print_entry_stat(num);
+					return;
 				}
 			}
 		}
 		else if (next_tok != NULL && !strcmp(next_tok, "table"))
 		{
 			openflow_flowtable_print_table_stats();
+			return;
 		}
 		else if (next_tok != NULL && !strcmp(next_tok, "port"))
 		{
@@ -1248,6 +1254,7 @@ void flowtableCmd()
 			if (next_tok != NULL && !strcmp(next_tok, "all"))
 			{
 				openflow_config_print_port_stats();
+				return;
 			}
 			else if (next_tok != NULL) {
 				char *endptr;
@@ -1255,6 +1262,7 @@ void flowtableCmd()
 				if (endptr != next_tok)
 				{
 					openflow_config_print_port_stat(num);
+					return;
 				}
 			}
 		}
@@ -1265,6 +1273,7 @@ void flowtableCmd()
 		if (next_tok != NULL && !strcmp(next_tok, "all"))
 		{
 			openflow_config_print_ports();
+			return;
 		}
 		else if (next_tok != NULL) {
 			char *endptr;
@@ -1272,6 +1281,7 @@ void flowtableCmd()
 			if (endptr != next_tok)
 			{
 				openflow_config_print_port(num);
+				return;
 			}
 		}
 	}

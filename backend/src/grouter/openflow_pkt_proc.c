@@ -158,8 +158,8 @@ static int32_t openflow_pkt_proc_forward_packet_to_port(gpacket_t *packet,
 	free(port);
 
 	ofp_port_stats *stats = openflow_config_get_port_stats(of_port);
-	stats->tx_packets += htonll(ntohll(stats->tx_packets) + 1);
-	stats->tx_bytes += htonll(ntohll(stats->tx_bytes) + DEFAULT_MTU);
+	stats->tx_packets = htonll(ntohll(stats->tx_packets) + 1);
+	stats->tx_bytes = htonll(ntohll(stats->tx_bytes) + DEFAULT_MTU);
 	openflow_config_set_port_stats(of_port, stats);
 	free(stats);
 
@@ -191,8 +191,8 @@ int32_t openflow_pkt_proc_handle_packet(gpacket_t *packet)
 	uint16_t of_port = openflow_config_get_of_port_num(
 	        packet->frame.src_interface);
 	ofp_port_stats *stats = openflow_config_get_port_stats(of_port);
-	stats->rx_packets += htonll(ntohll(stats->rx_packets) + 1);
-	stats->rx_bytes += htonll(ntohll(stats->rx_bytes) + DEFAULT_MTU);
+	stats->rx_packets = htonll(ntohll(stats->rx_packets) + 1);
+	stats->rx_bytes = htonll(ntohll(stats->rx_bytes) + DEFAULT_MTU);
 	openflow_config_set_port_stats(of_port, stats);
 	free(stats);
 
