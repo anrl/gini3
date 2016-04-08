@@ -1619,8 +1619,8 @@ static void openflow_flowtable_update_entry_stats(uint32_t index)
 {
 	time_t now;
 	time(&now);
-	flowtable->entries[index].stats.duration_sec = difftime(now,
-	        flowtable->entries[index].added);
+	flowtable->entries[index].stats.duration_sec = htonl(difftime(now,
+	        flowtable->entries[index].added));
 	flowtable->entries[index].stats.duration_nsec = 0;
 }
 
