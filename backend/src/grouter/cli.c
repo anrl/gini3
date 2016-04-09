@@ -1198,7 +1198,7 @@ void openflowCmd()
 	}
 
 	char *next_tok = strtok(NULL, " \n");
-	if (next_tok != NULL && !strcmp(next_tok, "entries"))
+	if (next_tok != NULL && !strcmp(next_tok, "entry"))
 	{
 		next_tok = strtok(NULL, " \n");
 		if (next_tok != NULL && !strcmp(next_tok, "all"))

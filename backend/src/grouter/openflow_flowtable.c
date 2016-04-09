@@ -1323,6 +1323,7 @@ static int32_t openflow_flowtable_modify_entry_at_index(ofp_flow_mod *flow_mod,
 	flowtable->entries[index].cookie = flow_mod->cookie;
 	flowtable->entries[index].stats.cookie = flow_mod->cookie;
 
+	time(&flowtable->entries[index].last_matched);
 	time(&flowtable->entries[index].last_modified);
 
 	flowtable->entries[index].idle_timeout = flow_mod->idle_timeout;
@@ -1629,8 +1630,9 @@ static void openflow_flowtable_update_entry_stats(uint32_t index)
 {
 	time_t now;
 	time(&now);
-	flowtable->entries[index].stats.duration_sec = htonl(
-	        difftime(now, flowtable->entries[index].added));
+
+	double duration = difftime(now, flowtable->entries[index].added);
+	flowtable->entries[index].stats.duration_sec = htonl((uint32_t) duration);
 	flowtable->entries[index].stats.duration_nsec = 0;
 }
 
@@ -1964,7 +1966,6 @@ static void openflow_flowtable_print_action(ofp_action_header *action)
 	if (ntohs(action->type) == OFPAT_OUTPUT)
 	{
 		printf("\t\tType: OFPAT_OUTPUT\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		uint16_t port = ntohs(((ofp_action_output *) action)->port);
 		if (port == OFPP_IN_PORT)
 		{
@@ -2013,7 +2014,6 @@ static void openflow_flowtable_print_action(ofp_action_header *action)
 	else if (ntohs(action->type) == OFPAT_SET_VLAN_VID)
 	{
 		printf("\t\tType: OFPAT_SET_VLAN_VID\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		if (ntohs(((ofp_action_vlan_vid *) action)->vlan_vid) == OFP_VLAN_NONE)
 		{
 			printf("\t\tEthernet VLAN ID: OFP_VLAN_NONE\n");
@@ -2027,19 +2027,16 @@ static void openflow_flowtable_print_action(ofp_action_header *action)
 	else if (ntohs(action->type) == OFPAT_SET_VLAN_PCP)
 	{
 		printf("\t\tType: OFPAT_SET_VLAN_PCP\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		printf("\t\tEthernet VLAN priority: %" PRIu16 "\n",
 		        ntohs(((ofp_action_vlan_pcp *) action)->vlan_pcp));
 	}
 	else if (ntohs(action->type) == OFPAT_STRIP_VLAN)
 	{
 		printf("\t\tType: OFPAT_STRIP_VLAN\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 	}
 	else if (ntohs(action->type) == OFPAT_SET_DL_SRC)
 	{
 		printf("\t\tType: OFPAT_SET_DL_SRC\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		char dl_src[50];
 		MAC2Colon(dl_src, ((ofp_action_dl_addr *) action)->dl_addr);
 		printf("\t\tEthernet source MAC address: %s\n", dl_src);
@@ -2047,7 +2044,6 @@ static void openflow_flowtable_print_action(ofp_action_header *action)
 	else if (ntohs(action->type) == OFPAT_SET_DL_DST)
 	{
 		printf("\t\tType: OFPAT_SET_DL_DST\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		char dl_dst[50];
 		MAC2Colon(dl_dst, ((ofp_action_dl_addr *) action)->dl_addr);
 		printf("\t\tEthernet destination MAC address: %s\n", dl_dst);
@@ -2055,7 +2051,6 @@ static void openflow_flowtable_print_action(ofp_action_header *action)
 	else if (ntohs(action->type) == OFPAT_SET_NW_SRC)
 	{
 		printf("\t\tType: OFPAT_SET_NW_SRC\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		char nw_src[50];
 		uint32_t nw_src_raw = ntohl(((ofp_action_nw_addr *) action)->nw_addr);
 		IP2Dot(nw_src, (uint8_t *) &nw_src_raw);
@@ -2064,7 +2059,6 @@ static void openflow_flowtable_print_action(ofp_action_header *action)
 	else if (ntohs(action->type) == OFPAT_SET_NW_DST)
 	{
 		printf("\t\tType: OFPAT_SET_NW_DST\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		char nw_dst[50];
 		uint32_t nw_dst_raw = ntohl(((ofp_action_nw_addr *) action)->nw_addr);
 		IP2Dot(nw_dst, (uint8_t *) &nw_dst_raw);
@@ -2073,21 +2067,18 @@ static void openflow_flowtable_print_action(ofp_action_header *action)
 	else if (ntohs(action->type) == OFPAT_SET_NW_TOS)
 	{
 		printf("\t\tType: OFPAT_SET_NW_TOS\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		printf("\t\tIP type of service: %" PRIu8 "\n",
 		        ((ofp_action_nw_tos *) action)->nw_tos);
 	}
 	else if (ntohs(action->type) == OFPAT_SET_TP_SRC)
 	{
 		printf("\t\tType: OFPAT_SET_TP_SRC\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		printf("\t\tTCP/UDP source port or ICMP type: %" PRIu16 "\n",
 		        ntohs(((ofp_action_tp_port *) action)->tp_port));
 	}
 	else if (ntohs(action->type) == OFPAT_SET_TP_DST)
 	{
 		printf("\t\tType: OFPAT_SET_TP_DST\n");
-		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
 		printf("\t\tTCP/UDP destination port or ICMP code: %" PRIu16 "\n",
 		        ntohs(((ofp_action_tp_port *) action)->tp_port));
 	}
