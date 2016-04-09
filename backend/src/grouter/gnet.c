@@ -846,11 +846,11 @@ void *GNETHandler(void *outq)
 			continue;
 		}
 
-		// we have a valid interface handle -- iface.
-		COPY_MAC(in_pkt->data.header.src, iface->mac_addr);
-
 		if (!in_pkt->frame.openflow)
 		{
+			// we have a valid interface handle -- iface.
+			COPY_MAC(in_pkt->data.header.src, iface->mac_addr);
+
 			if (in_pkt->frame.arp_valid == TRUE)
 				putARPCache(in_pkt->frame.nxth_ip_addr, in_pkt->data.header.dst);
 			else if (in_pkt->frame.arp_bcast != TRUE)

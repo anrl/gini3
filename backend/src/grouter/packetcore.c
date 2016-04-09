@@ -411,6 +411,7 @@ void *openflowPacketProcessor(void *pc) {
 			" processing..");
 
 		openflow_pkt_proc_handle_packet(in_pkt);
+		free(in_pkt);
 	}
 }
 

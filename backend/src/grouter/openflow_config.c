@@ -432,7 +432,7 @@ ofp_switch_features openflow_config_get_switch_features()
 	}
 
 	switch_features.n_buffers = htonl(0);
-	switch_features.n_tables = 2;
+	switch_features.n_tables = 1;
 	switch_features.capabilities = htonl(
 	        OFPC_FLOW_STATS | OFPC_TABLE_STATS | OFPC_PORT_STATS
 	                | OFPC_ARP_MATCH_IP);

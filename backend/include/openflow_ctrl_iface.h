@@ -12,6 +12,11 @@
 #include "message.h"
 
 /**
+ * Requests that the switch reconnect to the controller.
+ */
+void openflow_ctrl_iface_reconnect();
+
+/**
  * Sends a packet in message to the OpenFlow controller containing the
  * specified packet.
  *

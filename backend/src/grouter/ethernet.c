@@ -54,7 +54,7 @@ void *toEthernetDev(void *arg)
 	if ((iface = findInterface(inpkt->frame.dst_interface)) != NULL)
 	{
 		/* send IP packet or ARP reply */
-		if (inpkt->data.header.prot == htons(ARP_PROTOCOL))
+		if (!inpkt->frame.openflow && inpkt->data.header.prot == htons(ARP_PROTOCOL))
 		{
 			apkt = (arp_packet_t *) inpkt->data.data;
 			COPY_MAC(apkt->src_hw_addr, iface->mac_addr);
@@ -101,7 +101,8 @@ void* fromEthernetDev(void *arg)
 		// check whether the incoming packet is a layer 2 broadcast or
 		// meant for this node... otherwise should be thrown..
 		// TODO: fix for promiscuous mode packet snooping.
-		if ((COMPARE_MAC(in_pkt->data.header.dst, iface->mac_addr) != 0) &&
+		if (!rconfig.openflow &&
+			(COMPARE_MAC(in_pkt->data.header.dst, iface->mac_addr) != 0) &&
 			(COMPARE_MAC(in_pkt->data.header.dst, bcast_mac) != 0))
 		{
 			verbose(1, "[fromEthernetDev]:: Packet dropped .. not for this router!? ");

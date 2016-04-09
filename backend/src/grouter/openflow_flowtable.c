@@ -5,6 +5,7 @@
 #include "openflow_flowtable.h"
 
 #include <inttypes.h>
+#include <string.h>
 #include <time.h>
 
 #include "arp.h"
@@ -25,6 +26,9 @@
 // OpenFlow flowtable
 static openflow_flowtable_type *flowtable;
 static pthread_mutex_t flowtable_mutex;
+
+// Forward declaration of debugging functions
+static void openflow_flowtable_print_entry_no_lock(uint32_t index);
 
 /**
  * Set the specified ofp_flow_stats struct to its defaults.
@@ -88,7 +92,7 @@ void openflow_flowtable_release(void)
 	pthread_mutex_lock(&flowtable_mutex);
 
 	flowtable = malloc(sizeof(openflow_flowtable_type));
-	if(flowtable)
+	if (flowtable)
 	{
 		free(flowtable);
 	}
@@ -126,7 +130,8 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
         gpacket_t *packet)
 {
 	// Default headers
-	uint16_t in_port = packet->frame.src_interface;
+	uint16_t in_port = htons(
+	        openflow_config_get_of_port_num(packet->frame.src_interface));
 	uint8_t dl_src[OFP_ETH_ALEN];
 	uint8_t dl_dst[OFP_ETH_ALEN];
 	uint16_t dl_vlan = 0;
@@ -215,7 +220,7 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
 		verbose(2, "[openflow_flowtable_match_packet]:: Setting headers for"
 				" ARP.");
 		arp_packet_t *arp_packet = (arp_packet_t *) &packet->data.data;
-		nw_proto = htons(ntohs(arp_packet->arp_opcode) & 0xFF);
+		nw_proto = ntohs(arp_packet->arp_opcode);
 		COPY_IP(&nw_src, &arp_packet->src_ip_addr);
 		COPY_IP(&nw_dst, &arp_packet->dst_ip_addr);
 	}
@@ -269,8 +274,8 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
 				int ip_header_length = ip_packet->ip_hdr_len * 4;
 				icmphdr_t *icmp_packet = (icmphdr_t *) ((uint8_t *) ip_packet
 				        + ip_header_length);
-				tp_src = icmp_packet->type;
-				tp_dst = icmp_packet->code;
+				tp_src = htons((uint16_t) icmp_packet->type);
+				tp_dst = htons((uint16_t) icmp_packet->code);
 			}
 		}
 	}
@@ -284,7 +289,8 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
 	}
 
 	// Reject match on Ethernet source MAC address
-	if (!(ntohl(match->wildcards) & OFPFW_DL_SRC) && dl_src != match->dl_src)
+	if (!(ntohl(match->wildcards) & OFPFW_DL_SRC)
+	        && memcmp(dl_src, match->dl_src, OFP_ETH_ALEN))
 	{
 		verbose(2, "[openflow_flowtable_match_packet]:: Packet not matched"
 				" (source MAC address).");
@@ -292,7 +298,8 @@ static uint8_t openflow_flowtable_match_packet(ofp_match *match,
 	}
 
 	// Reject match on Ethernet destination MAC address
-	if (!(ntohl(match->wildcards) & OFPFW_DL_DST) && dl_dst != match->dl_dst)
+	if (!(ntohl(match->wildcards) & OFPFW_DL_DST)
+	        && memcmp(dl_dst, match->dl_dst, OFP_ETH_ALEN))
 	{
 		verbose(2, "[openflow_flowtable_match_packet]:: Packet not matched"
 				" (destination MAC address).");
@@ -460,8 +467,8 @@ openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
 				// Exact match
 				verbose(2, "[openflow_flowtable_get_entry_for_packet]::"
 						" Found exact match at index %" PRIu32 ".", i);
-				pthread_mutex_unlock(&flowtable_mutex);
-				return entry;
+				current_entry = entry;
+				break;
 			}
 			else if (entry->priority >= current_priority)
 			{
@@ -493,7 +500,7 @@ openflow_flowtable_entry_type *openflow_flowtable_get_entry_for_packet(
 		current_entry->stats.packet_count = htonll(
 		        ntohll(current_entry->stats.packet_count) + 1);
 		current_entry->stats.byte_count = htonll(
-		        ntohll(current_entry->stats.byte_count) + DEFAULT_MTU);
+		        ntohll(current_entry->stats.byte_count) + sizeof(pkt_data_t));
 		time(&current_entry->last_matched);
 
 		// Make copy of entry for use outside this function
@@ -560,7 +567,8 @@ static uint8_t openflow_flowtable_find_overlapping_entry(ofp_flow_mod *flow_mod,
 		if (!(ntohl(flow_mod_match->wildcards) & OFPFW_DL_SRC)
 		        && !(ntohl(entry_match->wildcards) & OFPFW_DL_SRC))
 		{
-			if (flow_mod_match->dl_src != entry_match->dl_src)
+			if (memcmp(flow_mod_match->dl_src, entry_match->dl_src,
+			OFP_ETH_ALEN))
 			{
 				continue;
 			}
@@ -570,7 +578,8 @@ static uint8_t openflow_flowtable_find_overlapping_entry(ofp_flow_mod *flow_mod,
 		if (!(ntohl(flow_mod_match->wildcards) & OFPFW_DL_DST)
 		        && !(ntohl(entry_match->wildcards) & OFPFW_DL_DST))
 		{
-			if (flow_mod_match->dl_dst != entry_match->dl_dst)
+			if (memcmp(flow_mod_match->dl_dst, entry_match->dl_dst,
+			OFP_ETH_ALEN))
 			{
 				continue;
 			}
@@ -839,7 +848,8 @@ static uint8_t openflow_flowtable_find_matching_entry(ofp_match *flow_mod_match,
 		if (!(ntohl(flow_mod_match->wildcards) & OFPFW_DL_SRC))
 		{
 			if ((ntohl(entry_match->wildcards) & OFPFW_DL_SRC)
-			        || entry_match->dl_src != flow_mod_match->dl_src)
+			        || memcmp(flow_mod_match->dl_src, entry_match->dl_src,
+			        OFP_ETH_ALEN))
 			{
 				continue;
 			}
@@ -849,7 +859,8 @@ static uint8_t openflow_flowtable_find_matching_entry(ofp_match *flow_mod_match,
 		if (!(ntohl(flow_mod_match->wildcards) & OFPFW_DL_DST))
 		{
 			if ((ntohl(entry_match->wildcards) & OFPFW_DL_DST)
-			        || entry_match->dl_dst != flow_mod_match->dl_dst)
+			        || memcmp(flow_mod_match->dl_dst, entry_match->dl_dst,
+			        OFP_ETH_ALEN))
 			{
 				continue;
 			}
@@ -1113,13 +1124,12 @@ static void openflow_flowtable_delete_entry_at_index(uint32_t i)
 	if (ntohs(flowtable->entries[i].flags) & OFPFF_SEND_FLOW_REM)
 	{
 		openflow_ctrl_iface_send_flow_removed(&flowtable->entries[i],
-				OFPRR_DELETE);
+		        OFPRR_DELETE);
 	}
 
-	flowtable->stats.active_count = htonl(ntohl(
-			flowtable->stats.active_count) - 1);
-	memset(&flowtable->entries[i], 0,
-			sizeof(openflow_flowtable_entry_type));
+	flowtable->stats.active_count = htonl(
+	        ntohl(flowtable->stats.active_count) - 1);
+	memset(&flowtable->entries[i], 0, sizeof(openflow_flowtable_entry_type));
 }
 
 /**
@@ -1619,8 +1629,8 @@ static void openflow_flowtable_update_entry_stats(uint32_t index)
 {
 	time_t now;
 	time(&now);
-	flowtable->entries[index].stats.duration_sec = htonl(difftime(now,
-	        flowtable->entries[index].added));
+	flowtable->entries[index].stats.duration_sec = htonl(
+	        difftime(now, flowtable->entries[index].added));
 	flowtable->entries[index].stats.duration_nsec = 0;
 }
 
@@ -1806,7 +1816,14 @@ static void openflow_flowtable_print_match(ofp_match *match)
 
 	if (!(ntohl(match->wildcards) & OFPFW_DL_VLAN))
 	{
-		printf("\tEthernet VLAN ID: %" PRIu16 "\n", ntohs(match->dl_vlan));
+		if (ntohs(match->dl_vlan) == OFP_VLAN_NONE)
+		{
+			printf("\tEthernet VLAN ID: OFP_VLAN_NONE\n");
+		}
+		else
+		{
+			printf("\tEthernet VLAN ID: %" PRIu16 "\n", ntohs(match->dl_vlan));
+		}
 
 		if (match->dl_vlan != OFP_VLAN_NONE
 		        && !(ntohl(match->wildcards) & OFPFW_DL_VLAN_PCP))
@@ -1848,15 +1865,18 @@ static void openflow_flowtable_print_match(ofp_match *match)
 	{
 		if (!(ntohl(match->wildcards) & OFPFW_NW_PROTO))
 		{
-			if (match->nw_proto == ICMP_PROTOCOL)
+			if (ntohs(match->dl_type) == IP_PROTOCOL
+			        && match->nw_proto == ICMP_PROTOCOL)
 			{
 				printf("\tIP protocol: ICMP\n");
 			}
-			else if (match->nw_proto == TCP_PROTOCOL)
+			else if (ntohs(match->dl_type) == IP_PROTOCOL
+			        && match->nw_proto == TCP_PROTOCOL)
 			{
 				printf("\tIP protocol: TCP\n");
 			}
-			else if (match->nw_proto == UDP_PROTOCOL)
+			else if (ntohs(match->dl_type) == IP_PROTOCOL
+			        && match->nw_proto == UDP_PROTOCOL)
 			{
 				printf("\tIP protocol: UDP\n");
 			}
@@ -1994,8 +2014,15 @@ static void openflow_flowtable_print_action(ofp_action_header *action)
 	{
 		printf("\t\tType: OFPAT_SET_VLAN_VID\n");
 		printf("\t\tLength: %" PRIu16 "\n", ntohs(action->len));
-		printf("\t\tEthernet VLAN ID: %" PRIu16 "\n",
-		        ntohs(((ofp_action_vlan_vid *) action)->vlan_vid));
+		if (ntohs(((ofp_action_vlan_vid *) action)->vlan_vid) == OFP_VLAN_NONE)
+		{
+			printf("\t\tEthernet VLAN ID: OFP_VLAN_NONE\n");
+		}
+		else
+		{
+			printf("\t\tEthernet VLAN ID: %" PRIu16 "\n",
+			        ntohs(((ofp_action_vlan_vid *) action)->vlan_vid));
+		}
 	}
 	else if (ntohs(action->type) == OFPAT_SET_VLAN_PCP)
 	{
@@ -2072,21 +2099,13 @@ static void openflow_flowtable_print_action(ofp_action_header *action)
 }
 
 /**
- * Prints the specified OpenFlow flowtable entry to the console.
+ * Prints the specified OpenFlow flowtable entry to the console without locking
+ * the flowtable.
  *
  * @param index The index of the entry to print.
  */
-void openflow_flowtable_print_entry(uint32_t index)
+static void openflow_flowtable_print_entry_no_lock(uint32_t index)
 {
-	pthread_mutex_lock(&flowtable_mutex);
-
-	if (index < 0 || index >= OPENFLOW_MAX_FLOWTABLE_ENTRIES)
-	{
-		printf("Entry index invalid\n");
-		pthread_mutex_unlock(&flowtable_mutex);
-		return;
-	}
-
 	printf("\n");
 	printf("=========\n");
 	printf("Entry %d\n", index);
@@ -2143,7 +2162,17 @@ void openflow_flowtable_print_entry(uint32_t index)
 	{
 		printf("Entry inactive\n");
 	}
+}
 
+/**
+ * Prints the specified OpenFlow flowtable entry to the console.
+ *
+ * @param index The index of the entry to print.
+ */
+void openflow_flowtable_print_entry(uint32_t index)
+{
+	pthread_mutex_lock(&flowtable_mutex);
+	openflow_flowtable_print_entry_no_lock(index);
 	pthread_mutex_unlock(&flowtable_mutex);
 }
 
@@ -2311,34 +2340,41 @@ static void openflow_flowtable_timeout()
 		uint32_t i;
 		for (i = 0; i < OPENFLOW_MAX_FLOWTABLE_ENTRIES; i++)
 		{
-			time_t now;
-			time(&now);
-
-			uint32_t idle_diff = difftime(now,
-					flowtable->entries[i].last_matched);
-			if (flowtable->entries[i].idle_timeout != 0)
+			if (flowtable->entries[i].active)
 			{
-				if (idle_diff - flowtable->entries[i].idle_timeout > 0)
+				time_t now;
+				time(&now);
+
+				double idle_diff = difftime(now,
+				        flowtable->entries[i].last_matched);
+				if (flowtable->entries[i].idle_timeout != 0)
 				{
-					openflow_flowtable_delete_entry_at_index(i);
-					continue;
+					if (idle_diff > ntohs(flowtable->entries[i].idle_timeout))
+					{
+						verbose(2, "[openflow_flowtable_timeout]:: Entry"
+								" %d idle timeout.", i);
+						openflow_flowtable_delete_entry_at_index(i);
+						continue;
+					}
 				}
-			}
 
-			uint32_t hard_diff = difftime(now,
-					flowtable->entries[i].last_modified);
-			if (flowtable->entries[i].hard_timeout != 0)
-			{
-				if (hard_diff - flowtable->entries[i].hard_timeout > 0)
+				double hard_diff = difftime(now,
+				        flowtable->entries[i].last_modified);
+				if (flowtable->entries[i].hard_timeout != 0)
 				{
-					openflow_flowtable_delete_entry_at_index(i);
-					continue;
+					if (hard_diff > htons(flowtable->entries[i].hard_timeout))
+					{
+						verbose(2, "[openflow_flowtable_timeout]:: Entry"
+								" %d hard timeout.", i);
+						openflow_flowtable_delete_entry_at_index(i);
+						continue;
+					}
 				}
 			}
 		}
 
 		pthread_mutex_unlock(&flowtable_mutex);
-		sleep(10);
+		sleep(1);
 	}
 }
 

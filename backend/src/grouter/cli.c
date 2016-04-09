@@ -92,7 +92,7 @@ int CLIInit(router_config *rarg)
 	registerCLI("spolicy", spolicyCmd, SHELP_SPOLICY, USAGE_SPOLICY, LHELP_SPOLICY); // Check
 	registerCLI("class", classCmd, SHELP_CLASS, USAGE_CLASS, LHELP_CLASS);
 	registerCLI("filter", filterCmd, SHELP_FILTER, USAGE_FILTER, LHELP_FILTER);
-	registerCLI("flowtable", flowtableCmd, SHELP_FLOWTABLE, USAGE_FLOWTABLE, LHELP_FLOWTABLE);
+	registerCLI("openflow", openflowCmd, SHELP_OPENFLOW, USAGE_OPENFLOW, LHELP_OPENFLOW);
 
 	if (rarg->config_dir != NULL)
 		chdir(rarg->config_dir);                  // change to the configuration directory
@@ -1189,7 +1189,7 @@ void spolicyCmd()
 		printf("Scheduling policy: rr (round robin)\n");
 }
 
-void flowtableCmd()
+void openflowCmd()
 {
 	if (!rconfig.openflow)
 	{
@@ -1285,6 +1285,11 @@ void flowtableCmd()
 			}
 		}
 	}
+	else if (next_tok != NULL && !strcmp(next_tok, "reconnect"))
+	{
+		openflow_ctrl_iface_reconnect();
+		return;
+	}
 
-	printf("Unrecognized flowtable command\n");
+	printf("Unrecognized OpenFlow command\n");
 }

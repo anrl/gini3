@@ -385,7 +385,7 @@ def createVOFC(myGINI, options):
         vofcFlags += "gini.support.gini_pid --pid_file_path='%s/%s/%s.pid' " % (options.controllerDir, controller.name, controller.name)
         vofcFlags += "gini.support.gini_module_load --module_file_path='%s/%s/%s.modules' " % (options.controllerDir, controller.name, controller.name)
 
-        command = "screen -d -m -S %s %s %s" % (controller.name, VOFC_PROG_BIN, vofcFlags)
+        command = "screen -d -m -L -S %s %s %s" % (controller.name, VOFC_PROG_BIN, vofcFlags)
 
         oldDir = os.getcwd()
         os.chdir(subControllerDir)

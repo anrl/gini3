@@ -38,6 +38,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <slack/err.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,15 +58,19 @@
 
 // Controller socket file descriptor
 static int32_t ofc_socket_fd;
-pthread_mutex_t ofc_socket_mutex;
+static pthread_mutex_t ofc_socket_mutex;
 
 // Transaction ID counter
 static uint32_t xid = 0;
-pthread_mutex_t xid_mutex;
+static pthread_mutex_t xid_mutex;
 
 // Connection status
 static uint8_t connection_status = 0;
-pthread_mutex_t connection_status_mutex;
+static pthread_mutex_t connection_status_mutex;
+
+// Reconnect requested variable
+static uint8_t reconnect = 0;
+static pthread_mutex_t reconnect_mutex;
 
 /**
  * Gets a transaction ID. This transaction ID will not have been used to send
@@ -103,6 +108,10 @@ static void openflow_ctrl_iface_conn_up()
 	pthread_mutex_lock(&connection_status_mutex);
 	connection_status = 1;
 	pthread_mutex_unlock(&connection_status_mutex);
+
+	pthread_mutex_lock(&reconnect_mutex);
+	reconnect = 0;
+	pthread_mutex_unlock(&reconnect_mutex);
 }
 
 /**
@@ -113,6 +122,16 @@ static void openflow_ctrl_iface_conn_down()
 	pthread_mutex_lock(&connection_status_mutex);
 	connection_status = 0;
 	pthread_mutex_unlock(&connection_status_mutex);
+}
+
+/**
+ * Requests that the switch reconnect to the controller.
+ */
+void openflow_ctrl_iface_reconnect()
+{
+	pthread_mutex_lock(&reconnect_mutex);
+	reconnect = 1;
+	pthread_mutex_unlock(&reconnect_mutex);
 }
 
 /**
@@ -127,6 +146,7 @@ static void openflow_ctrl_iface_conn_down()
 static ofp_header *openflow_ctrl_iface_create_msg(uint8_t type, uint16_t length)
 {
 	ofp_header *msg = malloc(length);
+	memset(msg, 0, length);
 	msg->version = OFP_VERSION;
 	msg->type = type;
 	msg->length = htons(length);
@@ -165,7 +185,8 @@ static int32_t openflow_ctrl_iface_send(void *data, uint32_t len)
 	uint32_t sent = 0;
 	while (sent < len && counter < OPENFLOW_CTRL_IFACE_SEND_TIMEOUT)
 	{
-		int32_t ret = send(ofc_socket_fd, data + sent, len - sent, 0);
+		int32_t ret = send(ofc_socket_fd, ((uint8_t *) data) + sent, len - sent,
+		        0);
 
 		if (ret < 0)
 		{
@@ -545,6 +566,7 @@ static int32_t openflow_ctrl_iface_features_req_rep()
 	if (ret < 0) return ret;
 
 	ret = openflow_ctrl_iface_recv_features_req(msg);
+	;
 	if (ret < 0) return ret;
 
 	ret = openflow_ctrl_iface_send_features_rep(msg->xid);
@@ -647,7 +669,7 @@ static int32_t openflow_ctrl_iface_recv_packet_out(ofp_packet_out *msg)
 	verbose(2, "[openflow_ctrl_iface_parse_message]:: Received"
 			" message from controller of type OFPT_PACKET_OUT.");
 
-	if (ntohs(msg->header.length) != 16)
+	if (ntohs(msg->header.length) < 16)
 	{
 		verbose(1, "[openflow_ctrl_iface_recv_packet_out]:: Unexpected"
 				" message length found in message of type OFPT_PACKET_OUT from"
@@ -802,16 +824,17 @@ int32_t openflow_ctrl_iface_send_packet_in(gpacket_t *packet, uint8_t reason)
 {
 	if (openflow_ctrl_iface_get_conn_state())
 	{
-		uint16_t msg_len = sizeof(ofp_packet_in) + sizeof(gpacket_t);
+		uint16_t msg_len = sizeof(ofp_packet_in) + sizeof(pkt_data_t)
+		        - (sizeof(ofp_packet_in) - offsetof(ofp_packet_in, data));
 		ofp_packet_in *msg = (ofp_packet_in *) openflow_ctrl_iface_create_msg(
 		        OFPT_PACKET_IN, msg_len);
 		msg->header.xid = htonl(openflow_ctrl_iface_get_xid());
 		msg->buffer_id = htonl(-1);
-		msg->total_len = htons(sizeof(gpacket_t));
+		msg->total_len = htons(sizeof(pkt_data_t));
 		msg->in_port = htons(
 		        openflow_config_get_of_port_num(packet->frame.src_interface));
 		msg->reason = reason;
-		memcpy(msg->data, packet, sizeof(gpacket_t));
+		memcpy(msg->data, &packet->data, sizeof(pkt_data_t));
 
 		int32_t ret = openflow_ctrl_iface_send(msg, msg_len);
 		free(msg);
@@ -1393,9 +1416,9 @@ static void openflow_ctrl_iface(void *port)
 		exit(1);
 	}
 
-	verbose(2, "[openflow_ctrl_iface]:: Sleeping for 15 seconds to allow"
-			" interfaces to be configured before connecting to controller.");
-	sleep(15);
+	verbose(2, "[openflow_ctrl_iface]:: Sleeping for 30 seconds to allow"
+			" controller to be configured before connecting.");
+	sleep(30);
 
 	openflow_config_init_phy_ports();
 
@@ -1435,13 +1458,28 @@ static void openflow_ctrl_iface(void *port)
 			do
 			{
 				ret = openflow_ctrl_iface_recv(&msg);
-				if (ret == 0) sleep(1);
+				if (ret == 0)
+				{
+					pthread_mutex_lock(&reconnect_mutex);
+					if (reconnect == 1)
+					{
+						msg = NULL;
+						pthread_mutex_unlock(&reconnect_mutex);
+						break;
+					}
+					pthread_mutex_unlock(&reconnect_mutex);
+
+					sleep(1);
+				}
 			}
 			while (ret == 0);
 
 			if (msg == NULL)
 			{
-				// Controller connection lost
+				// Controller connection lost or reconnect requested
+				pthread_mutex_lock(&ofc_socket_mutex);
+				close(ofc_socket_fd);
+				pthread_mutex_unlock(&ofc_socket_mutex);
 				openflow_ctrl_iface_conn_down();
 				break;
 			}

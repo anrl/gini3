@@ -72,7 +72,7 @@ void qdiscCmd();
 void spolicyCmd();
 void classCmd();
 void filterCmd();
-void flowtableCmd();
+void openflowCmd();
 
 
 #endif

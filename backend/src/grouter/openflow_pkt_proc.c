@@ -159,7 +159,7 @@ static int32_t openflow_pkt_proc_forward_packet_to_port(gpacket_t *packet,
 
 	ofp_port_stats *stats = openflow_config_get_port_stats(of_port);
 	stats->tx_packets = htonll(ntohll(stats->tx_packets) + 1);
-	stats->tx_bytes = htonll(ntohll(stats->tx_bytes) + DEFAULT_MTU);
+	stats->tx_bytes = htonll(ntohll(stats->tx_bytes) + sizeof(pkt_data_t));
 	openflow_config_set_port_stats(of_port, stats);
 	free(stats);
 
@@ -192,7 +192,7 @@ int32_t openflow_pkt_proc_handle_packet(gpacket_t *packet)
 	        packet->frame.src_interface);
 	ofp_port_stats *stats = openflow_config_get_port_stats(of_port);
 	stats->rx_packets = htonll(ntohll(stats->rx_packets) + 1);
-	stats->rx_bytes = htonll(ntohll(stats->rx_bytes) + DEFAULT_MTU);
+	stats->rx_bytes = htonll(ntohll(stats->rx_bytes) + sizeof(pkt_data_t));
 	openflow_config_set_port_stats(of_port, stats);
 	free(stats);
 
@@ -209,7 +209,6 @@ int32_t openflow_pkt_proc_handle_packet(gpacket_t *packet)
 				// Switch configured to drop fragmented IP packets
 				verbose(2, "[openflow_pkt_proc_handle_packet]::"
 						" Dropping fragmented IP packet.");
-				free(packet);
 				return 0;
 			}
 		}
@@ -240,7 +239,6 @@ int32_t openflow_pkt_proc_handle_packet(gpacket_t *packet)
 		}
 
 		free(matching_entry);
-		free(packet);
 		return 0;
 	}
 	else
@@ -248,7 +246,6 @@ int32_t openflow_pkt_proc_handle_packet(gpacket_t *packet)
 		verbose(2, "[openflow_pkt_proc_handle_packet]:: Forwarding packet"
 				" with no flowtable match to controller.");
 		int32_t ret = openflow_ctrl_iface_send_packet_in(packet, OFPR_NO_MATCH);
-		free(packet);
 		return ret;
 	}
 }

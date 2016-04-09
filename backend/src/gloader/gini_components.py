@@ -234,6 +234,7 @@ class VR:
     name = ""
     netIF = None
     cli = False
+    openFlowController = None
 
     def __init__(self, vrName):
         "Initialize the VR class"
