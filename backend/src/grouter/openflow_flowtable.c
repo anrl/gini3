@@ -1117,14 +1117,15 @@ static uint8_t openflow_flowtable_find_identical_entry(ofp_flow_mod* flow_mod,
 /**
  * Deletes the entry with the specified index from the flowtable.
  *
- * @param i The index of the entry to remove.
+ * @param i      The index of the entry to remove.
+ * @param reason The reason for the flow removal.
  */
-static void openflow_flowtable_delete_entry_at_index(uint32_t i)
+static void openflow_flowtable_delete_entry_at_index(uint32_t i,uint8_t reason)
 {
 	if (ntohs(flowtable->entries[i].flags) & OFPFF_SEND_FLOW_REM)
 	{
 		openflow_ctrl_iface_send_flow_removed(&flowtable->entries[i],
-		        OFPRR_DELETE);
+		        reason);
 	}
 
 	flowtable->stats.active_count = htonl(
@@ -1520,7 +1521,7 @@ static int32_t openflow_flowtable_delete(ofp_flow_mod *flow_mod,
 		{
 			verbose(2, "[openflow_flowtable_delete]:: Deleting flowtable entry"
 					" at index %" PRIu32 ".", i);
-			openflow_flowtable_delete_entry_at_index(i);
+			openflow_flowtable_delete_entry_at_index(i, OFPRR_DELETE);
 			start_index = i + 1;
 		}
 		else
@@ -1552,7 +1553,7 @@ static int32_t openflow_flowtable_delete_strict(ofp_flow_mod *flow_mod,
 	{
 		verbose(2, "[openflow_flowtable_delete_strict]:: Deleting flowtable"
 				" entry at index %" PRIu32 ".", i);
-		openflow_flowtable_delete_entry_at_index(i);
+		openflow_flowtable_delete_entry_at_index(i, OFPRR_DELETE);
 	}
 
 	return 0;
@@ -2344,7 +2345,8 @@ static void openflow_flowtable_timeout()
 					{
 						verbose(2, "[openflow_flowtable_timeout]:: Entry"
 								" %d idle timeout.", i);
-						openflow_flowtable_delete_entry_at_index(i);
+						openflow_flowtable_delete_entry_at_index(i,
+								OFPRR_IDLE_TIMEOUT);
 						continue;
 					}
 				}
@@ -2357,7 +2359,8 @@ static void openflow_flowtable_timeout()
 					{
 						verbose(2, "[openflow_flowtable_timeout]:: Entry"
 								" %d hard timeout.", i);
-						openflow_flowtable_delete_entry_at_index(i);
+						openflow_flowtable_delete_entry_at_index(i,
+								OFPRR_HARD_TIMEOUT);
 						continue;
 					}
 				}
