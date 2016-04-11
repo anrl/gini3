@@ -20,7 +20,7 @@
 #define USAGE_SPOLICY		"spolicy action [action specific options]"
 #define USAGE_CLASS		    "class cname [-src ip_spec [<min_port--max_port>]] [-dst ip_spec [<min_port--max_port>]] [-prot num] [-tos tos_spec]"
 #define USAGE_FILTER     	"filter action [action specific options]"
-#define USAGE_OPENFLOW      "flowtable action [action specific options]"
+#define USAGE_OPENFLOW      "openflow action [action specific options]"
 
 
 #define SHELP_HELP          "display help information on given command"
@@ -40,7 +40,7 @@
 #define SHELP_SPOLICY		"set the inter queue scheduler"
 #define SHELP_CLASS		    "create add, del, and view classifier information"
 #define SHELP_FILTER		"create add, del, and view filtering rules; this uses class rules to group packets"
-#define SHELP_OPENFLOW      "create, delete, and view OpenFlow flowtable entries"
+#define SHELP_OPENFLOW      "view OpenFlow switch information or force the OpenFlow switch to reconnect to the controller"
 
 
 /*
