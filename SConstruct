@@ -265,7 +265,16 @@ grouter_libs = Split ("""readline
                          util
                          m""")
 
-grouter = grouter_env.Program(grouter_build_dir + "/grouter", Glob(grouter_build_dir + "/*.c"), LIBS=grouter_libs)
+grouter_test_objects = []
+grouter_other_objects = []
+for file in os.listdir(grouter_dir):
+    if file.endswith(".c"):
+        if file == "cli.c" or file == "grouter.c":
+            grouter_other_objects.append(grouter_env.Object(grouter_build_dir + "/" + file))
+        else:
+            grouter_test_objects.append(grouter_env.Object(grouter_build_dir + "/" + file))
+        
+grouter = grouter_env.Program(grouter_build_dir + "/grouter", grouter_test_objects + grouter_other_objects, LIBS=grouter_libs)
 
 env.Install(libdir + "/grouter/", grouter)
 post_chmod(libdir + "/grouter/grouter")
@@ -527,17 +536,25 @@ test_dir = backend_dir + '/tests'
 test_build_dir = src_dir + '/build/tests'
 test_include = src_dir + '/backend/third-party/mut'
 testenv = env.Clone()
-testenv.Tool('test')
 testenv.Append(CPPPATH=[test_include])
 testenv.Append(CFLAGS='-g')
 testenv.Append(CFLAGS='-DHAVE_PTHREAD_RWLOCK=1')
 testenv.Append(CFLAGS='-DHAVE_GETOPT_LONG')
+testenv.VariantDir(test_build_dir, test_dir, duplicate=0)
+tests = []
 
 grouter_test_dir = test_dir + '/grouter'
-grouter_test_src_dir = test_build_dir + '/grouter-src'
 grouter_test_build_dir = test_build_dir + '/grouter'
 grouter_test_env = testenv.Clone()
 grouter_test_env.Append(CPPPATH=[grouter_include])
-VariantDir(grouter_test_build_dir,grouter_test_dir, duplicate=0)
-VariantDir(grouter_test_src_dir,grouter_dir, duplicate=0)
-grouter_test_env.addAllTests(grouter_test_build_dir, grouter_test_src_dir, ['grouter.c', 'cli.c'], LIBS=grouter_libs)
+grouter_test_env.VariantDir(grouter_test_build_dir, grouter_test_dir, duplicate=0)
+
+for file in os.listdir(grouter_test_dir):
+    if file.endswith("_t.c"):
+        tests.append(grouter_test_env.Program(
+            os.path.join(grouter_test_build_dir, file[:-2]), 
+            [os.path.join(grouter_test_build_dir, file)] + grouter_test_objects, 
+            LIBS=grouter_libs))
+
+test_alias = Alias('test', tests, [test[0].abspath for test in tests])
+AlwaysBuild(test_alias)

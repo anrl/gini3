@@ -7,3 +7,4 @@ compiler:
 install: .test-scripts/install-deps.sh
 
 script: scons
+after_success: scons test
