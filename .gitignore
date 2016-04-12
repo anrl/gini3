@@ -20,3 +20,4 @@ tags
 .project*
 .pydevproject*
 .settings
+backend/src/pox/ext/gini/samples/*.xml
