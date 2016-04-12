@@ -10,11 +10,11 @@ import random
 from pox.core import core
 import pox.openflow.libopenflow_01 as of
 
-def packet_in(event):.
+def packet_in(event):
     if random.random() >= 0.25:
         msg = of.ofp_packet_out(data = event.ofp)
         msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-        conn.send(event.connection)
+        event.connection.send(msg)
 
 def launch():
     core.openflow.addListenerByName("PacketIn", packet_in)
