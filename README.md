@@ -1,4 +1,4 @@
-GINI Toolkit README 
+# GINI Toolkit 
 
 [![Build Status](https://travis-ci.org/michaelkourlas/gini.svg?branch=master)](https://travis-ci.org/michaelkourlas/gini)
 
