@@ -1267,7 +1267,7 @@ void openflowCmd()
 			}
 		}
 	}
-	else if (next_tok != NULL && !strcmp(next_tok, "ports"))
+	else if (next_tok != NULL && !strcmp(next_tok, "port"))
 	{
 		next_tok = strtok(NULL, " \n");
 		if (next_tok != NULL && !strcmp(next_tok, "all"))

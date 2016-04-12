@@ -46,21 +46,10 @@ static void openflow_flowtable_set_flow_stats_defaults(ofp_flow_stats *stats)
  */
 static void openflow_flowtable_set_defaults(void)
 {
+	pthread_mutex_lock(&flowtable_mutex);
+
 	// Clear flowtable
 	memset(flowtable, 0, sizeof(openflow_flowtable_type));
-
-	// Default flowtable entry (send all packets to normal router processing)
-	flowtable->entries[0].active = 1;
-	flowtable->entries[0].match.wildcards = htonl(OFPFW_ALL);
-	flowtable->entries[0].priority = htonl(1);
-	flowtable->entries[0].actions[0].active = 1;
-	ofp_action_output output_action;
-	output_action.type = htons(OFPAT_OUTPUT);
-	output_action.len = htons(8);
-	output_action.port = htons(OFPP_NORMAL);
-	memcpy(&flowtable->entries[0].actions[0].header, &output_action,
-	        sizeof(ofp_action_output));
-	openflow_flowtable_set_flow_stats_defaults(&flowtable->entries[0].stats);
 
 	// Initialize table stats
 	flowtable->stats.table_id = 0;
@@ -69,6 +58,29 @@ static void openflow_flowtable_set_defaults(void)
 	flowtable->stats.name[OFP_MAX_TABLE_NAME_LEN - 1] = '\0';
 	flowtable->stats.max_entries = htonl(OPENFLOW_MAX_FLOWTABLE_ENTRIES);
 	flowtable->stats.wildcards = htonl(OFPFW_ALL);
+
+	// Default flowtable entry (send all packets to normal router processing)
+	ofp_flow_mod *flow_mod = calloc(sizeof(ofp_flow_mod) +
+			sizeof(ofp_action_output), 1);
+
+	flow_mod->header.length = htons(sizeof(ofp_flow_mod) +
+			sizeof(ofp_action_output));
+	flow_mod->header.type = OFPT_FLOW_MOD;
+	flow_mod->header.version = OFP_VERSION;
+	flow_mod->header.xid = 0;
+
+	flow_mod->command = OFPFC_ADD;
+	flow_mod->match.wildcards = htonl(OFPFW_ALL);
+	flow_mod->priority = htonl(1);
+
+	flow_mod->actions[0].type = htons(OFPAT_OUTPUT);
+	flow_mod->actions[0].len = htons(sizeof(ofp_action_output));
+	((ofp_action_output *) &flow_mod->actions[0])->port = htons(OFPP_NORMAL);
+
+	pthread_mutex_unlock(&flowtable_mutex);
+
+	openflow_flowtable_modify(flow_mod, NULL, NULL);
+	free(flow_mod);
 }
 
 /**
@@ -77,11 +89,10 @@ static void openflow_flowtable_set_defaults(void)
 void openflow_flowtable_init(void)
 {
 	pthread_mutex_lock(&flowtable_mutex);
-
 	flowtable = malloc(sizeof(openflow_flowtable_type));
-	openflow_flowtable_set_defaults();
-
 	pthread_mutex_unlock(&flowtable_mutex);
+
+	openflow_flowtable_set_defaults();
 }
 
 /**

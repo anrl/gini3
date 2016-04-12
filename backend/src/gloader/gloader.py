@@ -323,7 +323,10 @@ def createVR(myGINI, options):
         startOut.close()
         os.chmod("startit.sh",0755)
         system("./startit.sh")
-        print "[OK]"
+        print "[OK]",
+        if router.openFlowController:
+            print " (OF port: " + port + ")",
+        print ""    
         os.chdir(oldDir)
         # Wait after starting router so they have time to create sockets
         time.sleep(GROUTER_WAIT)
@@ -332,7 +335,6 @@ def createVR(myGINI, options):
 def createVM(myGINI, options):
     "create UML config file, and start the UML"
     makeDir(options.umlDir)
-    print myGINI.vm
     for uml in myGINI.vm:
         print "Starting UML %s...\t" % uml.name,
         subUMLDir = "%s/%s" % (options.umlDir, uml.name)

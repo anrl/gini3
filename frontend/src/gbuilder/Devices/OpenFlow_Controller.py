@@ -1,6 +1,6 @@
 from Core.Connection import *
 from Core.Device import *
-from Core.globals import environ, mainWidgets, GINI_ROOT, GINI_HOME
+from Core.globals import environ, mainWidgets, GINI_ROOT, GINI_HOME, defaultOptions
 from PyQt4.QtCore import QPoint
 from PyQt4.QtGui import QGraphicsObject
 from Core.Attachable import *
@@ -15,13 +15,17 @@ class OpenFlow_Controller(Attachable):
         self.modulesFilePath = os.path.join(GINI_HOME, "data", self.getName(), self.getName() + ".modules")
 
         loadModuleMenu = self.menu.addMenu("Load Module")
+        loadModuleMenu.setPalette(defaultOptions["palette"])
         self.modulesPath = os.path.join(GINI_ROOT, "lib/gini/pox/ext/gini")
         
         self.coreMenu = loadModuleMenu.addMenu("Core")
+        self.coreMenu.setPalette(defaultOptions["palette"])
         self.coreMenu.aboutToShow.connect(self.showCoreMenu)
         self.customMenu = loadModuleMenu.addMenu("Custom")
+        self.customMenu.setPalette(defaultOptions["palette"])
         self.customMenu.aboutToShow.connect(self.showCustomMenu)
         self.samplesMenu = loadModuleMenu.addMenu("Samples")
+        self.samplesMenu.setPalette(defaultOptions["palette"])
         self.samplesMenu.aboutToShow.connect(self.showSamplesMenu)
 
         self.lightPoint = QPoint(-10,-3)
