@@ -427,7 +427,7 @@ int32_t openflow_pkt_proc_perform_action(ofp_action_header *header,
 		verbose(2, "[openflow_pkt_proc_perform_action]:: Performing"
 				" OFPAT_SET_DL_SRC action.");
 		ofp_action_dl_addr *dl_addr_action = (ofp_action_dl_addr *) header;
-		COPY_MAC(&packet->data.header.dst, &dl_addr_action->dl_addr);
+		COPY_MAC(&packet->data.header.src, &dl_addr_action->dl_addr);
 		return 0;
 	}
 	else if (header_type == OFPAT_SET_DL_DST)
