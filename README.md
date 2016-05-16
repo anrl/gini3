@@ -157,4 +157,4 @@ Notes
 The package "rxvt" might be needed, if already not available.
 GINI should work on all linux distributions with the required dependencies 
 installed.  If you have any problems on any distribution and/or 
-release, please e-mail the mailing list at <gini at cs dot mcgill dot ca>.
+release, please e-mail the mailing list at gini@cs.mcgill.ca
