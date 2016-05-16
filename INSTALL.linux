@@ -1,6 +1,6 @@
-GINI Toolkit Version 2.0.0
+GINI Toolkit Version 3.0.0
 
-Basic Installation - Linux
+Basic Installation - Ubuntu (32-bit)
 ==========================
 
 To install GINI, you need the following libraries and applications:
@@ -46,21 +46,16 @@ To enable the new settings, run the following:
 
     source $HOME/.bashrc
 
-Now we are ready to configure and install GINI.  To grab the latest stable
-GINI source code, run the following:
+Now, get the gini source. You can issue the following command to get the gini source. Unpack gini source outside $GINI_HOME/gini (this is reserved for the GINI installation). You may create a directory such as $HOME/gini-src or something else of your liking.
 
-    svn co https://svn.origo.ethz.ch/gini/stable gini-src
+  git clone git://github.com/anrl/gini3.git
 
-If you are using Python 2.5, before installing, you must run the following 
-command to configure pyXML:
+Go into source directory and issue the following commands.
 
-    `echo 'oldxml' > /usr/lib/python2.5/site-packages/oldxml.pth`
+  scons 
+  scons install
 
-Within the gini-src directory, run the following to install both the frontend
-and backend:
-
-    scons install
-
+This should install GINI unless you get some errors in one or more of the above steps. 
 To only install the frontend, run:
 
     cd frontend && scons install
@@ -69,9 +64,11 @@ Likewise, to only install the backend, run:
 
     cd backend && scons install
 
+Once installed, issue the gbuilder command to start the graphical interface. 
+
 Notes
 =====
-
+The package "rxvt" might be needed, if already not available.
 GINI should work on all linux distributions with the required dependencies 
 installed.  If you have any problems on any distribution and/or 
 release, please e-mail the mailing list at <gini at cs dot mcgill dot ca>.
