@@ -5,6 +5,9 @@ from SimpleXMLRPCServer import SimpleXMLRPCRequestHandler
 from yrouterAPI import *
 from XmlAPI import *
 from Database import *
+import socket
+import fcntl
+import struct
 
 class StationEntity:
 	def __init__(self, ID, CurrWlan, MaxWlan, IsPortal):
@@ -142,7 +145,16 @@ class WGINI_Server:
 			run_yrouter(interfaces, Station.ID)
 
 		return "Create: Topology %d deployed" %TopID
-		
+
+def get_ip_address(ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return socket.inet_ntoa(fcntl.ioctl(
+        s.fileno(),
+        0x8915,  # SIOCGIFADDR
+        struct.pack('256s', ifname[:15])
+    )[20:24])
+
+
 if __name__== "__main__":
-	wgini_server = WGINI_Server("192.168.54.121", 60000)
+	wgini_server = WGINI_Server(get_ip_address('eth1'), 60000)
 	wgini_server.StartServer()
