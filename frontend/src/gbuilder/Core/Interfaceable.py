@@ -1,14 +1,16 @@
 """A device that can have interfaces"""
 
 from Device import *
-from Attachable import *
 
-class Interfaceable(Attachable):
+class Interfaceable(Device):
     def __init__(self):
         """
         Create a device that can have interfaces.
         """
-        Attachable.__init__(self)
+        Device.__init__(self)
+
+        self.menu.addAction("Restart", self.restart)
+        self.menu.addAction("Stop", self.terminate)
 
         self.adjacentRouterList = []
         self.adjacentSubnetList = []
@@ -22,8 +24,54 @@ class Interfaceable(Attachable):
         tooltip = self.getName()
         for interface in self.getInterfaces():
             tooltip += "\n\nTarget: " + interface[QtCore.QString("target")].getName() + "\n"
-            tooltip += "IP: " + interface[QtCore.QString("ipv4")]          
+            tooltip += "IP: " + interface[QtCore.QString("ipv4")]
         self.setToolTip(tooltip)
+
+    def attach(self):
+        """
+        Attach to corresponding device on backend.
+        """
+
+        base = "ssh -t " + options["username"] + "@" + options["server"]
+
+        screen = " screen -r "
+        if self.device_type == "Wireless_access_point":
+            screen += "WAP_%d" % self.getID()
+	else:
+            name = self.getName()
+            pid = mainWidgets["tm"].getPID(name)
+            if not pid:
+                return
+            screen += pid + "." + name
+
+        command = ""
+
+        window_name = str(self.getProperty("name"))  # the strcast is necessary for cloning
+        if(self.getName() != window_name):
+            window_name += " (" + self.getName() + ")"
+        if environ["os"] == "Windows":
+
+            startpath = environ["tmp"] + self.getName() + ".start"
+            try:
+                outfile = open(startpath, "w")
+                outfile.write(screen)
+                outfile.close()
+            except:
+                mainWidgets["log"].append("Failed to write to start file!")
+                return
+
+            command += "putty -"
+            if options["session"]:
+                command += "load " + options["session"] + " -l " + options["username"] + " -t"
+            else:
+                command += base
+            command += " -m \"" + startpath + "\""
+        else:
+            command += "xterm -T \"" + window_name + "\" -e \"" + base + screen + "\""
+
+        self.shell = subprocess.Popen(str(command), shell=True)#ShellStarter(command)
+        #self.shell.start()
+
 
     def addInterface(self, node):
         """
@@ -31,8 +79,8 @@ class Interfaceable(Attachable):
         """
         for interface in self.interfaces:
             if interface[QtCore.QString("target")] == node:
-                return         
-        
+                return
+
         self.interfaces.append({
             QtCore.QString("target"):node,
             QtCore.QString("ipv4"):QtCore.QString(""),
@@ -51,7 +99,7 @@ class Interfaceable(Attachable):
 
         if interface:
             self.interfaces.remove(interface)
-        
+
     def getInterfaces(self):
         """
         Return the list of interfaces.
@@ -72,7 +120,7 @@ class Interfaceable(Attachable):
             for interface in self.interfaces:
                 if interface[QtCore.QString("target")] == node:
                     return interface
-            
+
     def getInterfaceProperty(self, propName, node=None, subnet=None, index=0):
         """
         Return an interface property specified by node or subnet.
@@ -82,7 +130,7 @@ class Interfaceable(Attachable):
         interface = self.getInterface(node, subnet)
         if interface:
             return interface[QtCore.QString(propName)]
-         
+
     def setInterfaceProperty(self, prop, value, node=None, subnet=None, index=0):
         """
         Set an interface property specified by node or subnet.
@@ -94,7 +142,7 @@ class Interfaceable(Attachable):
             if not interface:
                 return
             interface[QtCore.QString(prop)] = QtCore.QString(value)
-        
+
         if prop == "ipv4":
             self.generateToolTip()
 
@@ -141,7 +189,7 @@ class Interfaceable(Attachable):
         """
         table = self.getTable(target)
         table.remove(entry)
-        
+
     def addAdjacentRouter(self, router, interface):
         """
         Add a router to the list of adjacent ones for route computations.
@@ -188,18 +236,18 @@ class Interfaceable(Attachable):
             if sub == subnet:
                 return True
         return False
-    
+
     def searchSubnet(self, subnet):
         """
         Search the specified subnet in the whole network.
         """
         routerList=self.adjacentRouterList[:]
-        
+
         # Save all found routers in the list, so that we don't visit a router twice
         foundList=[]
         for r in routerList:
             foundList.append(r[0])
-            
+
         while len(routerList) > 0:
             theOne = routerList.pop(0)
             if theOne[0].hasSubnet(subnet):
@@ -208,7 +256,7 @@ class Interfaceable(Attachable):
                 # Add its adjacent router list to the list
                 for router, interface in theOne[0].getAdjacentRouters():
                     # Check if the router is already visited or is in the to be visited list
-                    if not router in foundList: 
+                    if not router in foundList:
                         newOne = [router, theOne[1]]
                         routerList.append(newOne)
                     foundList.append(router)
@@ -246,7 +294,7 @@ class Interfaceable(Attachable):
                                   subnet,
                                   target)
         else:
-            if self.device_type == "Router":
+            if self.device_type == "Router" or self.device_type == "yRouter":
                 interface = self.getInterface(None, subnet)
                 self.addEntry(interface[QtCore.QString("mask")],
                               "0.0.0.0",

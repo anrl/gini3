@@ -3,7 +3,7 @@
 from PyQt4 import QtCore, QtGui
 from Core.globals import mainWidgets
 from Dockable import *
-    
+
 class StatsWindow(Dockable):
     def __init__(self, name, parent = None):
         """
@@ -32,7 +32,7 @@ class StatsWindow(Dockable):
                 client.send("wstats " + self.name)
         else:
             self.hide()
-                     
+
     def updateStats(self, stats):
         """
         Receive updated stats from the server.

@@ -20,7 +20,7 @@ class TabWidget(QtGui.QTabWidget):
         """
         self.timer.stop()
         self.setMinimumSize(400, 300)
-    
+
     def setGeometry(self, rect):
         """
         Set the widget geometry.

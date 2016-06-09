@@ -18,7 +18,7 @@ class TextEdit(QtGui.QTextEdit):
         menu = self.createStandardContextMenu()
         menu.setPalette(defaultOptions["palette"])
         menu.exec_(event.globalPos())
-        
+
 class LogWindow(Dockable):
     def __init__(self, title, parent = None):
         """
@@ -42,7 +42,3 @@ class LogWindow(Dockable):
         Copy selected text from the log.
         """
         self.log.copy()
-
-            
-
-    

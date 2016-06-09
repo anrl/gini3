@@ -75,7 +75,7 @@ class TextItem(QtGui.QGraphicsTextItem):
         self.connect(self.offsetTimer, QtCore.SIGNAL("timeout()"), self.changeOffset)
         self.restartTimer.start(4000)
         self.offsetTimer.start(40)
-        
+
     def restart(self):
         """
         Move the gradient offset back into the initial position.
@@ -101,16 +101,16 @@ class TextItem(QtGui.QGraphicsTextItem):
             if rightGradient > adjusted.right() + 50:
                 self.shining = False
                 return
-            
+
             gradient = QtGui.QLinearGradient(self.offset,0,rightGradient,0)
             self.offset += 8
-            
+
             gradient.setColorAt(0, QtGui.QColor(160,160,160,128))
             gradient.setColorAt(0.5, QtGui.QColor(255,255,255,128))
             gradient.setColorAt(1, QtGui.QColor(160,160,160,128))
             self.gradientBrush = QtGui.QBrush(gradient)
             self.update()
-        
+
     def center(self):
         """
         Center the text item.
@@ -119,7 +119,7 @@ class TextItem(QtGui.QGraphicsTextItem):
         scpos = mainWidgets["canvas"].mapToScene(cpos)
         tpos = scpos - QtCore.QPointF(self.boundingRect().width() / 2, 0)
         self.setPos(tpos)
-        
+
     def paint(self, painter, option, widget=0):
         """
         Draw the text item.
@@ -148,7 +148,7 @@ class TutorialEdge(Edge):
         Get the endpoints of this edge.
         """
         return self.p1, self.p2
-    
+
     def paint(self, painter, option, widget=None):
         """
         Draw the edge.
@@ -159,7 +159,7 @@ class TutorialEdge(Edge):
 
     def contextMenu(self, pos):
         pass
-        
+
 class TutorialNode(Node):
     def __init__(self, itemType):
         """
@@ -170,7 +170,7 @@ class TutorialNode(Node):
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, False)
         self.setAcceptDrops(True)
         self.dragOver = False
-        
+
     def paint(self, painter, option, widget):
         """
         Draw the node.
@@ -200,7 +200,7 @@ class TutorialNode(Node):
         if self.device_type != mime.text():
             self.dragOver = False
             return
-        
+
         node = deviceTypes[str(mime.text())]
         node = node()
 
@@ -222,7 +222,7 @@ class TutorialNode(Node):
 
     def dragLeaveEvent(self, event):
         """
-        Handle a drag event leaving the node.  
+        Handle a drag event leaving the node.
         """
         self.dragOver = False
 
@@ -245,9 +245,9 @@ class Tutorial(View):
         scene.setItemIndexMethod(QtGui.QGraphicsScene.NoIndex)
         scene.setSceneRect(-175, -160, 350, 320)
         self.setScene(scene)
-        
+
         self.timer = QtCore.QTimer()
-        
+
         self.connect(scene, QtCore.SIGNAL("selectionChanged()"), self.select)
         self.connect(mainWidgets["properties"].model, QtCore.SIGNAL("dataChanged(QModelIndex,QModelIndex)"), self.propertiesChanged)
         self.connect(mainWidgets["interfaces"].rightScroll, QtCore.SIGNAL("clicked()"), self.navigateInterfaces)
@@ -256,7 +256,7 @@ class Tutorial(View):
         self.connect(mainWidgets["main"].startServerAct, QtCore.SIGNAL("triggered()"), self.startServer)
         self.connect(mainWidgets["main"].runAct, QtCore.SIGNAL("triggered()"), self.run)
         self.connect(mainWidgets["main"].stopAct, QtCore.SIGNAL("triggered()"), self.stop)
-        
+
 
     def addStep(self, message, angle, pos=QtCore.QPoint()):
         """
@@ -266,7 +266,7 @@ class Tutorial(View):
         if angle == None:
             self.arrows.append(None)
             return
-        
+
         arrow = Arrow(angle)
         arrow.setPos(pos)
         self.arrows.append(arrow)
@@ -303,7 +303,7 @@ class Tutorial(View):
                      3 * math.pi / 4, QtCore.QPointF(155,-155))
         self.addStep("The tutorial is finished.  Most of the basics have been covered.\nFor more information, please consult the FAQ in the help menu.\nYou can exit the tutorial by closing this topology.",
                      None)
-        
+
         uml1 = TutorialNode("UML")
         uml2 = TutorialNode("UML")
         uml3 = TutorialNode("UML")
@@ -311,7 +311,7 @@ class Tutorial(View):
         router = TutorialNode("Router")
         subnet1 = TutorialNode("Subnet")
         subnet2 = TutorialNode("Subnet")
-        
+
         scene = self.scene()
         scene.addItem(uml1)
         scene.addItem(uml2)
@@ -347,7 +347,7 @@ class Tutorial(View):
         if self.currentArrow:
             self.currentArrow.stop()
             self.scene().removeItem(self.currentArrow)
-            
+
         self.index += 1
         if self.index == len(self.arrows):
             self.currentArrow = None
@@ -366,7 +366,7 @@ class Tutorial(View):
             return
         self.index -= 1
         self.display()
-        
+
     def display(self):
         """
         Refresh the display with updated arrows and text.
@@ -384,7 +384,7 @@ class Tutorial(View):
         View.resizeEvent(self, event)
         if self.text:
             self.text.center()
-        
+
     def createConnection(self, sourceNode, destNode):
         """
         Reimplemented connecting as a step in the tutorial.
@@ -394,7 +394,7 @@ class Tutorial(View):
 
         scene = self.scene()
         con = Connection(sourceNode, destNode)
-        
+
         p1 = sourceNode.pos()
         p2 = destNode.pos()
         cItems = scene.collidingItems(con)
@@ -406,11 +406,11 @@ class Tutorial(View):
                     scene.addItem(con)
                     destNode.nudge()
                     break
-        
+
         for item in scene.items():
             if isinstance(item, TutorialEdge):
                 return
-            
+
         self.next()
 
     def select(self):
@@ -480,7 +480,7 @@ class Tutorial(View):
         """
         if self.index == 8:
             self.timer.stop()
-            
+
         self.next()
 
     def startServer(self):

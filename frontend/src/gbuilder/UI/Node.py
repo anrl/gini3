@@ -7,13 +7,13 @@ if sys.version_info < (2, 6):
 else:
     import subprocess
 from PyQt4 import QtCore, QtGui
-from Core.globals import options, environ, mainWidgets, defaultOptions
+from Core.globals import options, environ, mainWidgets, defaultOptions, availableyRouters, usedyRouters
 from Properties import *
 from Core.Item import *
 # from StatsWindow import *
 
 class DropItem(QtGui.QGraphicsItem):
-    
+
     def __init__(self, itemType=None):
         """
         Create a draggable item, which can be dropped into the canvas.
@@ -21,8 +21,8 @@ class DropItem(QtGui.QGraphicsItem):
         QtGui.QGraphicsItem.__init__(self)
         if itemType:
             self.device_type = itemType
-        
-        self.image = QtGui.QImage(environ["images"] + self.device_type + ".gif")  
+
+        self.image = QtGui.QImage(environ["images"] + self.device_type + ".gif")
         if self.image.isNull():
             mainWidgets["log"].append("Unknown node type " + str(self.device_type))
             return
@@ -35,7 +35,7 @@ class DropItem(QtGui.QGraphicsItem):
             self.setEnabled(False)
         else:
             self.setToolTip(self.device_type.center(21) + "\nDrag onto the canvas.")
-    
+
     def paint(self, painter, option, widget):
         """
         Draw the representation.
@@ -46,8 +46,11 @@ class DropItem(QtGui.QGraphicsItem):
             transparency.fill(QtGui.qRgba(0,0,0,50))
             painter.drawImage(QtCore.QPoint(-self.image.width()/2, -self.image.height()/2), transparency)
         painter.drawImage(QtCore.QPoint(-self.image.width()/2, -self.image.height()/2), self.image)
-        painter.drawText(QtCore.QRectF(-70, self.image.height()/2, 145, 60), self.device_type, QtGui.QTextOption(QtCore.Qt.AlignHCenter))
-        
+	device_text = self.device_type
+	if self.device_type == "yRouter":
+	    device_text += " (" + str(len(availableyRouters)) + ")"
+        painter.drawText(QtCore.QRectF(-70, self.image.height()/2, 145, 60), device_text, QtGui.QTextOption(QtCore.Qt.AlignHCenter))
+
     def boundingRect(self):
         """
         Get the bounding rectangle of the item.
@@ -55,11 +58,11 @@ class DropItem(QtGui.QGraphicsItem):
         rect = self.image.rect()
         toR = QtCore.QRectF(rect.left() - rect.width()/2, rect.top() - rect.height()/2, rect.width(), rect.height())
         return toR
-        
+
     def mousePressEvent(self, event):
         """
         Handle the mouse events on this item.
-        """        
+        """
         if event.button() != QtCore.Qt.LeftButton:
             event.ignore()
             return
@@ -73,7 +76,7 @@ class DropItem(QtGui.QGraphicsItem):
         drag.setHotSpot(QtCore.QPoint(15, 30))
 
         drag.start()
-    
+
 class Node(DropItem, Item):
 
     def __init__(self, itemType = None):
@@ -82,25 +85,42 @@ class Node(DropItem, Item):
         """
         self.edgeList = []
         DropItem.__init__(self, itemType)
-        
-        itemTypes = nodeTypes[self.device_type]
-        index = self.findNextIndex(itemTypes[self.device_type])
-        if index == 0:
-            print "Node.__init__: I have raise an exception."
-            raise Exception
+	itemTypes = nodeTypes[self.device_type]
+	index = self.findNextIndex(itemTypes[self.device_type])
+
+	if index == 0:
+	    if self.device_type == "yRouter":
+		popup = mainWidgets["popup"]
+		popup.setWindowTitle("Cannot add yRouter")
+		popup.setText("There are no yRouters available to add to the topology!")
+		popup.show()
+		return
+	    print "Node.__init__: I have raised an exception."
+	    raise Exception
+
+	if self.device_type == "yRouter":
+	    yRouter = availableyRouters.pop(0)
+	    usedyRouters[index] = yRouter
+	    if mainWidgets["drop"].commonDropArea.yRouterDrop is not None:
+		mainWidgets["drop"].commonDropArea.yRouterDrop.update()
+	    if mainWidgets["drop"].netDropArea.yRouterDrop is not None:
+		mainWidgets["drop"].netDropArea.yRouterDrop.update()
+
+
         name = self.device_type + "_%d" % index
-        self.properties = {}
+	self.properties = {}
         self.setProperty("Name", name)
+        self.setProperty("name", name)
         self.interfaces = []
-        
+
         self.newPos = QtCore.QPointF()
         self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
         self.setZValue(1)
         self.setToolTip(name)
-        
+
         self.shell = None
-        
+
         self.status = None
         self.inc = 4
         self.color = QtGui.QColor(0,0,0)
@@ -125,23 +145,29 @@ class Node(DropItem, Item):
         """
         Find the next index for the node's type.
         """
-        firstPass = True
-        newIndex = index + 1
-        if newIndex > 126:
-            newIndex = 1
-            firstPass = False
-        scene = mainWidgets["canvas"].scene()
-        while scene.findItem(self.device_type + "_%d" % newIndex) or newIndex == index:
-            newIndex += 1
+	itemTypes = nodeTypes[self.device_type]
+	if self.device_type == "yRouter":
+	    if not availableyRouters:
+		return 0
+	    newIndex = availableyRouters[0]['ID']
+	    itemTypes[self.device_type] = len(usedyRouters) + 1
+	else:
+	    firstPass = True
+            newIndex = index + 1
             if newIndex > 126:
-                if not firstPass:
-                    return 0
-                newIndex = 1
-                firstPass = False
-        itemTypes = nodeTypes[self.device_type]
-        itemTypes[self.device_type] = newIndex
+		newIndex = 1
+        	firstPass = False
+            scene = mainWidgets["canvas"].scene()
+            while scene.findItem(self.device_type + "_%d" % newIndex) or newIndex == index:
+		newIndex += 1
+		if newIndex > 126:
+                    if not firstPass:
+               		return 0
+                    newIndex = 1
+                    firstPass = False
+            itemTypes[self.device_type] = newIndex
         return newIndex
-            
+
     def setIndex(self, index):
         """
         Set the index of the node.
@@ -151,19 +177,20 @@ class Node(DropItem, Item):
             itemTypes[self.device_type] = index
         name = self.device_type + "_%d" % index
         self.setProperty("Name", name)
+        self.setProperty("name", name)
         self.setToolTip(name)
-        
+
     def setStatus(self, status):
         """
         Set the status of the node.
         """
         if self.status == status:
             return
-        if not self.status and self.device_type == "Wireless_access_point":                
+        if not self.status and self.device_type == "Wireless_access_point":
             client = mainWidgets["client"]
             if client:
                 client.send("attachdetach %d" % self.getID())
-            
+
         self.status = status
 
         if not status:
@@ -196,7 +223,7 @@ class Node(DropItem, Item):
         """
         if not options["glowingLights"] or not self.status:
             return
-        
+
         currentGreen = self.color.green()
         if currentGreen == 255:
             self.inc = -4
@@ -208,7 +235,7 @@ class Node(DropItem, Item):
             self.inc = -4
         elif currentRed == 127:
             self.inc = 4
-          
+
         if self.status == "attached":
             self.color.setGreen(self.color.green() + self.inc)
         elif self.status == "detached":
@@ -216,7 +243,7 @@ class Node(DropItem, Item):
             self.color.setRed(self.color.red() + self.inc)
         else:
             self.color.setRed(self.color.red() + self.inc)
-    
+
     def paint(self, painter, option, widget):
         """
         Draw the representation and its name.
@@ -224,12 +251,12 @@ class Node(DropItem, Item):
         painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform, options["smoothing"])
         painter.drawImage(QtCore.QPoint(-self.image.width()/2, -self.image.height()/2), self.image)
         if options["names"]:
-            painter.drawText(QtCore.QRectF(-90, self.image.height()/2, 180, 60), self.getProperty("Name"), QtGui.QTextOption(QtCore.Qt.AlignHCenter))
+            painter.drawText(QtCore.QRectF(-90, self.image.height()/2, 180, 60), self.getProperty("name"), QtGui.QTextOption(QtCore.Qt.AlignHCenter))
 
         if self.status:
             painter.setBrush(self.color)
             painter.drawEllipse(self.lightPoint, 5, 5)
-                
+
         painter.setBrush(QtCore.Qt.NoBrush)
 
         if self.isSelected():
@@ -262,7 +289,7 @@ class Node(DropItem, Item):
         if not self.scene() or self.scene().mouseGrabberItem() is self:
             self.newPos = self.pos()
             return
-    
+
         # Sum up all forces pushing this item away.
         xvel = 0.0
         yvel = 0.0
@@ -287,7 +314,7 @@ class Node(DropItem, Item):
                 pos = self.mapFromItem(edge.sourceNode(), 0, 0)
             xvel += pos.x() / weight
             yvel += pos.y() / weight
-    
+
         if QtCore.qAbs(xvel) < 0.1 and QtCore.qAbs(yvel) < 0.1:
             xvel = yvel = 0.0
 
@@ -363,7 +390,7 @@ class Node(DropItem, Item):
                 popup.setText("Cannot move devices other than Mobile in a running topology!")
                 popup.show()
             return
-        
+
         QtGui.QGraphicsItem.mouseMoveEvent(self, event)
 
     def mouseReleaseEvent(self, event):
@@ -399,7 +426,7 @@ class Node(DropItem, Item):
         Attach to corresponding device on backend.
         """
         return
-        
+
     def mouseDoubleClickEvent(self, event):
         """
         Handle mouse double click events on the node.
@@ -431,9 +458,22 @@ class Node(DropItem, Item):
         if isinstance(mainWidgets["canvas"], Tutorial):
             mainWidgets["log"].append("You cannot delete items from the tutorial!")
             return
-        
+
         for edge in self.edges():
-            edge.delete() 
+            edge.delete()
+
+	if self.device_type == "yRouter":
+	    index = self.getID()
+	    yRouter = usedyRouters[index]
+	    availableyRouters.append(yRouter)
+	    availableyRouters.sort(key=lambda YunEntity: YunEntity['ID'])
+	    del usedyRouters[index]
+
+	    if mainWidgets["drop"].commonDropArea.yRouterDrop is not None:
+		mainWidgets["drop"].commonDropArea.yRouterDrop.update()
+	    if mainWidgets["drop"].netDropArea.yRouterDrop is not None:
+		mainWidgets["drop"].netDropArea.yRouterDrop.update()
+
         self.scene().removeItem(self)
 
     def restart(self):
@@ -443,7 +483,7 @@ class Node(DropItem, Item):
         if not mainWidgets["main"].isRunning():
             mainWidgets["log"].append("You must start the topology first!")
             return
-        
+
         client = mainWidgets["client"]
         if client:
             client.send("restart " + self.getName())
@@ -455,11 +495,11 @@ class Node(DropItem, Item):
         if not mainWidgets["main"].isRunning():
             mainWidgets["log"].append("You must start the topology first!")
             return
-        
+
         client = mainWidgets["client"]
         if client:
             client.send("terminate " + self.getName())
-        
+
     def contextMenu(self, pos):
         """
         Pop up the context menu in the location given by pos
@@ -481,7 +521,7 @@ class Node(DropItem, Item):
             print type(inst)
             print inst
             print inst.args
-            
+
     def moveStats(self):
         """
         Move the wireless stats window along with the node.
@@ -490,29 +530,29 @@ class Node(DropItem, Item):
                         mainWidgets["canvas"].pos() +
                         mainWidgets["canvas"].mapFromScene(self.pos()) +
                         QtCore.QPoint(-100,-55))
-        
+
     def hoverEnterEvent(self, event):
         """
         Handle a hover event over the node.
         """
         if not mainWidgets["main"].isRunning():
             return
-        
+
         self.moveStats()
         self.wstatsWindow.show()
 
     def hoverMoveEvent(self, event):
         pass
-    
+
     def hoverLeaveEvent(self, event):
         """
         Handle a hover event leaving the node.
         """
         if not mainWidgets["main"].isRunning():
             return
-        
+
         self.wstatsWindow.hide()
-        
+
     def toString(self):
         """
         Return a string representation of the graphical node.
@@ -523,4 +563,3 @@ class Node(DropItem, Item):
             logical += "\t" + prop + ":" + str(value) + "\n"
 
         return graphical + logical
-    

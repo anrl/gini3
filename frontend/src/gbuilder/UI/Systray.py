@@ -13,7 +13,7 @@ class Systray(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self, parent)
 
         self.project = ""
-        
+
         self.createTrayActions()
         self.createTrayIcon()
         self.icon = QtGui.QIcon(environ["images"] + "giniLogo.png")
@@ -43,12 +43,12 @@ class Systray(QtGui.QMainWindow):
             self.trayIcon.show()
             event.ignore()
             return
-        
+
         elif self.canvas.scene().items():
             if not self.closeTopology():
                 event.ignore()
                 return
-            
+
         if options["restore"]:
             self.saveLayout()
 
@@ -59,7 +59,7 @@ class Systray(QtGui.QMainWindow):
         if not default and isinstance(mainWidgets["canvas"], Tutorial):
             self.log.append("You cannot reset the layout during the Tutorial!")
             return
-        
+
         if default:
             self.defaultLayout = True
         else:
@@ -68,7 +68,7 @@ class Systray(QtGui.QMainWindow):
             self.loadLayout(environ["config"] + "defaultLayout")
         else:
             self.loadLayout()
-            
+
     def saveLayout(self, filename=""):
         """
         Save the layout.
@@ -94,20 +94,20 @@ class Systray(QtGui.QMainWindow):
 
             return wlist
 
-        try:          
+        try:
             if filename:
                 outfile = open(filename, "w")
             else:
                 outfile = open(environ["config"] + "layout", "w")
         except:
             return
-        
+
         for key in ["main", "tab"]:
             window = mainWidgets[key]
             outfile.write(key + ":")
             outfile.write("visible=" + str(window.isVisible()) + ";")
             outfile.write("geometry=" + getGeometry(window) + "\n")
-        
+
         for key in getWindowList():
             window = self.docks[key]
             outfile.write(key + ":")
@@ -141,14 +141,14 @@ class Systray(QtGui.QMainWindow):
                 infile = open(environ["config"] + "layout", "r")
         except:
             return
-        
+
         lines = infile.readlines()
 
         windows = self.docks.copy()
         windows["main"] = mainWidgets["main"]
         windows["tab"] = mainWidgets["tab"]
         windows["tm"] = mainWidgets["tm"]
-        
+
         for line in lines:
             name, properties = line.strip().split(":", 1)
             if name == "project":
@@ -168,22 +168,22 @@ class Systray(QtGui.QMainWindow):
                     window.setFloating(floating)
                 elif prop == "location":
                     self.addDockWidget(parse(val), window)
-                    
-        
+
+
     def setVisible(self, visible):
         """
         Set the visibility of the window and the tray.
         """
         QtGui.QMainWindow.setVisible(self, visible)
-        
+
         if not options["systray"]:
             return
-        
+
         self.minimizeAction.setEnabled(visible)
         self.maximizeAction.setEnabled(not self.isMaximized())
         self.restoreAction.setEnabled(self.isMaximized() or not visible)
         self.trayIcon.setVisible(not visible)
-        
+
         if not visible:
             self.showMessage("GINI", "GINI is still running in the background")
 
@@ -202,7 +202,7 @@ class Systray(QtGui.QMainWindow):
             self.setVisible(not self.isVisible())
         elif reason == QtGui.QSystemTrayIcon.MiddleClick:
             self.showMessage("Middle Click", "You clicked?")
-            
+
     def showMessage(self, title, message):
         """
         Show a message from the system tray.
@@ -210,14 +210,14 @@ class Systray(QtGui.QMainWindow):
         self.trayIcon.showMessage(title,
                 message, QtGui.QSystemTrayIcon.Information,
                 15 * 1000)
-    
+
     def messageClicked(self):
         """
         Handle mouse clicks to the message.
         """
         QtGui.QMessageBox.information(None, self.tr("Systray"),
                 self.tr("Goto whatever"))
-        
+
     def createTrayActions(self):
         """
         Create the right click tray actions.
@@ -239,7 +239,7 @@ class Systray(QtGui.QMainWindow):
         self.quitAction = QtGui.QAction(self.tr("&Quit"), self)
         QtCore.QObject.connect(self.quitAction, QtCore.SIGNAL("triggered()"),
                 QtGui.qApp, QtCore.SLOT("quit()"))
-        
+
     def createTrayIcon(self):
         """
         Create the tray icon and menu.
@@ -254,7 +254,7 @@ class Systray(QtGui.QMainWindow):
 
         self.trayIcon = QtGui.QSystemTrayIcon(self)
         self.trayIcon.setContextMenu(self.trayIconMenu)
-         
+
 if __name__=='__main__':
     app = QtGui.QApplication(sys.argv)
     systray = Systray()

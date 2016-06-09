@@ -12,4 +12,3 @@ def progExists(prog):
         if os.path.exists(file) and os.access(file, os.X_OK):
             return True
     return False
-

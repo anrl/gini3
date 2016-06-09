@@ -20,7 +20,7 @@ class TaskManagerWindow(Dockable):
         self.widget.setLayout(self.layout)
 
         self.setWidget(self.widget)
-        
+
         self.connect(self.button, QtCore.SIGNAL("clicked()"), self.kill)
         self.connect(self,
                      QtCore.SIGNAL("topLevelChanged(bool)"),
@@ -32,7 +32,7 @@ class TaskManagerWindow(Dockable):
         """
         if floating:
             self.setWindowOpacity(0.8)
-            
+
     def kill(self):
         """
         Kill the selected process.
@@ -62,7 +62,7 @@ class TaskManagerWindow(Dockable):
     def getPID(self, device):
         """
         Get the pid from a device in the list.
-        """        
+        """
         entries = self.list.findItems(device+"\t", QtCore.Qt.MatchStartsWith)
         if entries:
             device, pid, status = str(entries[0].text()).split("\t", 2)

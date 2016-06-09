@@ -25,23 +25,29 @@ options = {"names":True,
            "windowTheme":environ["images"] + "background2.jpg",
            "baseTheme":environ["images"] + "background3.jpg",
            "autorouting":True, "autogen":True, "autocompile":True,
-           "graphing":True, "username":"",
+           "graphing":True, "username":"root",
            "server":"localhost", "session":"GINI", "autoconnect":True,
            "localPort":"10001", "remotePort":"10000",
            "restore":True,
-           "moveAlert":True}
+           "moveAlert":True, "wserver":"192.168.54.121", "wlocalPort":"60001","wremotePort":"60000"}
 
 mainWidgets = {"app":None,
                "main":None,
                "canvas":None,
                "tab":None,
                "popup":None,
+	       "inputDialog":None,
                "log":None,
                "tm":None,
                "properties":None,
                "interfaces":None,
                "routes":None,
                "drop":None,
-               "client":None}
+               "client":None,
+	       "wgini_client":None}
 
 defaultOptions = {"palette":None}
+
+yRouters = {}		# indexed by yun ID
+availableyRouters = []
+usedyRouters = {}	# indexed by topology index

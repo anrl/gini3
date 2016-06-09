@@ -33,7 +33,7 @@ typedef struct _pkt_data_t
 		ushort prot;                // protocol field
 	} header;
 	uchar data[DEFAULT_MTU];             // payload (limited to maximum MTU)
-	uint8_t pad[4];					// VLAN padding
+	int8_t pad[4];					// VLAN padding
 } pkt_data_t;
 
 /**
@@ -66,7 +66,7 @@ typedef struct _pkt_frame_t
 } pkt_frame_t;
 
 
-typedef struct _gpacket_t 
+typedef struct _gpacket_t
 {
 	pkt_frame_t frame;
 	pkt_data_t data;

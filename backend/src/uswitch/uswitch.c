@@ -455,7 +455,6 @@ void sock_owner(char *arg)
 struct port *g_porttap = NULL;
 struct fd *g_tapfd;
 char *g_tapdown;
-
 void send_tap(struct port *p, struct packet *packet, int len)
 {
 	if (write(p->fh, (void *) packet, len) != len) {
@@ -465,7 +464,6 @@ void send_tap(struct port *p, struct packet *packet, int len)
 			printf("notice: tap packet dropped.");
 	}
 }
-
 void tap_cleanup(void)
 {
 	if (debug_flag >0) printf("Close tap interface.\n");
@@ -476,15 +474,12 @@ void tap_cleanup(void)
 	}
 	close(g_porttap->fh);
 }
-
 void tap_data(int fd)
 {
 	struct packet packet;
 	int len;
-
 	if (debug_flag >1)
 		printf("tap_data: event on tapfd %d.\n", fd);
-
 	len = read(fd, &packet, sizeof(struct packet));
 	if (len <0) {
 		if (errno != EAGAIN)
@@ -494,7 +489,6 @@ void tap_data(int fd)
 	if (debug_flag >1) printf("send packet with len %d from tap-device.\n", len);
 	port_send(g_porttap, &packet, len);
 }
-
 void tap_up(char *cmd)
 {
 	if (g_porttap != NULL) {
@@ -503,7 +497,6 @@ void tap_up(char *cmd)
 	}
 	else printf("Error: define tap device prior to defining up-cmd.\n");
 }
-
 void tap_dn(char *cmd)
 {
 	if (g_porttap != NULL) {
@@ -514,13 +507,11 @@ void tap_dn(char *cmd)
 	}
 	else printf("Error: define tap device prior to defining down-cmd.\n");
 }
-
 void tap_setup(char *name)
 {
 	struct ifreq ifr;
 	union sa sa;
 	int tapfd;
-
 	sa.s = NULL;
 	if (debug_flag >0) printf("Setup tap interface %s.\n", name);
 	if ((tapfd = open("/dev/net/tun", O_RDWR)) < 0)
@@ -829,7 +820,6 @@ bind_ctrl_sock(int fd)
 #if 0
 			if ((test_fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0)
 				CLEANUP_DO("socket() failed");
-
 			if (connect(test_fd, (struct sockaddr *) &s,
 					sizeof(struct sockaddr_un)) < 0) {
 				if (errno == ECONNREFUSED) {
@@ -974,10 +964,10 @@ int main(int argc, char *argv[])
 	char * log_name		= NULL;
 	char * remote_name	= NULL;
 	char * targetfile	= NULL;
-	
+
 	int priority = 0;
 	char mac[6] = {0, 0, 0, 0, 0, 0};
-	
+
 
 	opterr = 1;	/* enable error msg when parsing options */
 
@@ -1116,4 +1106,3 @@ void usage(int status)
 	, g_cmdname);
 	exit(status);
 }
-

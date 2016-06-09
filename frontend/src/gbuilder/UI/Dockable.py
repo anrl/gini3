@@ -11,7 +11,7 @@ class Dockable(QtGui.QDockWidget):
         self.location = None
         self.chosenSize = None
         self.timer = QtCore.QTimer()
-        
+
         self.connect(self, QtCore.SIGNAL("dockLocationChanged(Qt::DockWidgetArea)"), self.locationChanged)
         self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.resetMinsize)
 
@@ -33,7 +33,7 @@ class Dockable(QtGui.QDockWidget):
         Return the dock location.
         """
         return self.location
-        
+
     def setGeometry(self, rect):
         """
         Set the window geometry.

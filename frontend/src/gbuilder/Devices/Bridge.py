@@ -11,5 +11,4 @@ class Bridge(Device):
 
         self.setProperty("port", "")
         self.setProperty("monitor", "")
-        self.setProperty("hub", True)   # use hub mode by default      
-
+        self.setProperty("hub", True)   # use hub mode by default 

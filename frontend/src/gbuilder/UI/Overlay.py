@@ -45,11 +45,11 @@ class Overlay(QtGui.QGraphicsView):#QtGui.QSplashScreen):
         brush = QtGui.QBrush(QtGui.QColor(0,0,0,0))
         palette = QtGui.QPalette(p.windowText(), p.button(), p.light(), p.dark(), p.mid(), p.text(), p.brightText(), brush, p.window())
         self.setPalette(palette)
-        
+
         self.scene = QtGui.QGraphicsScene()
         self.setScene(self.scene)
         self.setWindowFlags(QtCore.Qt.Window | QtCore.Qt.FramelessWindowHint)
-        
+
         self.setWindowOpacity(0.4)
         self.show()
 
@@ -58,7 +58,7 @@ class Overlay(QtGui.QGraphicsView):#QtGui.QSplashScreen):
         self.addArrow(0, QtCore.QPointF(150,-75))
         self.addArrow(math.pi / 2, QtCore.QPointF(100,-145))
         self.addArrow(3 * math.pi / 2, QtCore.QPointF(0,145))
-        self.addArrow(math.pi / 2, QtCore.QPointF(-125,-145))        
+        self.addArrow(math.pi / 2, QtCore.QPointF(-125,-145))
 
     def addArrow(self, angle, pos):
         arrow = Arrow(angle)
@@ -77,7 +77,7 @@ class Overlay(QtGui.QGraphicsView):#QtGui.QSplashScreen):
 
     def dragLeaveEvent(self, event):
         pass
-    
+
     def mousePressEvent(self, event):
         mainWidgets["canvas"].mousePressEvent(event)
 
@@ -86,10 +86,10 @@ class Overlay(QtGui.QGraphicsView):#QtGui.QSplashScreen):
 
     def mouseDoubleClickEvent(self, event):
         mainWidgets["canvas"].mouseDoubleClickEvent(event)
-    
+
     def mouseMoveEvent(self, event):
         mainWidgets["canvas"].mouseMoveEvent(event)
-       
+
     def wheelEvent(self, event):
         mainWidgets["canvas"].wheelEvent(event)
 
@@ -104,18 +104,17 @@ class Overlay(QtGui.QGraphicsView):#QtGui.QSplashScreen):
         self.overlay = Overlay(mainWidgets["main"])
         self.overlay.setWindowModality(QtCore.Qt.WindowModal)
         self.refitOverlay()
-                    
+
     def refitOverlay(self):
         if not self.overlay:
             return
         geo = mainWidgets["canvas"].geometry()
         pos = mainWidgets["canvas"].mapToGlobal(geo.topLeft())
         self.overlay.setGeometry(pos.x(), pos.y(), geo.width(), geo.height())
-        
+
     def resizeEvent(self, event):
         QtGui.QTabWidget.resizeEvent(self, event)
         self.refitOverlay()
-
     def moveEvent(self, event):
         QtGui.QTabWidget.moveEvent(self, event)
         self.refitOverlay()

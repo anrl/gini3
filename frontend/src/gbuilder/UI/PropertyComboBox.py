@@ -17,7 +17,7 @@ class PropertyComboBox(QtGui.QComboBox):
 
         self.connect(self, QtCore.SIGNAL("currentIndexChanged(int)"), self.changeIndex)
 
-   
+
 
     def changeIndex(self, index):
 
@@ -31,4 +31,3 @@ class PropertyComboBox(QtGui.QComboBox):
         self.item.setProperty("realmachinePort", realport)
 	from Properties import PropertiesWindow
 	self.PropertiesWindow.display()
-

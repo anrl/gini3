@@ -16,7 +16,7 @@ class Client(QtCore.QThread):
         parent.connect(self.tcpSocket, QtCore.SIGNAL("readyRead()"), self.read)
         parent.connect(self.tcpSocket, QtCore.SIGNAL("connected()"), self.setConnected)
         parent.connect(self.tcpSocket, QtCore.SIGNAL("error(QAbstractSocket::SocketError)"), self.displayError)
-    
+
         global client
         client = self
 
@@ -33,7 +33,7 @@ class Client(QtCore.QThread):
             self.tcpSocket.connectToHost(ip, port)
             connected = self.tcpSocket.waitForConnected(1500)
             tries += 1
-            
+
         self.connecting = False
         print "-- gclient output --"
 
@@ -52,7 +52,7 @@ class Client(QtCore.QThread):
             main.setRecovery(True)
             mainWidgets["log"].append("The connection was lost while a topology was running.\nYou can attempt to re-establish the connection by restarting the server.  You can then press run to resume the previous running topology, or stop to stop it.")
             mainWidgets["canvas"].scene().pauseRefresh()
-        
+
         if socketError ==  QtNetwork.QAbstractSocket.RemoteHostClosedError:
             print "Lost connection to server."
         elif socketError ==  QtNetwork.QAbstractSocket.HostNotFoundError:
@@ -65,7 +65,7 @@ class Client(QtCore.QThread):
 
         self.connected = False
         self.terminate()
-        
+
     def read(self):
         instring = self.waitForMessage(str(self.tcpSocket.readAll()))
         if instring:
@@ -73,7 +73,7 @@ class Client(QtCore.QThread):
 
     def waitForMessage(self, instring):
         instring = self.leftovers + instring
-        
+
         if not self.readlength and instring.find(" ") == -1:
             self.leftovers = instring
             return
@@ -96,10 +96,10 @@ class Client(QtCore.QThread):
     def process(self, instring):
         if not instring:
             return
-        
+
         args = ""
         instring = str(instring)
-        
+
         index = instring.find(" ")
         if index != -1:
             commandType, args = instring.split(" ", 1)
@@ -116,20 +116,20 @@ class Client(QtCore.QThread):
             print commandType, args
 
         self.process(self.waitForMessage(""))
-        
+
     def send(self, text):
         length = str(len(text))
         self.tcpSocket.writeData(length + " " + text)
-        
+
     def disconnect(self):
         self.tcpSocket.disconnectFromHost()
 
     def run(self):
-        
+
         while not self.isConnected():
             time.sleep(1)
         print "connected!"
-    
+
         text = raw_input("gclient> ")
         while text != "exit":
             self.process(text)
@@ -146,17 +146,17 @@ class ShellStarter(QtCore.QThread):
 
     def startStatus(self):
         return self.started
-    
+
     def run(self):
         self.started = 0
         os.system(self.command)
         self.started = 1
 """
-    
+
 class Callable:
     def __init__(self, anycallable):
         self.__call__ = anycallable
-        
+
 class Command:
     def __init__(self, args):
         global client
@@ -165,7 +165,7 @@ class Command:
 
     def isolateFilename(self, path):
         return path.split("/")[-1].split("\\")[-1]
-        
+
     def create(commandType, args):
         return commands[commandType](args)
     create = Callable(create)
@@ -227,6 +227,12 @@ class ReceiveRouterStatsCommand(Command):
         scene = mainWidgets["canvas"].scene()
         scene.findItem(name).setRouterStats(queue, size, rate)
 
+class ReceiveYRouterStatsCommand(Command):
+    def execute(self):
+	name, queue, size, rate = self.args.split(" ", 3)
+	scene = mainWidgets["canvas"].scene()
+	scene.findItem(name).setYRouterStats(queue, size, rate)
+
 class ReceiveWiresharkCaptureCommand(Command):
     def execute(self):
         name, capture = self.args.split(" ", 1)
@@ -234,7 +240,7 @@ class ReceiveWiresharkCaptureCommand(Command):
         fd = open(outfile, "ab")
         fd.write(capture)
         fd.close()
-        
+
 commands = \
     {
         "start":SendStartCommand,
@@ -245,16 +251,16 @@ commands = \
         "kill":SendKillCommand,
         "wstats":ReceiveWirelessStatsCommand,
         "rstats":ReceiveRouterStatsCommand,
+        "yrstats":ReceiveYRouterStatsCommand,
         "wshark":ReceiveWiresharkCaptureCommand
     }
 client = None
 
 if __name__ == "__main__":
-    app = QtCore.QCoreApplication(sys.argv)     
+    app = QtCore.QCoreApplication(sys.argv)
     client.connectTo("localhost", 9000)
-        
+
     text = raw_input("gclient> ")
     while text:
         client.send(text)
         text = raw_input("gclient> ")
-

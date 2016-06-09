@@ -256,5 +256,3 @@ int isPIDAlive(int pid)
 	}
 	return TRUE;
 }
-
-

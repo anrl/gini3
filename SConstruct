@@ -85,7 +85,7 @@ def gen_environment_file(target,source,env):
   output_file.write('os.environ["GINI_ROOT"] = os.path.realpath("%s")\n' % os.path.relpath(prefix,bindir))
   output_file.write('os.environ["GINI_SHARE"] = os.path.realpath("%s")\n' % os.path.relpath(sharedir,bindir))
   output_file.write('os.environ["GINI_LIB"] = os.path.realpath("%s")\n' % os.path.relpath(libdir,bindir))
-  output_file.write('os.environ["GINI_HOME"] = os.environ["HOME"] + "/.gini"\n') 
+  output_file.write('os.environ["GINI_HOME"] = os.environ["HOME"] + "/.gini"\n')
   output_file.write('if not os.path.exists(os.environ["GINI_HOME"] + "/etc"): os.makedirs(os.environ["GINI_HOME"] + "/etc")\n')
   output_file.write('if not os.path.exists(os.environ["GINI_HOME"] + "/sav"): os.makedirs(os.environ["GINI_HOME"] + "/sav")\n')
   output_file.write('if not os.path.exists(os.environ["GINI_HOME"] + "/data"): os.makedirs(os.environ["GINI_HOME"] + "/data")\n')
@@ -102,7 +102,7 @@ def gen_python_path_file(target,source,env):
   output_file = open(target[0].abspath,'w')
   output_file.write('import os\n')
   output_file.write('GINI_ROOT = "%s"\n' % prefix)
-  #if env['PLATFORM'] != 'win32': 
+  #if env['PLATFORM'] != 'win32':
     #output_file.write('GINI_HOME = os.environ["HOME"] + "/.gini"\n')
   #else:
     #output_file.write('GINI_HOME = os.environ["USERPROFILE"] + "/gini_files"\n')
@@ -236,7 +236,7 @@ pox_targets = recursive_install(libdir, pox_dir, env)
 gpox = env.Symlink(bindir + "/gpox", lib_pox_dir + "/pox.py")
 for target in pox_targets:
 	env.Depends(gpox, target)
-	
+
 recursive_install(lib_pox_dir, pox_ext_dir, env)
 
 ###########
@@ -273,7 +273,7 @@ for file in os.listdir(grouter_dir):
             grouter_other_objects.append(grouter_env.Object(grouter_build_dir + "/" + file))
         else:
             grouter_test_objects.append(grouter_env.Object(grouter_build_dir + "/" + file))
-        
+
 grouter = grouter_env.Program(grouter_build_dir + "/grouter", grouter_test_objects + grouter_other_objects, LIBS=grouter_libs)
 
 env.Install(libdir + "/grouter/", grouter)
@@ -300,7 +300,6 @@ uswitch_build_dir = src_dir + '/build/release/uswitch'
 VariantDir(uswitch_build_dir, uswitch_dir, duplicate=0)
 
 uswitch_env = Environment(CPPPATH=uswitch_include)
-
 uswitch = uswitch_env.Program(uswitch_build_dir + "/uswitch", Glob(uswitch_build_dir + "/*.c"))
 
 env.Install(libdir + "/uswitch/", uswitch)
@@ -356,7 +355,7 @@ env.Alias('install','install-wgini')
 # Gloader #
 ###########
 
-gloader_dir = backend_dir + "/src/gloader" 
+gloader_dir = backend_dir + "/src/gloader"
 gloader_conf = gloader_dir + "/gloader.dtd"
 gloader_lib_dir = libdir
 
@@ -381,14 +380,13 @@ env.Alias('install-gloader', bindir + '/gloader')
 env.Alias('install-gloader', bindir + '/gserver')
 env.Alias('install-gloader', sharedir + '/gloader' + '/gloader.dtd')
 env.Alias('install','install-gloader')
-
 ##########
 # Kernel #
 ##########
 
 kernel_dir = backend_dir + "/kernel"
 kernel = kernel_dir + "/linux-2.6.26.1"
-alt_kernel = kernel_dir + "/linux-2.6.25.10" 
+alt_kernel = kernel_dir + "/linux-2.6.25.10"
 
 # Copy kernel and glinux loader into bin and set executable
 env.Install(libdir + '/kernel/',kernel_dir + '/glinux')
@@ -498,7 +496,8 @@ gbuilder_folders = Split("""
     Core
     Devices
     Network
-    UI""")
+    UI
+    Wireless""")
 
 gbuilder_images = gbuilder_dir + "/images/*"
 
@@ -515,6 +514,12 @@ post_chmod(libdir + '/gbuilder/gbuilder.py')
 # Install images
 env.Install(sharedir + '/gbuilder/images/', Glob(gbuilder_images))
 env.Clean(sharedir + '/gbuilder/images/',sharedir + '/gbuilder/images/')
+
+post_chmod(libdir + "/gbuilder/Wireless/ServerAPI.py")
+env.PythonEnvFile(bindir + '/ServerAPI',libdir + '/gbuilder/Wireless/ServerAPI.py')
+post_chmod(bindir + '/ServerAPI')
+
+env.Alias('install-gbuilder', bindir + '/ServerAPI')
 
 if env['PLATFORM'] != 'win32':
     #env.SymLink(bindir + '/gbuilder', sharedir + '/gbuilder/gbuilder.py')
@@ -552,8 +557,8 @@ grouter_test_env.VariantDir(grouter_test_build_dir, grouter_test_dir, duplicate=
 for file in os.listdir(grouter_test_dir):
     if file.endswith("_t.c"):
         tests.append(grouter_test_env.Program(
-            os.path.join(grouter_test_build_dir, file[:-2]), 
-            [os.path.join(grouter_test_build_dir, file)] + grouter_test_objects, 
+            os.path.join(grouter_test_build_dir, file[:-2]),
+            [os.path.join(grouter_test_build_dir, file)] + grouter_test_objects,
             LIBS=grouter_libs))
 
 test_alias = Alias('test', tests, [test[0].abspath for test in tests])

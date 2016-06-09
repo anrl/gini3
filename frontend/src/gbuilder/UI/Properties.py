@@ -12,7 +12,7 @@ class ConnectM():
         self.ip=ip
         self.mac=mac
         self.port=port
-        alist={"m1":ConnectM("m1","ip1","mac1","port1"),"m2":ConnectM("m1","ip2","ma     c2","port2")}
+        alist={"m1":ConnectM("m1","ip1","mac1","port1"),"m2":ConnectM("m1","ip2","mac2","port2")}
 
 
 class PropertyCheckBox(QtGui.QCheckBox):
@@ -27,7 +27,7 @@ class PropertyCheckBox(QtGui.QCheckBox):
             self.item.setProperty(self.prop, "True")
         else:
             self.item.setProperty(self.prop, "False")
-        
+
 class PropertiesWindow(Dockable):
     def __init__(self, parent = None):
         """
@@ -50,12 +50,12 @@ class PropertiesWindow(Dockable):
 
         self.sourceView.setEditTriggers(QtGui.QAbstractItemView.CurrentChanged)
         self.sourceView.setModel(self.model)
-        
+
         self.connect(self,
                      QtCore.SIGNAL("topLevelChanged(bool)"),
                      self.dockChanged)
         self.connect(self.model, QtCore.SIGNAL("dataChanged(QModelIndex,QModelIndex)"), self.changed)
-        
+
     def addProperty(self, prop, value, editable=True, checkable=False, combo=False):
         """
         Add a property to display in the window.
@@ -63,16 +63,16 @@ class PropertiesWindow(Dockable):
         pr = QtGui.QStandardItem()
         pr.setData(QtCore.QVariant(prop), QtCore.Qt.DisplayRole)
         pr.setEditable(False)
-    
+
         val = QtGui.QStandardItem()
         if not (checkable or combo):
             val.setData(QtCore.QVariant(value), QtCore.Qt.EditRole)
-            
+
         if mainWidgets["main"].isRunning():
             val.setEnabled(False)
         elif not editable:
             val.setEditable(False)
-            
+
         if prop == "id":
             self.model.insertRow(0, [pr, val])
         else:
@@ -89,7 +89,7 @@ class PropertiesWindow(Dockable):
             index = self.model.indexFromItem(val)
             combobox = PropertyComboBox(self.currentItem, self, prop, value)
             self.sourceView.setIndexWidget(index, combobox)
-        
+
     def changed(self, index, index2):
         """
         Handle a change in the properties of the current item.
@@ -99,23 +99,26 @@ class PropertiesWindow(Dockable):
         prop = self.model.data(propertyIndex)
         if prop.toString() == "id":
             name = str(value.toString())
-            if name.find(self.currentItem.device_type + "_") == 0:
+	    devType, index = name.rsplit("_", 1)
+            if not devType == "yRouter" and name.find(self.currentItem.device_type + "_") == 0:
                 try:
-                    devType, index = name.rsplit("_", 1)
                     index = int(index)
                     if index - 1 in range(126) and mainWidgets["canvas"].scene().findItem(name) == None:
                         self.currentItem.setIndex(index)
                         return
                 except:
                     pass
-                
+
             popup = mainWidgets["popup"]
             popup.setWindowTitle("Invalid Name Change")
-            popup.setText("Only the index of the name can be changed!  The index must be unique and in the range 1-126.")
+	    if devType == "yRouter":
+		popup.setText("Cannot change the index of a yRouter!")
+	    else:
+                popup.setText("Only the index of the name can be changed! The index must be unique and in the range 1-126.")
             popup.show()
-        else:
+	else:
             self.currentItem.setProperty(prop.toString(), value.toString())
-        
+
     def dockChanged(self, floating):
         """
         Handle a change in the dock location or state.
@@ -123,13 +126,13 @@ class PropertiesWindow(Dockable):
         if floating:
             self.setWindowOpacity(0.8)
 
-    
+
     def setCurrent(self, item):
         """
         Set the current item.
         """
         self.currentItem = item
-        
+
     def display(self):
         """
         Show the properties of the current item.
@@ -141,7 +144,7 @@ class PropertiesWindow(Dockable):
             editable = True
             checkable = False
             combo = False
-            if prop == "Hub mode":
+            if prop in ["Hub mode", "WLAN"]:
                 checkable = True
             elif prop == "Hosts":
                 combo = True
@@ -156,7 +159,7 @@ class PropertiesWindow(Dockable):
         """
         self.currentItem = None
         self.removeRows()
-                
+
     def removeRows(self):
         """
         Clear the rows of the properties window.
@@ -172,7 +175,7 @@ class InterfacesWindow(PropertiesWindow):
         """
         Dockable.__init__(self, parent=parent)
         self.createView()
-         
+
         self.currentInterface = 1
         self.leftScroll = QtGui.QPushButton("<")
         self.rightScroll = QtGui.QPushButton(">")
@@ -191,7 +194,7 @@ class InterfacesWindow(PropertiesWindow):
         self.widget.setLayout(mainLayout)
 
         self.setWidget(self.widget)
-        
+
         self.connect(self.leftScroll, QtCore.SIGNAL("clicked()"), self.scrollLeft)
         self.connect(self.rightScroll, QtCore.SIGNAL("clicked()"), self.scrollRight)
 
@@ -201,7 +204,7 @@ class InterfacesWindow(PropertiesWindow):
         """
         PropertiesWindow.setCurrent(self, item)
         self.display()
-        
+
     def addProperty(self, prop, value):
         """
         Add a property to display in the window.
@@ -216,7 +219,7 @@ class InterfacesWindow(PropertiesWindow):
             return#editable = False
 
         PropertiesWindow.addProperty(self, prop, value, editable)
-        
+
     def scrollLeft(self):
         """
         Scroll to the previous interface of the current item.
@@ -226,7 +229,7 @@ class InterfacesWindow(PropertiesWindow):
         from Core.Interfaceable import Interfaceable
         if not isinstance(self.currentItem, Interfaceable):
             return
-        
+
         if self.currentInterface == 1:
             return
 
@@ -241,7 +244,7 @@ class InterfacesWindow(PropertiesWindow):
         from Core.Interfaceable import Interfaceable
         if not isinstance(self.currentItem, Interfaceable):
             return
-        
+
         if self.currentInterface == len(self.currentItem.getInterfaces()):
             return
 
@@ -266,7 +269,7 @@ class InterfacesWindow(PropertiesWindow):
         self.currentInterface += inc
         interface = interfaces[self.currentInterface-1]
         self.setWindowTitle("Interface %d" % self.currentInterface)
-        for prop, value in interface.iteritems():
+	for prop, value in interface.iteritems():
             self.addProperty(prop, value)
 
     def changed(self, index, index2):
@@ -304,7 +307,7 @@ class RoutesWindow(InterfacesWindow):
         self.interfacesWindow = interfacesWindow
         self.currentInterface = 1
         self.currentRoute = 1
-        
+
         self.connect(self.interfacesWindow.leftScroll, QtCore.SIGNAL("clicked()"), self.decInterface)
         self.connect(self.interfacesWindow.rightScroll, QtCore.SIGNAL("clicked()"), self.incInterface)
         self.connect(self.interfacesWindow.routesButton, QtCore.SIGNAL("clicked()"), self.show)
@@ -320,13 +323,13 @@ class RoutesWindow(InterfacesWindow):
         from Core.Interfaceable import Interfaceable
         if not isinstance(self.currentItem, Interfaceable):
             return
-        
+
         if self.currentInterface == 1:
             return
 
         self.currentRoute = 1
         self.display(-1)
-        
+
     def incInterface(self):
         """
         Handle the interfaces window changing to the next interface.
@@ -336,14 +339,14 @@ class RoutesWindow(InterfacesWindow):
         from Core.Interfaceable import Interfaceable
         if not isinstance(self.currentItem, Interfaceable):
             return
-        
+
         if self.currentInterface == len(self.currentItem.getInterfaces()):
             return
 
         self.currentRoute = 1
         self.display(1)
 
-        
+
     def display(self, interfaceInc=0, routeInc=0):
         """
         Show the properties of the interface of the current item.
@@ -396,7 +399,7 @@ class RoutesWindow(InterfacesWindow):
         from Core.Interfaceable import Interfaceable
         if not isinstance(self.currentItem, Interfaceable):
             return
-        
+
         interfaces = self.currentItem.getInterfaces()
         if not interfaces:
             return
@@ -404,7 +407,7 @@ class RoutesWindow(InterfacesWindow):
         routes = interfaces[self.currentInterface-1][QtCore.QString("routing")]
         if not routes:
             return
-        
+
         if self.currentRoute == len(routes):
             return
 

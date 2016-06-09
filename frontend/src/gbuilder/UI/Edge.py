@@ -21,7 +21,7 @@ class Edge(QtGui.QGraphicsLineItem, Item):
         self.properties = {}
         self.setProperty("id", "SomeEdge")
         self.interfaces = []
-        
+
         self.setPen(QtGui.QPen(QtCore.Qt.black, 2, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin))
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
 
@@ -61,7 +61,7 @@ class Edge(QtGui.QGraphicsLineItem, Item):
         """
         self.dest = node
         self.adjust()
-        
+
     def shape(self):
         """
         Get the shape of the edge.
@@ -77,7 +77,7 @@ class Edge(QtGui.QGraphicsLineItem, Item):
 
         line = QtCore.QLineF(self.mapFromItem(self.source, 0, 0), self.mapFromItem(self.dest, 0, 0))
         self.setLine(line)
-        
+
         length = line.length()
 
         if length == 0.0:
@@ -88,7 +88,7 @@ class Edge(QtGui.QGraphicsLineItem, Item):
         self.prepareGeometryChange()
         self.sourcePoint = line.p1() + edgeOffset
         self.destPoint = line.p2() - edgeOffset
-        
+
     def paint(self, painter, option, widget=None):
         """
         Draw the representation.
@@ -101,9 +101,9 @@ class Edge(QtGui.QGraphicsLineItem, Item):
             pen = QtGui.QPen()
             pen.setDashPattern([10,10])
             painter.setPen(pen)
-        
+
         painter.drawLine(self.line())
-        
+
         if self.isSelected():
             painter.setPen(QtGui.QPen(QtCore.Qt.black, 1, QtCore.Qt.DashLine))
 
@@ -127,7 +127,7 @@ class Edge(QtGui.QGraphicsLineItem, Item):
         if isinstance(mainWidgets["canvas"], Tutorial):
             mainWidgets["log"].append("You cannot delete items from the tutorial!")
             return
-        
+
         self.source.removeEdge(self)
         self.dest.removeEdge(self)
         self.scene().removeItem(self)

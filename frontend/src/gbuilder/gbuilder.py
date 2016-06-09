@@ -14,12 +14,12 @@ except ImportError, err:
     print "ImportError: ", err
     raw_input("PyQt4 must be installed.  Press Enter to quit.")
     sys.exit(1)
-   
+
 # Check if we have GINI_HOME set
 if not os.environ.has_key("GINI_HOME"):
     raw_input("Environment variable GINI_HOME not set, please set it before running gbuilder!")
     sys.exit(1)
-        
+
 import UI.MainWindow
 import Core.globals
 
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     QtCore.qsrand(QtCore.QTime(0,0,0).secsTo(QtCore.QTime.currentTime()))
     mainWindow = UI.MainWindow.MainWindow(app)
     #demo(mainWindow.centralWidget())
-    mainWindow.setWindowTitle(QtCore.QObject.tr(mainWindow, 
+    mainWindow.setWindowTitle(QtCore.QObject.tr(mainWindow,
         "%s %s" % (Core.globals.PROG_NAME, Core.globals.PROG_VERSION)))
     mainWindow.setWindowIcon(QtGui.QIcon(os.environ["GINI_SHARE"] + "/gbuilder/images/giniLogo.png"))
     mainWindow.setMinimumSize(640, 480)

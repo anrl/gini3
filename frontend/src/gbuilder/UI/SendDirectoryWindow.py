@@ -1,3 +1,4 @@
+
 """The window to specify which directory to send a file to"""
 
 from PyQt4 import QtCore, QtGui
@@ -21,7 +22,7 @@ class SendDirectoryWindow(QtGui.QDialog):
 
         buttonLayout = QtGui.QHBoxLayout()
         buttonLayout.addWidget(self.sendButton)
-        
+
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self.filenameLabel)
         layout.addWidget(self.radio1)
@@ -43,7 +44,7 @@ class SendDirectoryWindow(QtGui.QDialog):
         """
         self.filename = filename
         self.filenameLabel.setText(filename)
-        
+
     def send(self):
         """
         Send the file to the server.

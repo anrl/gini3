@@ -9,19 +9,19 @@ class ExportWindow(QtGui.QDialog):
         Create an export window to save the current canvas as an image.
         """
         QtGui.QDialog.__init__(self, parent)
-        
+
         self.gridCheckBox = QtGui.QCheckBox(self.tr("Save with grid"))
         self.namesCheckBox = QtGui.QCheckBox(self.tr("Save with names"))
         self.gridCheckBox.setChecked(True)
         self.namesCheckBox.setChecked(True)
 
         chooseButton = QtGui.QPushButton("Select File")
-          
+
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self.gridCheckBox)
         layout.addWidget(self.namesCheckBox)
         layout.addWidget(chooseButton)
-        
+
         self.setLayout(layout)
         self.setWindowModality(QtCore.Qt.ApplicationModal)
         self.resize(200, 150)
@@ -46,7 +46,7 @@ class ExportWindow(QtGui.QDialog):
         canvas = mainWidgets["canvas"]
         sceneRect = canvas.sceneRect()
         viewRect = canvas.mapFromScene(sceneRect).boundingRect()
-        
+
         image = QtGui.QImage(viewRect.width(), viewRect.height(), QtGui.QImage.Format_ARGB32)
         painter = QtGui.QPainter(image)
 
@@ -57,10 +57,9 @@ class ExportWindow(QtGui.QDialog):
         canvas.render(painter, QtCore.QRectF(), viewRect)
         options["grid"] = oldGridOption
         options["names"] = oldNamesOption
-        
+
         painter.end()
-        
+
         image.save(filename)
 
         self.parent().statusBar().showMessage(self.tr("Ready"), 2000)
-        
