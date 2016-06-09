@@ -1,0 +1,11 @@
+init_logfile: stderr redirected
+init_logfile: 
+*** Starting new logfile at Wed May 25 13:09:20 2016
+
+init_pidfile: creating pidfile uswitch.pid
+init_sockfile: Setting up control socket gini_socket.ctl...
+fd_insert: Setup filedescriptor #3
+init_sockfile: Control socket gini_socket.ctl created
+init_sockfile: Setting up data socket (abstract namespace)...
+fd_insert: Setup filedescriptor #4
+init_sockfile: Data socket 00:03:44:00:00:00:00:00:00 created

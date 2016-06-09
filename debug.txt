@@ -1,0 +1,9 @@
+=== Local Switch ===
+/home/akanksha/gini/multiswitch
+Bridge ID:	64:00:FE:FD:04:00:00:01
+Root ID:	64:00:FE:FD:04:00:00:01
+Gateway ID:	64:00:FE:FD:04:00:00:01
+Root?		YES
+Cost:		0
+
+
