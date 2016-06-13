@@ -24,7 +24,6 @@ from TaskManagerWindow import *
 import Core.globals
 from Wireless.ClientAPI import *
 from Wireless.ServerAPI import *
-from threading import Thread
 
 class MainWindow(Systray):
     def __init__(self,app):
@@ -33,6 +32,7 @@ class MainWindow(Systray):
         """
         defaultOptions["palette"]=app.palette()
         Systray.__init__(self)
+
         self.expansions=0
         self.client=None
         self.server=None
@@ -105,7 +105,7 @@ class MainWindow(Systray):
             self.log.append("You are already doing the tutorial!  If you would like to stop or restart, select 'Close' from the File menu now.")
             return
 
-        if not self.closeTopology(usedyRouters):
+        if not self.closeTopology():
             return
 
         self.project = "Tutorial"
@@ -196,6 +196,7 @@ class MainWindow(Systray):
         for nodeType in nodeTypes.keys():
             itemTypes = nodeTypes[nodeType]
             itemTypes[nodeType] = 0
+
 	    if usedyRouters:
 	        for yunid, yun in usedyRouters.iterItems():
 		        availableyRouters.append(yun)
@@ -222,8 +223,8 @@ class MainWindow(Systray):
         if not filename:
             return
 
-        #self.sendWindow.setFilename(filename)
-        #self.sendWindow.show()
+        self.sendWindow.setFilename(filename)
+        self.sendWindow.show()
 
     def newScene(self):
         """
@@ -388,7 +389,7 @@ class MainWindow(Systray):
         """
         self.startServer()
         #self.startClient()
-    def setRecovery(self):
+    def setRecovery(self, recovery):
         """
         Set the recovering state of the topology.
         """
@@ -603,7 +604,7 @@ class MainWindow(Systray):
                 continue
         os.chdir(olddir)
 
-    def loadFile(self):
+    def loadFile(self, filetype):
         """
         Load a file through a file dialog.
         """
@@ -771,13 +772,13 @@ class MainWindow(Systray):
         """
         Save a topology.
         """
-        scene = self.canvas.scene()
+        scene=self.canvas.scene()
 
         if not scene.items():
             self.log.append("There is nothing to save!")
             return False
 
-        # for first time use
+        #for first time used
         if not self.filename:
             return self.saveTopologyAs()
 
@@ -796,7 +797,6 @@ class MainWindow(Systray):
 
         out = QtCore.QTextStream(file)
         QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-
         outstring = ""
         for item in scene.items():
             if isinstance(item, Node):
@@ -1209,7 +1209,7 @@ class MainWindow(Systray):
         self.statusBar().addPermanentWidget(self.progressBar)
         self.progressBar.show()
 
-    def getDeviceCount(self):
+    def getDeviceCount(self, alive=False):
         """
         Return the interfaceable device count, or the alive ones if alive=True.
         """

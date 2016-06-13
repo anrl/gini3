@@ -2,7 +2,7 @@
 
 import sys, os
 from PyQt4 import QtCore, QtGui
-from Core.globals import options, environ, mainWidgets, defaultOptions
+from Core.globals import *
 from Tutorial import Tutorial
 
 class Systray(QtGui.QMainWindow):
@@ -45,7 +45,7 @@ class Systray(QtGui.QMainWindow):
             return
 
         elif self.canvas.scene().items():
-            if not self.closeTopology():
+            if not self.closeTopology(usedyRouters):
                 event.ignore()
                 return
 
