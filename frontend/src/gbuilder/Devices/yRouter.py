@@ -5,9 +5,9 @@ class yRouter(Router):
     device_type="yRouter"
 
     def __init__(self):
-	Interfaceable.__init__(self)
-	self.setProperty("WLAN", "False")
-	self.setProperty("mac_type", "MAC 802.11 DCF")
+        Interfaceable.__init__(self)
+        self.setProperty("WLAN", "False")
+        self.setProperty("mac_type", "MAC 802.11 DCF")
         self.lightPoint = QPoint(-14,15)
 
 #    def generateToolTip(self):
@@ -17,5 +17,5 @@ class yRouter(Router):
 #        tooltip = self.getName()
 #        interface = self.getInterface()
 #        tooltip += "\n\nSubnet: " + interface[QtCore.QString("subnet")] + "\n"
-#        tooltip += "IP: " + interface[QtCore.QString("ipv4")]          
+#        tooltip += "IP: " + interface[QtCore.QString("ipv4")]
 #        self.setToolTip(tooltip)
