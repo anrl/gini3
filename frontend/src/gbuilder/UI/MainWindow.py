@@ -830,6 +830,7 @@ class MainWindow(Systray):
         """
 	    Start wireless GINI client
 	    """
+        ok=None
         if not self.server or self.server.poll() is not None:
             self.log.append("You must start the main server before you can start the wireless client!")
         elif not self.wgini_server or self.wgini_server.poll() is not None:
