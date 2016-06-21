@@ -832,6 +832,10 @@ class MainWindow(Systray):
 	    """
         if not self.server or self.server.poll() is not None:
             self.log.append("You must start the main server before you can start the wireless client!")
+        elif not self.wgini_server or self.wgini_server.poll() is not None:
+            self.popup.setWindowTitle("Start server")
+            self.popup.setText("You must start the WGINI server first! Please start it from the system tray above canvas.")
+            self.popup.show()
         elif self.wgini_client is not None:
 	        self.log.append("Wireless GINI client is already running!")
         else:
@@ -874,7 +878,7 @@ class MainWindow(Systray):
             self.log.append("You must connect to the wireless server before you can discover any new devices!")
             if not self.startWGINIClient():
                 return
-        self.log.append("This is working")
+
         if self.isRunning() and not self.recovery:
             self.log.append("A topology is currently running, please stop it before discovering any new devices!")
             return
