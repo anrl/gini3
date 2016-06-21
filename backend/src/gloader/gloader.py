@@ -511,6 +511,7 @@ def getSocketName(nwIf, name, myGINI, options):
     "Get the socket name the interface is connecting to"
     waps = myGINI.vwr
     for wap in waps:
+        print wap
         # looking for a match in all waps
         if (wap.name == nwIf.target):
             oldDir = os.getcwd()
