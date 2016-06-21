@@ -1,8 +1,8 @@
 import os, sys, time, subprocess
 
 remote_dir = "/root/"
-local_dir = "/home/anrl/Desktop/"
-sshpass = "sshpass -p \"arduino\""
+local_dir = "/home/akanksha/"
+sshpass = "sshpass -p \"akanksha1\""
 username = "root"
 password = "arduino"
 

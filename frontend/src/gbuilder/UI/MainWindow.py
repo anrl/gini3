@@ -710,24 +710,25 @@ class MainWindow(Systray):
         QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
 
         itemDict = {}
-
+        _in.seek(0)
         line = str(_in.readLine())
         lines = []
+
         while not _in.atEnd():
-            item = loadIntoScene(line)
-            line = str(_in.readLine())
+            item=loadIntoScene(line)
+            line=str(_in.readLine())
             while line.find("\t") == 0:
                 lines.append(line)
-                line = str(_in.readLine())
+                line=str(_in.readLine())
             itemDict[item] = lines
             lines = []
-
-	    if yRouters:
-	        self.discover()
 
         loadProperties(itemDict)
 
         QtGui.QApplication.restoreOverrideCursor()
+
+        if yRouters:
+	        self.discover()
 
         self.statusBar().showMessage(self.tr("Loaded '%1'").arg(filename), 2000)
 

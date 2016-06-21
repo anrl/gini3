@@ -55,9 +55,9 @@ class Compiler:
             self.autogen_wireless_access_point()
         self.compile_wireless_access_point()
 
-	if options["autogen"]:
+        if options["autogen"]:
             self.autogen_router()
-	    self.autogen_yRouter()
+            self.autogen_yRouter()
             self.autogen_UML()
             self.autogen_REALM()
             self.autogen_mobile()
@@ -66,13 +66,13 @@ class Compiler:
         if options["autorouting"]:
             self.routing_table_router()
             #self.routing_table_wireless_access_point()
-	    self.routing_table_yRouter()
+            self.routing_table_yRouter()
             self.routing_table_entry()
             self.routing_table_uml()
             #self.routing_table_mobile()
 
         self.compile_router()
-	self.compile_yRouter()
+        self.compile_yRouter()
         self.compile_UML()
         self.compile_REALM()
         self.compile_mobile()
@@ -283,63 +283,60 @@ class Compiler:
         Auto-generate properties for yRouter.
         """
         for yRouter in self.compile_list["yRouter"]:
-	    i = 0
-	    for con in yRouter.edges():
-		i += 1
-		node = con.getOtherDevice(yRouter)
-		node = node.getTarget(yRouter)
+            i = 0
+            for con in yRouter.edges():
+                i += 1
+                node = con.getOtherDevice(yRouter)
+                node = node.getTarget(yRouter)
 
-		if options["autogen"]:
-		    subnet = str(yRouter.getInterfaceProperty("subnet", node)).rsplit(".", 1)[0]
-		    yRouter.setInterfaceProperty("ipv4", "%s.%d" %(subnet, yRouter.getID()), node)
-		    yRouter.setInterfaceProperty("mac", "fe:fd:05:%02x:00:%02x" %(yRouter.getID(), i), node)
+                if options["autogen"]:
+                    subnet = str(yRouter.getInterfaceProperty("subnet", node)).rsplit(".", 1)[0]
+                    yRouter.setInterfaceProperty("ipv4", "%s.%d" %(subnet, yRouter.getID()), node)
+                    yRouter.setInterfaceProperty("mac", "fe:fd:05:%02x:00:%02x" %(yRouter.getID(), i), node)
 
     def compile_yRouter(self):
         """
         Compile all the yRouters.
         """
-	if not self.compile_list["yRouter"]:
-	    return
+        if not self.compile_list["yRouter"]:
+            return
 
-	if not mainWidgets["wgini_client"]:
-	    self.log.append("Error: Please run WGINI client first!")
-	    return
+        if not mainWidgets["wgini_client"]:
+            self.log.append("Error: Please run WGINI client first!")
+            return
 
         tsfString = "<VN>\n"
-
-	for yRouter in self.compile_list["yRouter"]:
-	    yid = yRouter.getID()
-
+        for yRouter in self.compile_list["yRouter"]:
+            yid = yRouter.getID()
             tsfString += "\t<Station>\n"
             tsfString += "\t\t<ID>%d</ID>\n" %yid
 
-	    itf = 0
-	    for tun in yRouter.edges():
-		subnet = tun.getOtherDevice(yRouter)
-		node = subnet.getTarget(yRouter)
+            itf = 0
+            for tun in yRouter.edges():
+                subnet = tun.getOtherDevice(yRouter)
+                node = subnet.getTarget(yRouter)
+                mask = str(yRouter.getInterfaceProperty("mask", node))
+                mac = str(yRouter.getInterfaceProperty("mac", node))
+                ip = str(yRouter.getInterfaceProperty("ipv4", node))
 
-		mask = str(yRouter.getInterfaceProperty("mask", node))
-		mac = str(yRouter.getInterfaceProperty("mac", node))
-		ip = str(yRouter.getInterfaceProperty("ipv4", node))
+                if node.device_type == "Router":
+                    strOpen = "\t\t<BBInterface>\n"
+                    dest = "\t\t\t<DestIface>%d</DestIface>\n" %node.getID()
+                    strClose = "\t\t</BBInterface>\n"
+                else:
+                    strOpen = "\t\t<TunInterface>\n"
+                    dest = "\t\t\t<DestStaID>%d</DestStaID>\n" %node.getID()
+                    strClose = "\t\t</TunInterface>\n"
 
-		if node.device_type == "Router":
-		    strOpen = "\t\t<BBInterface>\n"
-		    dest = "\t\t\t<DestIface>%d</DestIface>\n" %node.getID()
-		    strClose = "\t\t</BBInterface>\n"
-		else:
-		    strOpen = "\t\t<TunInterface>\n"
-		    dest = "\t\t\t<DestStaID>%d</DestStaID>\n" %node.getID()
-		    strClose = "\t\t</TunInterface>\n"
-
-		tsfString += strOpen
-		tsfString += "\t\t\t<InterfaceNo>%d</InterfaceNo>\n" %itf
+                tsfString += strOpen
+                tsfString += "\t\t\t<InterfaceNo>%d</InterfaceNo>\n" %itf
                 tsfString += dest
                 tsfString += "\t\t\t<IPAddress>%s</IPAddress>\n" %ip
                 tsfString += "\t\t\t<HWAddress>%s</HWAddress>\n" %mac
 
-		interface = yRouter.getInterface(node)
-		routes = interface[QtCore.QString("routing")]
-		for route in routes:
+                interface = yRouter.getInterface(node)
+                routes = interface[QtCore.QString("routing")]
+                for route in routes:
                     tsfString += "\t\t\t<REntry>\n"
                     tsfString += "\t\t\t\t<Net>%s</Net>\n" %str(yRouter.getInterfaceProperty("subnet", node))
                     tsfString += "\t\t\t\t<NetMask>%s</NetMask>\n" %str(route[QtCore.QString("netmask")])
@@ -347,29 +344,25 @@ class Compiler:
                     tsfString += "\t\t\t</REntry>\n"
 
                 tsfString += strClose
-		itf += 1
+                itf += 1
 
-	    if yRouter.getProperty("WLAN") == "True":
-		tsfString += "\t\t<WlanInterface>\n"
-		tsfString += "\t\t\t<InterfaceNo>%d</InterfaceNo>\n" %itf
+            if yRouter.getProperty("WLAN") == "True":
+                tsfString += "\t\t<WlanInterface>\n"
+                tsfString += "\t\t\t<InterfaceNo>%d</InterfaceNo>\n" %itf
                 tsfString += "\t\t\t<IPAddress>192.167.%d.1</IPAddress>\n" %yid
-		#tsfString += "\t\t\t<SSID>%s</SSID>\n" %SSID
+                #tsfString += "\t\t\t<SSID>%s</SSID>\n" %SSID
                 tsfString += "\t\t\t<REntry>\n"
                 tsfString += "\t\t\t\t<Net>192.167.%d.0</Net>\n" %yid
                 tsfString += "\t\t\t\t<NetMask>255.255.255.0</NetMask>\n"
                 tsfString += "\t\t\t\t<NextHop>None</NextHop>\n"
                 tsfString += "\t\t\t</REntry>\n"
-		tsfString += "\t\t</WlanInterface>\n"
-
+                tsfString += "\t\t</WlanInterface>\n"
             tsfString += "\t</Station>\n"
-
         tsfString += "</VN>"
 
-	#TODO: remove
-	print tsfString
-
-	status = mainWidgets["wgini_client"].Create(tsfString)
-	self.log.append(status)
+        #print tsfString
+        status = mainWidgets["wgini_client"].Create(tsfString)
+        self.log.append(status)
 
     def writeInterface(self, device, interface, mapping):
         """

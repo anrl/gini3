@@ -103,8 +103,8 @@ class WGINI_Server:
 				return "Create: Not enough wlan interfaces on Station %d"%Station.ID
 
 		# Make sure the user doesn't have an existing topology deployed
-		if(self.database.GetTopologyID(HostIP) != None):
-			return "Create: Please delete the exising topology before creating a new one"
+		#if(self.database.GetTopologyID(HostIP) != None):
+			#return "Create: Please delete the exising topology before creating a new one"
 
 		self.database.AddTopology(HostIP)
 		TopID = self.database.GetTopologyID(HostIP)
