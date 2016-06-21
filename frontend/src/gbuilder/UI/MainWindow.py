@@ -198,9 +198,9 @@ class MainWindow(Systray):
             itemTypes[nodeType] = 0
 
 	    if usedyRouters:
-	        for yunid, yun in usedyRouters.iterItems():
+	        for yunid, yun in usedyRouters.iteritems():
 		        availableyRouters.append(yun)
-		        availableyRouters.sort(Key=lambda YunEntity: YunEntity['ID'])
+		        availableyRouters.sort(key=lambda YunEntity: YunEntity['ID'])
 	        usedyRouters = {}
 
         self.properties.clear()
@@ -707,6 +707,9 @@ class MainWindow(Systray):
 		            QtGui.QMessageBox.warning(self, self.tr("Load Error"), self.tr("Cannot open file with yRouters without connecting to wireless server."))
 		        return
 
+        if yRouters:
+	        self.discover()
+
         QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
 
         itemDict = {}
@@ -726,9 +729,6 @@ class MainWindow(Systray):
         loadProperties(itemDict)
 
         QtGui.QApplication.restoreOverrideCursor()
-
-        if yRouters:
-	        self.discover()
 
         self.statusBar().showMessage(self.tr("Loaded '%1'").arg(filename), 2000)
 
