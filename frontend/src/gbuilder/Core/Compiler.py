@@ -305,6 +305,44 @@ class Compiler:
             self.log.append("Error: Please run WGINI client first!")
             return
 
+
+        for router in self.compile_list["yRouter"]:
+            self.output.write("<vr name=\"" + router.getName() + "\">\n")
+
+            controllerFound = False
+            for con in router.edges():
+                node = con.getOtherDevice(router)
+                if node.device_type == "OpenFlow_Controller":
+                    if controllerFound:
+                        self.generateGenericError(router, " is connected to multiple OpenFlow controllers")
+                        return
+                    controllerFound = True
+                    self.output.write("\t<controller>" + node.getName() + "</controller>\n")
+
+
+
+            edges = router.edges()
+            if len(edges) < 2:
+                self.generateConnectionWarning(router, 2)
+
+            for con in edges:
+                node = con.getOtherDevice(router)
+                if node.device_type == "OpenFlow_Controller":
+                    continue
+                node = node.getTarget(router)
+
+                self.output.write("\t<netif>\n")
+
+                interface = router.getInterface(node)
+                mapping = {"subnet":"network", "mac":"nic", "ipv4":"ip"}
+
+                self.writeInterface(router, interface, mapping)
+
+                self.output.write("\t</netif>\n")
+
+            self.output.write("</vr>\n\n")
+
+
         tsfString = "<VN>\n"
         for yRouter in self.compile_list["yRouter"]:
             yid = yRouter.getID()
@@ -360,7 +398,7 @@ class Compiler:
             tsfString += "\t</Station>\n"
         tsfString += "</VN>"
 
-        #print tsfString
+        print tsfString
         status = mainWidgets["wgini_client"].Create(tsfString)
         self.log.append(status)
 

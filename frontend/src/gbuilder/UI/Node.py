@@ -45,11 +45,11 @@ class DropItem(QtGui.QGraphicsItem):
             transparency = QtGui.QImage(self.image)
             transparency.fill(QtGui.qRgba(0,0,0,50))
             painter.drawImage(QtCore.QPoint(-self.image.width()/2, -self.image.height()/2), transparency)
-        painter.drawImage(QtCore.QPoint(-self.image.width()/2, -self.image.height()/2), self.image)
-	device_text = self.device_type
-	if self.device_type == "yRouter":
-	    device_text += " (" + str(len(availableyRouters)) + ")"
-        painter.drawText(QtCore.QRectF(-70, self.image.height()/2, 145, 60), device_text, QtGui.QTextOption(QtCore.Qt.AlignHCenter))
+            painter.drawImage(QtCore.QPoint(-self.image.width()/2, -self.image.height()/2), self.image)
+            device_text = self.device_type
+        if self.device_type == "yRouter":
+            device_text += " (" + str(len(availableyRouters)) + ")"
+            painter.drawText(QtCore.QRectF(-70, self.image.height()/2, 145, 60), device_text, QtGui.QTextOption(QtCore.Qt.AlignHCenter))
 
     def boundingRect(self):
         """
@@ -468,11 +468,10 @@ class Node(DropItem, Item):
 	    availableyRouters.append(yRouter)
 	    availableyRouters.sort(key=lambda YunEntity: YunEntity['ID'])
 	    del usedyRouters[index]
-
-	    if mainWidgets["drop"].commonDropArea.yRouterDrop is not None:
-		mainWidgets["drop"].commonDropArea.yRouterDrop.update()
-	    if mainWidgets["drop"].netDropArea.yRouterDrop is not None:
-		mainWidgets["drop"].netDropArea.yRouterDrop.update()
+        if mainWidgets["drop"].commonDropArea.yRouterDrop is not None:
+            mainWidgets["drop"].commonDropArea.yRouterDrop.update()
+        if mainWidgets["drop"].netDropArea.yRouterDrop is not None:
+            mainWidgets["drop"].netDropArea.yRouterDrop.update()
 
         self.scene().removeItem(self)
 

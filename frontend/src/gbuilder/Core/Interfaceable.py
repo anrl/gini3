@@ -246,7 +246,7 @@ class Interfaceable(Attachable):
                                   subnet,
                                   target)
         else:
-            if self.device_type == "Router":
+            if self.device_type == "Router" or self.device_type=="yRouter":
                 interface = self.getInterface(None, subnet)
                 self.addEntry(interface[QtCore.QString("mask")],
                               "0.0.0.0",

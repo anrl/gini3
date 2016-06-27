@@ -290,6 +290,57 @@ env.Clean("install-grouter",libdir + "/grouter")
 env.Alias('install','install-grouter')
 
 ###########
+# yRouter #
+###########
+
+yrouter_include = backend_dir + '/include'
+yrouter_dir = backend_dir + '/src/grouter'
+yrouter_build_dir = src_dir + '/build/release/yrouter'
+
+VariantDir(yrouter_build_dir,yrouter_dir, duplicate=0)
+
+yrouter_env = Environment(CPPPATH=yrouter_include)
+yrouter_env.Append(CFLAGS='-g')
+yrouter_env.Append(CFLAGS='-DHAVE_PTHREAD_RWLOCK=1')
+yrouter_env.Append(CFLAGS='-DHAVE_GETOPT_LONG')
+
+# some of the following library dependencies can be removed?
+# may be the termcap is not needed anymore..?
+# TODO: libslack should be removed.. required routines should be custom compiled
+
+yrouter_libs = Split ("""readline
+                         termcap
+                         slack
+                         pthread
+                         util
+                         m""")
+
+yrouter_test_objects = []
+yrouter_other_objects = []
+for file in os.listdir(yrouter_dir):
+    if file.endswith(".c"):
+        if file == "cli.c" or file == "grouter.c":
+            yrouter_other_objects.append(yrouter_env.Object(yrouter_build_dir + "/" + file))
+        else:
+            yrouter_test_objects.append(yrouter_env.Object(yrouter_build_dir + "/" + file))
+
+yrouter = yrouter_env.Program(yrouter_build_dir + "/yrouter", yrouter_test_objects + yrouter_other_objects, LIBS=yrouter_libs)
+
+env.Install(libdir + "/yrouter/", yrouter)
+post_chmod(libdir + "/yrouter/yrouter")
+env.PythonEnvFile(bindir + "/yrouter" ,libdir + "/yrouter/yrouter")
+post_chmod(bindir + "/yrouter")
+
+env.Install(sharedir + '/yrouter/helpdefs', Glob(yrouter_include + '/helpdefs/*'))
+
+env.Alias('install-yrouter',bindir + '/yrouter')
+env.Alias('install-yrouter',sharedir + '/yrouter/helpdefs')
+env.Clean(bindir + "/yrouter",libdir + "/yrouter/yrouter")
+env.Clean("install-yrouter",libdir + "/yrouter")
+env.Alias('install','install-yrouter')
+
+
+###########
 # uswitch #
 ###########
 
@@ -560,6 +611,19 @@ for file in os.listdir(grouter_test_dir):
             os.path.join(grouter_test_build_dir, file[:-2]),
             [os.path.join(grouter_test_build_dir, file)] + grouter_test_objects,
             LIBS=grouter_libs))
+
+yrouter_test_dir = test_dir + '/grouter'
+yrouter_test_build_dir = test_build_dir + '/yrouter'
+yrouter_test_env = testenv.Clone()
+yrouter_test_env.Append(CPPPATH=[yrouter_include])
+yrouter_test_env.VariantDir(yrouter_test_build_dir, yrouter_test_dir, duplicate=0)
+
+for file in os.listdir(yrouter_test_dir):
+    if file.endswith("_t.c"):
+        tests.append(yrouter_test_env.Program(
+            os.path.join(yrouter_test_build_dir, file[:-2]),
+            [os.path.join(yrouter_test_build_dir, file)] + yrouter_test_objects,
+            LIBS=yrouter_libs))
 
 test_alias = Alias('test', tests, [test[0].abspath for test in tests])
 AlwaysBuild(test_alias)

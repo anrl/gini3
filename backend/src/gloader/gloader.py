@@ -270,13 +270,13 @@ def createVR(myGINI, options):
                       (router.name, nwIf.name)
                 return False
             else:
+                #print socketName
                 configOut.write(getVRIFOutLine(nwIf, socketName))
         configOut.write("echo -ne \"\\033]0;" + router.name + "\\007\"")
         configOut.close()
         ### ------- execute ---------- ###
         # go to the router directory to execute the command
         oldDir = os.getcwd()
-        os.chdir(subRouterDir)
         command = "screen -d -m -L -S %s %s " % (router.name, GR_PROG_BIN)
         command += "--config=%s.conf " % GR_PROG
         command += "--confpath=" + os.environ["GINI_HOME"] + "/data/" + router.name + " "
@@ -542,6 +542,7 @@ def getSocketName(nwIf, name, myGINI, options):
         if (router.name == nwIf.target):
             for remoteNWIf in router.netIF:
                 # router matches, looking for a reverse match
+                #print remoteNWIf.target, name
                 if (remoteNWIf.target == name):
                     # all match create and return the socketname
                     targetDir = getFullyQualifiedDir(options.routerDir)
