@@ -277,6 +277,7 @@ def createVR(myGINI, options):
         ### ------- execute ---------- ###
         # go to the router directory to execute the command
         oldDir = os.getcwd()
+        os.chdir(subRouterDir)
         command = "screen -d -m -L -S %s %s " % (router.name, GR_PROG_BIN)
         command += "--config=%s.conf " % GR_PROG
         command += "--confpath=" + os.environ["GINI_HOME"] + "/data/" + router.name + " "
