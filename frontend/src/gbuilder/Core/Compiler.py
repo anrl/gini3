@@ -644,6 +644,16 @@ class Compiler:
             self.output.write("</vofc>\n\n")
 
 
+    def generateGenericWarning(self, device, message):
+        """
+        Generate a compile warning.
+        """
+        self.warnings += 1
+        message = ' '.join(("Warning:", device.getName(), message))
+        self.log.append(message)
+
+
+
     def pass_mask(self, node):
         """
         Pass the mask between connected devices.
