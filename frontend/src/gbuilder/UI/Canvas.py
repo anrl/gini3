@@ -5,6 +5,9 @@ from Node import *
 from Core.globals import options, mainWidgets, yRouters
 from Core.Connection import *
 from Core.Wireless_Connection import *
+from Core.Item import *
+import os.path
+
 
 realMnumber=3
 deviceTypes = {"Bridge":Bridge, "Firewall":Firewall, "Hub":Hub, "Mobile":Mobile,
@@ -281,20 +284,26 @@ class Canvas(View):
         """
         Handle a drop.
         """
+        from MainWindow import *
+        from Systray import *
         mime = event.mimeData()
-        node = deviceTypes[str(mime.text())]
-        try:
-            node = node()
-        except:
-            return
+        if(str(mime.text()) in topology.keys()):
+            filename= "/home/akanksha/.gini/sav/"+str(mime.text())+".gsav"
 
-        scene = self.scene()
-        scene.addItem(node)
+        else:
+            node = deviceTypes[str(mime.text())]
+            try:
+                node = node()
+            except:
+                return
 
-        scenePos = self.mapToScene(event.pos())
-        node.setPos(scenePos.x(), scenePos.y())
-        self.setFocus()
-        scene.update()
+            scene = self.scene()
+            scene.addItem(node)
+
+            scenePos = self.mapToScene(event.pos())
+            node.setPos(scenePos.x(), scenePos.y())
+            self.setFocus()
+            scene.update()
 
     def dragMoveEvent(self, event):
         pass

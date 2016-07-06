@@ -621,7 +621,7 @@ class MainWindow(Systray):
 
         return filename
 
-    def loadTopology(self):
+    def loadTopology(self, *args):
         """
         Load a topology.
         """
@@ -633,7 +633,7 @@ class MainWindow(Systray):
             self.log.append("You cannot load a topology during the tutorial!")
             return
 
-        def loadIntoScene(line):
+        def loadIntoScene(line, *args):
             scene = self.canvas.scene()
             itemType,arg = line.split(":")
             args = str(arg).strip("()").split(",")
@@ -680,7 +680,10 @@ class MainWindow(Systray):
                     elif count == 5:
                         item.setEntryProperty(prop, value, currentRouteSubnet, currentInterfaceTarget)
 
-        filename = self.loadFile("GSAV (*.gsav)")
+        if(args):
+            filename=args
+        else:
+            filename = self.loadFile("GSAV (*.gsav)")
         if filename.isEmpty():
             return
 
