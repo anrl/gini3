@@ -1,7 +1,8 @@
 """The main window for gbuilder 2.0"""
 
-import os, time, math, subprocess
-from PyQt4 import QtCore, QtGui
+import os, time, math, subprocess, sys
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
 from DropBar import *
 from LogWindow import *
 from Canvas import *
@@ -621,7 +622,146 @@ class MainWindow(Systray):
 
         return filename
 
-    def loadTopology(self, *args):
+    def loadrealTopologyfile(self, filetype):
+        """
+        Load a real topology name
+        """
+        self.popup.setWindowTitle("Topology Names")
+        self.popup.setText("You are about to select from the list:\n1.Ernet")
+        self.popup.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        self.popup.show()
+        retval = self.popup.exec_()
+
+        if retval==1024:
+            olddir = os.getcwd()
+            os.chdir(environ["sav"])
+            os.chdir("exist")
+            loadpath = os.getcwd()
+            os.chdir(olddir)
+
+            filename = QtGui.QFileDialog.getOpenFileName(self,
+                        self.tr("Choose a file name"), loadpath,
+                        self.tr(filetype))
+
+            return filename
+
+
+
+    def loadrealTopology(self):
+        """
+        Load a real topology.
+        """
+        if self.running:
+            self.log.append("You cannot load a topology when one is still running!")
+            return
+
+        if isinstance(mainWidgets["canvas"], Tutorial):
+            self.log.append("You cannot load a topology during the tutorial!")
+            return
+
+        def loadIntoScene(line, *args):
+            scene = self.canvas.scene()
+            itemType,arg = line.split(":")
+            args = str(arg).strip("()").split(",")
+
+            if itemType == "edge":
+                source = scene.findItem(args[0])
+                dest = scene.findItem(args[1])
+                if source.device_type == "Mobile" or dest.device_type == "Mobile":
+                    item = Wireless_Connection(source, dest)
+                else:
+                    item = Connection(source, dest)
+                scene.addItem(item)
+            else:
+                devType, index = str(itemType).rsplit("_", 1)
+                item = deviceTypes[devType]()
+                item.setIndex(int(index))
+                scene.addItem(item)
+                item.setPos(float(args[0]), float(args[1]))
+                item.nudge()
+
+            return item
+
+        def loadProperties(itemDict):
+            currentInterfaceTarget = None
+            currentRouteSubnet = None
+
+            for item, properties in itemDict.iteritems():
+                for line in properties:
+                    count = 0
+                    while line.find("\t") == 0:
+                        line = line[1:]
+                        count += 1
+
+                    prop, value = line.split(":", 1)
+                    if count == 1:
+                        item.setProperty(prop, value)
+                    elif count == 2:
+                        currentInterfaceTarget = self.canvas.scene().findItem(value)
+                    elif count == 3:
+                        item.setInterfaceProperty(prop, value, currentInterfaceTarget)
+                    elif count == 4:
+                        currentRouteSubnet = value
+                        item.addEntry("", "", value, currentInterfaceTarget)
+                    elif count == 5:
+                        item.setEntryProperty(prop, value, currentRouteSubnet, currentInterfaceTarget)
+
+        filename = self.loadrealTopologyfile("GSAV (*.gsav)")
+        if not filename:
+            return
+
+        file = QtCore.QFile(filename)
+        if not file.open(QtCore.QFile.ReadOnly | QtCore.QFile.Text):
+            QtGui.QMessageBox.warning(self, self.tr("Load Error"),
+                                      self.tr("Cannot read file %1:\n%2.")
+                                      .arg(filename)
+                                      .arg(file.errorString()))
+            return
+
+        self.newScene()
+        self.filename = str(filename)
+
+        _in = QtCore.QTextStream(file)
+
+        yRouters = False
+        if "yRouter" in str(_in.readAll()):
+	        yRouters = True
+	        QtGui.QMessageBox.warning(self, self.tr("Load Warning"), self.tr("This file contains yRouters, which may not be physically available right now. Any yRouters no longer physically available will automatically be removed from the topology."))
+
+	        if not self.wgini_server:
+		        if not self.startWGINIClient():
+		            QtGui.QMessageBox.warning(self, self.tr("Load Error"), self.tr("Cannot open file with yRouters without connecting to wireless server."))
+		        return
+
+        if yRouters:
+	        self.discover()
+
+        QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+
+        itemDict = {}
+        _in.seek(0)
+        line = str(_in.readLine())
+        lines = []
+
+        while not _in.atEnd():
+            item=loadIntoScene(line)
+            line=str(_in.readLine())
+            while line.find("\t") == 0:
+                lines.append(line)
+                line=str(_in.readLine())
+            itemDict[item] = lines
+            lines = []
+
+        loadProperties(itemDict)
+
+        QtGui.QApplication.restoreOverrideCursor()
+
+        self.statusBar().showMessage(self.tr("Loaded '%1'").arg(filename), 2000)
+
+
+
+
+    def loadTopology(self):
         """
         Load a topology.
         """
@@ -680,10 +820,7 @@ class MainWindow(Systray):
                     elif count == 5:
                         item.setEntryProperty(prop, value, currentRouteSubnet, currentInterfaceTarget)
 
-        if(args):
-            filename=args
-        else:
-            filename = self.loadFile("GSAV (*.gsav)")
+        filename = self.loadFile("GSAV (*.gsav)")
         if filename.isEmpty():
             return
 
@@ -1002,6 +1139,11 @@ class MainWindow(Systray):
         self.loadAct.setStatusTip(self.tr("Load a topology"))
         self.connect(self.loadAct, QtCore.SIGNAL("triggered()"), self.loadTopology)
 
+        self.loadTopAct = QtGui.QAction(QtGui.QIcon(environ["images"] + "open.png"), self.tr("&Open Topology..."), self)
+        self.loadTopAct.setShortcut(self.tr("Ctrl+Shift+O"))
+        self.loadTopAct.setStatusTip(self.tr("Load an existing topology"))
+        self.connect(self.loadTopAct, QtCore.SIGNAL("triggered()"), self.loadrealTopology)
+
         self.saveAct = QtGui.QAction(QtGui.QIcon(environ["images"] + "save.png"), self.tr("&Save..."), self)
         self.saveAct.setShortcut(self.tr("Ctrl+S"))
         self.saveAct.setStatusTip(self.tr("Save the current topology"))
@@ -1123,6 +1265,7 @@ class MainWindow(Systray):
         self.fileMenu.setPalette(defaultOptions["palette"])
         self.fileMenu.addAction(self.newSceneAct)
         self.fileMenu.addAction(self.loadAct)
+        self.fileMenu.addAction(self.loadTopAct)
         self.fileMenu.addAction(self.saveAct)
         self.fileMenu.addAction(self.saveAsAct)
         self.fileMenu.addAction(self.sendFileAct)
@@ -1182,6 +1325,7 @@ class MainWindow(Systray):
         self.fileToolBar = self.addToolBar(self.tr("File"))
         self.fileToolBar.addAction(self.newSceneAct)
         self.fileToolBar.addAction(self.loadAct)
+        self.fileToolBar.addAction(self.loadTopAct)
         self.fileToolBar.addAction(self.saveAct)
         self.fileToolBar.addAction(self.sendFileAct)
         self.fileToolBar.addAction(self.exportAct)
@@ -1264,6 +1408,7 @@ class MainWindow(Systray):
         self.log = LogWindow(self.tr("Log"), self)
         self.log.append("Welcome to %s %s!\n"
                 % (Core.globals.PROG_NAME, Core.globals.PROG_VERSION))
+        self.log.append("To open a real topology, please click 'open existing topology' from the tray above canvas!")
         self.log.setGeometry(QtCore.QRect(0, 0, 800, 114))
         mainWidgets["log"] = self.log
 

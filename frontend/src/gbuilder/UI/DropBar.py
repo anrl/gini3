@@ -74,12 +74,10 @@ class DropBar(Dockable):
         self.commonDropArea = DropArea(commonTypes)
         self.hostDropArea = DropArea(hostTypes.keys())
         self.netDropArea = DropArea(netTypes.keys())
-        self.topDropArea = DropArea(topology.keys())
 
         self.toolBox.addItem(self.commonDropArea, self.tr("&Common Elements"))
         self.toolBox.addItem(self.hostDropArea, self.tr("&Host Elements"))
         self.toolBox.addItem(self.netDropArea, self.tr("&Net Elements"))
-        self.toolBox.addItem(self.topDropArea, self.tr("&Real Topologies"))
 
         self.connect(self.toolBox,
                      QtCore.SIGNAL("currentChanged(int)"),

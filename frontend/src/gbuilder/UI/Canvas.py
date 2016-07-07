@@ -284,26 +284,20 @@ class Canvas(View):
         """
         Handle a drop.
         """
-        from MainWindow import *
-        from Systray import *
-        mime = event.mimeData()
-        if(str(mime.text()) in topology.keys()):
-            filename= "/home/akanksha/.gini/sav/"+str(mime.text())+".gsav"
 
-        else:
-            node = deviceTypes[str(mime.text())]
-            try:
-                node = node()
-            except:
-                return
+        node = deviceTypes[str(mime.text())]
+        try:
+            node = node()
+        except:
+            return
 
-            scene = self.scene()
-            scene.addItem(node)
+        scene = self.scene()
+        scene.addItem(node)
 
-            scenePos = self.mapToScene(event.pos())
-            node.setPos(scenePos.x(), scenePos.y())
-            self.setFocus()
-            scene.update()
+        scenePos = self.mapToScene(event.pos())
+        node.setPos(scenePos.x(), scenePos.y())
+        self.setFocus()
+        scene.update()
 
     def dragMoveEvent(self, event):
         pass
