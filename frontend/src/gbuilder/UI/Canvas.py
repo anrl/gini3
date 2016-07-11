@@ -195,43 +195,44 @@ class View(QtGui.QGraphicsView):
                         elif dest.device_type == "REALM":
                             if len(dest.edges()) == 1:
                                 return "REALM cannot have more than one connection!"
+                        elif dest.device_type == "yRouter":
+                            target =source.getTarget(dest)
+                            yid= dest.getID()
+                            if target is not None and target.device_type == "Router" and not yRouters[yid]['IsPortal']:
+                                 return "yRouter_%d is not a portal and cannot connect to the host!" %yid
+                        elif dest.device_type == "Subnet":
+                            if len(dest.edges()) == 2:
+                                return "Subnet cannot have more than two connections!"
+                            if source.device_type == "Switch":
+                                for edge in dest.edges():
+                                    if edge.getOtherDevice(dest).device_type == "Switch":
+                                        return "Subnet cannot have more than one Switch!"
+                                for edge in source.edges():
+                                    if edge.getOtherDevice(source).device_type == "Subnet":
+                                        return "Switch cannot have more than one Subnet!"
+                            if source.device_type == "yRouter":
+                                target = dest.getTarget(source)
+                                yid = source.getID()
+                                if target is not None and target.device_type == "Router" and not yRouters[yid]['IsPortal']:
+                                    return "yRouter_%d is not a portal and cannot connect to the host!" %yid
+                            if source.device_type == "Router":
+                                target = dest.getTarget(source)
+                                if target is not None and target.device_type == "yRouter":
+                                    yid = target.getID()
+                                    if not yRouters[yid]['IsPortal']:
+                                        return "Cannot connect yRouter_%d to the host (not a portal)!" %yid
+
+
                         elif dest.device_type == "Router":
                             if source.device_type == "OpenFlow_Controller":
                                 for edge in dest.edges():
                                     if edge.getOtherDevice(dest).device_type == "OpenFlow_Controller":
                                         return "Router cannot have more than one OpenFlow Controller!"
-                        elif dest.device_type == "yRouter":
-            			    target = source.getTarget(dest)
-            			    yid = dest.getID()
-            			    if target is not None and target.device_type == "Router" and not yRouters[yid]['IsPortal']:
-            				return "yRouter_%d is not a portal and cannot connect to the host!" %yid
-                        elif dest.device_type == "Router":
-            			    target = source.getTarget(dest)
-            			    if target is not None and target.device_type == "yRouter":
-            				yid = target.getID()
-            				if not yRouters[yid]['IsPortal']:
-            				    return "Cannot connect yRouter_%d to the host (not a portal)!" %yid
-                                    elif dest.device_type == "Subnet":
-                                        if len(dest.edges()) == 2:
-                                            return "Subnet cannot have more than two connections!"
-            			    if source.device_type == "yRouter":
-            				target = dest.getTarget(source)
-            				yid = source.getID()
-            				if target is not None and target.device_type == "Router" and not yRouters[yid]['IsPortal']:
-            				    return "yRouter_%d is not a portal and cannot connect to the host!" %yid
-            			    if source.device_type == "Router":
-            				target = dest.getTarget(source)
-            				if target is not None and target.device_type == "yRouter":
-            				    yid = target.getID()
-            				    if not yRouters[yid]['IsPortal']:
-            					return "Cannot connect yRouter_%d to the host (not a portal)!" %yid
-                                        if source.device_type == "Switch":
-                                            for edge in dest.edges():
-                                                if edge.getOtherDevice(dest).device_type == "Switch":
-                                                    return "Subnet cannot have more than one Switch!"
-                                            for edge in source.edges():
-                                                if edge.getOtherDevice(source).device_type == "Subnet":
-                                                    return "Switch cannot have more than one Subnet!"
+                            target= source.getTarget(dest)
+                            if target is not None and target.device_type == "yRouter":
+                                yid = target.getID()
+                                if not yRouters[yid]['IsPortal']:
+                                    return "Cannot connect yRouter_%d to the host (not a portal)!" %yid
                         return True
                     return False
 
@@ -247,6 +248,7 @@ class View(QtGui.QGraphicsView):
                         return
 
                 # Check if connection rules are satisfied
+                #print self.sourceNode, item
                 valid = isValid(self.sourceNode, item)
                 if valid is True:
                     valid = isValid(item, self.sourceNode)
@@ -285,6 +287,7 @@ class Canvas(View):
         Handle a drop.
         """
 
+        mime = event.mimeData()
         node = deviceTypes[str(mime.text())]
         try:
             node = node()
