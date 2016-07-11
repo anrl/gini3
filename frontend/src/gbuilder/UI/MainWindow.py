@@ -13,6 +13,8 @@ from Core.globals import *
 import thread
 import socket
 import atexit
+import fcntl
+import struct
 from ExportWindow import *
 from SendDirectoryWindow import *
 from Properties import *
@@ -981,7 +983,7 @@ class MainWindow(Systray):
 	        self.log.append("Wireless GINI client is already running!")
         else:
 	        windowTitle = "Client data"
-	        labelText = "Enter wireless Server IP and port number, followed by Client IP, as \"serverIP:serverPort,clientIP\":"
+	        labelText = "Enter wireless client IP:"
 	        text, ok = self.inputDialog.getText(self.inputDialog, windowTitle, labelText)
 
         if ok:
@@ -989,17 +991,13 @@ class MainWindow(Systray):
                 self.log.append("Nothing entered; starting wireless GINI client cancelled!")
                 return False
             else:
-                ipportip=text.split(",")
-                if not (len(ipportip)==2):
+                ipportip=text
+                if not (socket.inet_aton(str(ipportip))):
                     self.log.append("Invalid entry, starting wireless GINI client cancelled.")
                     return False
-                wserver = ipportip[0].split(":")
-                if not (len(wserver) == 2):
-			        self.log.append("Invalid entry, starting wireless GINI client cancelled.")
-			        return False
-                self.wserverIP = str(wserver[0])
-                self.wserverPort = str(wserver[1])
-                wclientIP = str(ipportip[1])
+                self.wserverIP = get_ip_address('eth1')
+                self.wserverPort = '60000'
+                wclientIP = str(ipportip)
                 try:
                     self.wgini_client= WGINI_Client(self.wserverIP,self.wserverPort,wclientIP)
                     mainWidgets["wgini_client"]=self.wgini_client
@@ -1010,6 +1008,14 @@ class MainWindow(Systray):
                     return False
         else:
             return False
+
+    def get_ip_address(ifname):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        return socket.inet_ntoa(fcntl.ioctl(
+            s.fileno(),
+            0x8915,  # SIOCGIFADDR
+            struct.pack('256s', ifname[:15])
+        )[20:24])
 
     def discover(self):
         """
