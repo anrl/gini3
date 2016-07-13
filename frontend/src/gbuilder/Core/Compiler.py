@@ -306,12 +306,12 @@ class Compiler:
             return
 
 
-        for router in self.compile_list["yRouter"]:
-            self.output.write("<vr name=\"" + router.getName() + "\">\n")
+        for yRouter in self.compile_list["yRouter"]:
+            self.output.write("<vr name=\"" + yRouter.getName() + "\">\n")
 
             controllerFound = False
-            for con in router.edges():
-                node = con.getOtherDevice(router)
+            for con in yRouter.edges():
+                node = con.getOtherDevice(yRouter)
                 if node.device_type == "OpenFlow_Controller":
                     if controllerFound:
                         self.generateGenericError(router, " is connected to multiple OpenFlow controllers")
@@ -321,22 +321,21 @@ class Compiler:
 
 
 
-            edges = router.edges()
+            edges = yRouter.edges()
             if len(edges) < 2:
                 self.generateConnectionWarning(router, 2)
 
-            for con in edges:
-                node = con.getOtherDevice(router)
-                if node.device_type == "OpenFlow_Controller":
+            for tun in edges:
+                subnet = tun.getOtherDevice(yRouter)
+                node = subnet.getTarget(yRouter)
+                if subnet.device_type == "OpenFlow_Controller":
                     continue
-                node = node.getTarget(router)
-
                 self.output.write("\t<netif>\n")
 
-                interface = router.getInterface(node)
+                interface = yRouter.getInterface(node)
                 mapping = {"subnet":"network", "mac":"nic", "ipv4":"ip"}
 
-                self.writeInterface(router, interface, mapping)
+                self.writeInterface(yRouter, interface, mapping)
 
                 self.output.write("\t</netif>\n")
 
@@ -398,7 +397,7 @@ class Compiler:
             tsfString += "\t</Station>\n"
         tsfString += "</VN>"
 
-        print tsfString
+        #print tsfString
         status = mainWidgets["wgini_client"].Create(tsfString)
         self.log.append(status)
 

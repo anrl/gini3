@@ -270,7 +270,6 @@ def createVR(myGINI, options):
                       (router.name, nwIf.name)
                 return False
             else:
-                #print socketName
                 configOut.write(getVRIFOutLine(nwIf, socketName))
         configOut.write("echo -ne \"\\033]0;" + router.name + "\\007\"")
         configOut.close()
