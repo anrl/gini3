@@ -323,7 +323,7 @@ class Compiler:
 
             edges = yRouter.edges()
             if len(edges) < 2:
-                self.generateConnectionWarning(router, 2)
+                self.generateConnectionWarning(yRouter, 2)
 
             for tun in edges:
                 subnet = tun.getOtherDevice(yRouter)
@@ -480,8 +480,6 @@ class Compiler:
 
     def switch_pass_mask(self):
         for switch in self.compile_list["Switch"]:
-
-          has_subnet = False
           for edge in switch.edges():
               node = edge.getOtherDevice(switch)
               if node.device_type == "Subnet":

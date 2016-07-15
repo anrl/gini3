@@ -457,7 +457,12 @@ class MainWindow(Systray):
         command = ""
         gserver = "WGINI Server"
 
+
         command += "rxvt -T \"" + gserver + "\" -e " + base + tunnel + " \" " + server + "\""
+
+        sudoPassword = 'livelifeking123'
+        command1 = 'route add -net 192.168.0.0 gw 192.168.54.24 netmask 255.255.255.0 eth1' #change accordingly!
+        p = os.system('echo %s|sudo -S %s' % (sudoPassword, command1))
 
         self.wgini_server = subprocess.Popen(str(command), shell=True,preexec_fn=os.setpgrp)
 
