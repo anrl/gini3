@@ -96,7 +96,8 @@ def run_yrouter(interfaces, ID):
 	--config=%s test%s\n" %(interfaces.top_num, RemoteFile, interfaces.top_num)
 	print yrouter
 	remote_run = "%s ssh %s \"source /root/.profile; %s\""%(sshpass, remote_Station, yrouter)
-	os.system(remote_run)
+	#run_yrouter = subprocess.Popen(remote_run, shell=True,preexec_fn=os.setpgrp)
+	#os.system(remote_run)
 
 def kill_yrouter(top_num, StationIP):
 	kill_command = "%s ssh root@%s \"/root/bin/kill_yrouter %d\"" %(sshpass, StationIP, top_num)
