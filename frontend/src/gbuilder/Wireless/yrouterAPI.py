@@ -50,6 +50,7 @@ class rentry:
 def run_yrouter(interfaces, ID):
 	StationIP = interfaces.StationIP
 
+
 	# 1) Set up the yrouter's configuration file
 	configFileName = "script_t%d_y%d.conf" %(interfaces.top_num, ID)
 	configFile = local_dir + configFileName
@@ -70,13 +71,13 @@ def run_yrouter(interfaces, ID):
 			if(route.nexthop != "None"):
 				outLine += " -gw %s" %route.nexthop
 			outLine += "\n"
-
+        outLine += "route add -dev tun%d -net 192.168.0.0 -netmask 255.255.255.0\n"%(iface.num)
 	for iface in interfaces.wlan:
-		outLine += "ifconfig add raw%d -addr %s\n" % (iface.num, iface.vIP)
+		outLine += "ifconfig add raw%d -addr %s\n" % (iface.num+1, iface.vIP)
 
 		for route in iface.routes:
 			outLine += "route add -dev raw%d -net %s -netmask %s" \
-			%(iface.num, route.net, route.netmask)
+			%(iface.num+1, route.net, route.netmask)
 			if(route.nexthop != "None"):
 				outLine += " -gw %s" %route.nexthop
 			outLine += "\n"

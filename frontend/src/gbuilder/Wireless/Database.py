@@ -19,6 +19,7 @@ class WGINI_DB:
 
 		# Add Station info into the new database
 		self.AddStation("192.168.0.1", 3, 1)
+		self.AddStation("192.168.0.2", 3, 0)
 
 
 	def CreateTables(self):

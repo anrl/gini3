@@ -271,6 +271,7 @@ def createVR(myGINI, options):
                 return False
             else:
                 configOut.write(getVRIFOutLine(nwIf, socketName))
+                configOut.write("ifconfig add tun0 -socket 99 -addr 192.168")
         configOut.write("echo -ne \"\\033]0;" + router.name + "\\007\"")
         configOut.close()
         ### ------- execute ---------- ###
