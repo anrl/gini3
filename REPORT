@@ -1,0 +1,7 @@
+The following functions have been added in version 3.0.0:
+
+-- Revamped user interface with flattnened icons for the devices as well as for system trays.
+
+-- Users can now deploy actually exisiting topologies from the GML file of http://topology-zoo.org/. The conversion code is uploaded in the repository as convertor.py. All the GML files can be converted to GSAV files using this code, which can subsequently be copied to the .gini/sav/exist directory(automation of this process can be done) and thus can be loaded by the "Open Existing Topology" button on the system tray above the canvas, for which and instruction has been provided in the gbuilder.
+
+TODO: Dynamically upload the file from the website and convert it to GSAV, all in real time.
