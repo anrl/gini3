@@ -155,6 +155,10 @@ Otherwise, you should use Sessions:
         
 Details: What you just did was create a putty session identified by the name you provided.  This session holds the Host Name you will connect to, as well as the key used to authenticate you.  The session name can then be provided in gBuilder, who will use it to connect to the back-end.  Note that when providing a session name in gBuilder, the server name will be ignored.
 
+Wireless GINI integration
+=====
+Please refer to REPORT, https://github.com/ahmed-youssef/WirelessGINI and https://github.com/ahmed-youssef/yRouter for more information.
+
 Notes
 =====
 The package "rxvt" might be needed, if already not available.
