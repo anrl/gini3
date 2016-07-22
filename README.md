@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/michaelkourlas/gini-sdn.svg?branch=master)](https://travis-ci.org/michaelkourlas/gini-sdn)
 
 The GINI Toolkit is free software. Please see the file COPYING for copyright information.
+Please read REPORT in this repository to know the functionalities.
 
 Basic Installation - Ubuntu (32-bit)
 ==========================
