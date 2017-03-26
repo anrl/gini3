@@ -56,7 +56,7 @@ To enable the new settings, run the following:
 
 Now, get the gini source. You can issue the following command to get the gini source. Unpack gini source outside $GINI_HOME/gini (this is reserved for the GINI installation). You may create a directory such as $HOME/gini-src or something else of your liking.
 
-  git clone git://github.com/anrl/gini3.git
+    git clone git://github.com/anrl/gini3.git
 
 Go into source directory and issue the following commands.
 

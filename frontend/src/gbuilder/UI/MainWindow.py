@@ -163,7 +163,7 @@ class MainWindow(Systray):
             url = QtCore.QUrl("file://" + loadpath + "/FAQ.html")
         QtGui.QDesktopServices.openUrl(url)
 
-    def closeTopology(self,usedyRouters):
+    def closeTopology(self,usedyRouters=usedyRouters):
         """
         Close the current topology.
         """
@@ -1412,7 +1412,7 @@ class MainWindow(Systray):
         self.log = LogWindow(self.tr("Log"), self)
         self.log.append("Welcome to %s %s!\n"
                 % (Core.globals.PROG_NAME, Core.globals.PROG_VERSION))
-        self.log.append("To open a real topology, please click 'open existing topology' from the tray above canvas!")
+        self.log.append("To open an existing topology, please click the 'Open' icon from the tray above canvas!")
         self.log.setGeometry(QtCore.QRect(0, 0, 800, 114))
         mainWidgets["log"] = self.log
 

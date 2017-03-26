@@ -299,19 +299,8 @@ class GeneralPage(QtGui.QWidget):
         uiLayout.addLayout(baseThemeLayout)
         uiGroup.setLayout(uiLayout)
 
-        compilationGroup = QtGui.QGroupBox(self.tr("Compilation / Runtime"))
-        self.createCompilationCheckboxes()
-
-        compilationLayout = QtGui.QVBoxLayout()
-        compilationLayout.addWidget(self.autoroutingCheckBox)
-        compilationLayout.addWidget(self.autogenCheckBox)
-        compilationLayout.addWidget(self.autocompileCheckBox)
-        compilationLayout.addWidget(self.glowingCheckBox)
-        compilationGroup.setLayout(compilationLayout)
-
         mainLayout = QtGui.QVBoxLayout()
         mainLayout.addWidget(uiGroup)
-        mainLayout.addWidget(compilationGroup)
         mainLayout.addSpacing(12)
         mainLayout.addStretch(1)
 
@@ -333,19 +322,10 @@ class GeneralPage(QtGui.QWidget):
         """
         self.namesCheckBox = QtGui.QCheckBox(self.tr("Show component names"))
         self.smoothingCheckBox = QtGui.QCheckBox(self.tr("Use smoothing"))
-        self.glowingCheckBox = QtGui.QCheckBox(self.tr("Use glowing lights"))
         self.systrayCheckBox = QtGui.QCheckBox(self.tr("Use system tray (hide on close)"))
         self.gridCheckBox = QtGui.QCheckBox(self.tr("Show grid"))
         self.moveAlertCheckBox = QtGui.QCheckBox(self.tr("Alert on Move (when started)"))
         self.restoreLayoutCheckBox = QtGui.QCheckBox(self.tr("Remember and restore layout"))
-
-    def createCompilationCheckboxes(self):
-        """
-        Create checkboxes for compilation options.
-        """
-        self.autoroutingCheckBox = QtGui.QCheckBox(self.tr("Auto-routing"))
-        self.autogenCheckBox = QtGui.QCheckBox(self.tr("Auto-generate IP/MAC addresses"))
-        self.autocompileCheckBox = QtGui.QCheckBox(self.tr("Compile before running"))
 
     def createBrowsables(self):
         """
@@ -453,11 +433,6 @@ class GeneralPage(QtGui.QWidget):
         self.windowThemeLine.setText(options["windowTheme"])
         self.baseThemeLine.setText(options["baseTheme"])
 
-        self.autoroutingCheckBox.setChecked(options["autorouting"])
-        self.autogenCheckBox.setChecked(options["autogen"])
-        self.autocompileCheckBox.setChecked(options["autocompile"])
-        self.glowingCheckBox.setChecked(options["glowingLights"])
-
     def getBrushFrom(self, option):
         """
         Get the color or image in brush form.
@@ -508,12 +483,59 @@ class GeneralPage(QtGui.QWidget):
         options["windowTheme"] = self.windowThemeLine.text()
         options["baseTheme"] = self.baseThemeLine.text()
 
+        self.updateLook()
+
+class RuntimePage(QtGui.QWidget):
+    def __init__(self, parent=None):
+        """
+        Create a general configuration page.
+        """
+        QtGui.QWidget.__init__(self, parent)
+
+        compilationGroup = QtGui.QGroupBox(self.tr("Compilation / Runtime"))
+        self.createCompilationCheckboxes()
+
+        compilationLayout = QtGui.QVBoxLayout()
+        compilationLayout.addWidget(self.autoroutingCheckBox)
+        compilationLayout.addWidget(self.autogenCheckBox)
+        compilationLayout.addWidget(self.autocompileCheckBox)
+        compilationLayout.addWidget(self.glowingCheckBox)
+        compilationGroup.setLayout(compilationLayout)
+
+        mainLayout = QtGui.QVBoxLayout()
+        mainLayout.addWidget(compilationGroup)
+        mainLayout.addSpacing(12)
+        mainLayout.addStretch(1)
+
+        self.setLayout(mainLayout)
+        self.updateSettings()
+
+    def createCompilationCheckboxes(self):
+        """
+        Create checkboxes for compilation options.
+        """
+        self.autoroutingCheckBox = QtGui.QCheckBox(self.tr("Auto-routing"))
+        self.autogenCheckBox = QtGui.QCheckBox(self.tr("Auto-generate IP/MAC addresses"))
+        self.autocompileCheckBox = QtGui.QCheckBox(self.tr("Compile before running"))
+        self.glowingCheckBox = QtGui.QCheckBox(self.tr("Use glowing lights"))
+
+    def updateSettings(self):
+        """
+        Update the page with current options.
+        """
+        self.autoroutingCheckBox.setChecked(options["autorouting"])
+        self.autogenCheckBox.setChecked(options["autogen"])
+        self.autocompileCheckBox.setChecked(options["autocompile"])
+        self.glowingCheckBox.setChecked(options["glowingLights"])
+    
+    def saveOptions(self):
+        """
+        Save options handled by this page.
+        """
         options["autorouting"] = self.autoroutingCheckBox.isChecked()
         options["autogen"] = self.autogenCheckBox.isChecked()
         options["autocompile"] = self.autocompileCheckBox.isChecked()
         options["glowingLights"] = self.glowingCheckBox.isChecked()
-
-        self.updateLook()
 
 class ConfigDialog(QtGui.QDialog):
     def __init__(self, parent=None):
@@ -535,9 +557,11 @@ class ConfigDialog(QtGui.QDialog):
         self.contentsWidget.setSpacing(12)
 
         self.generalPage = GeneralPage()
+        self.runtimePage = RuntimePage()
         self.serverPage = ServerPage()
         self.updatePage = UpdatePage()
         self.pagesWidget.addWidget(self.generalPage)
+        self.pagesWidget.addWidget(self.runtimePage)
         self.pagesWidget.addWidget(self.serverPage)
         #self.pagesWidget.addWidget(self.updatePage)
 
@@ -627,6 +651,12 @@ class ConfigDialog(QtGui.QDialog):
         generalButton.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
 
         configButton = QtGui.QListWidgetItem(self.contentsWidget)
+        configButton.setIcon(QtGui.QIcon(environ["images"] + "runtime.png"))
+        configButton.setText(self.tr("Runtime"))
+        configButton.setTextAlignment(QtCore.Qt.AlignHCenter)
+        configButton.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+
+        configButton = QtGui.QListWidgetItem(self.contentsWidget)
         configButton.setIcon(QtGui.QIcon(environ["images"] + "Gserver.png"))
         configButton.setText(self.tr("Server"))
         configButton.setTextAlignment(QtCore.Qt.AlignHCenter)
@@ -648,6 +678,7 @@ class ConfigDialog(QtGui.QDialog):
         Handle closing the config window.
         """
         self.generalPage.saveOptions()
+        self.runtimePage.saveOptions()
         self.serverPage.saveOptions()
         self.updatePage.saveOptions()
 
@@ -671,6 +702,7 @@ class ConfigDialog(QtGui.QDialog):
         Update all pages with the current options.
         """
         self.generalPage.updateSettings()
+        self.runtimePage.updateSettings()
         self.serverPage.updateSettings()
 
 class Wizard(QtGui.QWizard):
