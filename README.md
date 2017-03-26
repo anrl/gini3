@@ -60,8 +60,8 @@ Now, get the gini source. You can issue the following command to get the gini so
 
 Go into source directory and issue the following commands.
 
-  scons 
-  scons install
+    scons 
+    scons install
 
 This should install GINI unless you get some errors in one or more of the above steps.
 Once installed, issue the gbuilder command to start the graphical interface. 

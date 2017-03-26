@@ -36,7 +36,7 @@ mainWidgets = {"app":None,
                "canvas":None,
                "tab":None,
                "popup":None,
-	       "inputDialog":None,
+	           "inputDialog":None,
                "log":None,
                "tm":None,
                "properties":None,
@@ -44,7 +44,7 @@ mainWidgets = {"app":None,
                "routes":None,
                "drop":None,
                "client":None,
-	       "wgini_client":None}
+	           "wgini_client":None}
 
 defaultOptions = {"palette":None}
 
