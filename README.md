@@ -17,8 +17,8 @@ To install GINI, you need the following libraries and applications:
 	sudo apt-get install screen
 	sudo apt-get install uml-utilities
 	sudo apt-get install openssh-server
-	mkdir -p ~/downloads
-	cd ~/downloads
+    sudo apt-get install build-essential
+    sudo apt-get install rxvt
 	wget http://libslack.org/download/libslack-0.6.tar.gz
 	tar xzf libslack-0.6.tar.gz
 	cd libslack-0.6

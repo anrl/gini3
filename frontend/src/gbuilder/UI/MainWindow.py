@@ -1150,11 +1150,6 @@ class MainWindow(Systray):
         self.loadAct.setStatusTip(self.tr("Load a topology"))
         self.connect(self.loadAct, QtCore.SIGNAL("triggered()"), self.loadTopology)
 
-        self.loadTopAct = QtGui.QAction(QtGui.QIcon(environ["images"] + "open.png"), self.tr("&Open Topology..."), self)
-        self.loadTopAct.setShortcut(self.tr("Ctrl+Shift+O"))
-        self.loadTopAct.setStatusTip(self.tr("Load an existing topology"))
-        self.connect(self.loadTopAct, QtCore.SIGNAL("triggered()"), self.loadrealTopology)
-
         self.saveAct = QtGui.QAction(QtGui.QIcon(environ["images"] + "save.png"), self.tr("&Save..."), self)
         self.saveAct.setShortcut(self.tr("Ctrl+S"))
         self.saveAct.setStatusTip(self.tr("Save the current topology"))
@@ -1180,7 +1175,7 @@ class MainWindow(Systray):
         self.copyAct.setStatusTip(self.tr("Copy the selected text"))
         self.connect(self.copyAct, QtCore.SIGNAL("triggered()"), self.copy)
 
-    	self.startWGINIClientAct = QtGui.QAction(QtGui.QIcon(environ["images"] + "startServer.png"), self.tr("&Start WGINI Client"), self)
+    	self.startWGINIClientAct = QtGui.QAction(QtGui.QIcon(environ["images"] + "startClient.png"), self.tr("&Start WGINI Client"), self)
     	self.startWGINIClientAct.setShortcut(self.tr("Ctrl+W"))
     	self.startWGINIClientAct.setStatusTip(self.tr("Start wireless GINI client"))
     	self.connect(self.startWGINIClientAct, QtCore.SIGNAL("triggered()"), self.startWGINIClient)
@@ -1276,7 +1271,6 @@ class MainWindow(Systray):
         self.fileMenu.setPalette(defaultOptions["palette"])
         self.fileMenu.addAction(self.newSceneAct)
         self.fileMenu.addAction(self.loadAct)
-        self.fileMenu.addAction(self.loadTopAct)
         self.fileMenu.addAction(self.saveAct)
         self.fileMenu.addAction(self.saveAsAct)
         self.fileMenu.addAction(self.sendFileAct)
@@ -1336,7 +1330,6 @@ class MainWindow(Systray):
         self.fileToolBar = self.addToolBar(self.tr("File"))
         self.fileToolBar.addAction(self.newSceneAct)
         self.fileToolBar.addAction(self.loadAct)
-        self.fileToolBar.addAction(self.loadTopAct)
         self.fileToolBar.addAction(self.saveAct)
         self.fileToolBar.addAction(self.sendFileAct)
         self.fileToolBar.addAction(self.exportAct)
@@ -1348,12 +1341,12 @@ class MainWindow(Systray):
         self.editToolBar.addAction(self.expandSceneAct)
 
         self.runToolBar = self.addToolBar(self.tr("Run"))
-        self.runToolBar.addAction(self.startWGINIClientAct)
+        self.runToolBar.addAction(self.startServerAct)
         self.runToolBar.addAction(self.discoverAct)
         self.runToolBar.addAction(self.compileAct)
         self.runToolBar.addAction(self.runAct)
         self.runToolBar.addAction(self.stopAct)
-        self.runToolBar.addAction(self.startServerAct)
+        self.runToolBar.addAction(self.startWGINIClientAct)
         self.runToolBar.addAction(self.startwServerAct)
 
     def createStatusBar(self):

@@ -282,12 +282,6 @@ class GeneralPage(QtGui.QWidget):
         baseThemeLayout.addWidget(self.chooseBaseColorButton)
         baseThemeLayout.setAlignment(QtCore.Qt.AlignLeft)
 
-        self.createStylesCombo()
-        styleLayout = QtGui.QHBoxLayout()
-        styleLayout.addWidget(QtGui.QLabel(self.tr("Style: ")))
-        styleLayout.addWidget(self.styleComboBox)
-        styleLayout.setAlignment(QtCore.Qt.AlignLeft)
-
         uiLayout = QtGui.QVBoxLayout()
         uiLayout.addWidget(self.namesCheckBox)
         uiLayout.addWidget(self.gridCheckBox)
@@ -303,7 +297,6 @@ class GeneralPage(QtGui.QWidget):
         uiLayout.addLayout(windowThemeLayout)
         uiLayout.addWidget(QtGui.QLabel(self.tr("Base Theme: ")))
         uiLayout.addLayout(baseThemeLayout)
-        uiLayout.addLayout(styleLayout)
         uiGroup.setLayout(uiLayout)
 
         compilationGroup = QtGui.QGroupBox(self.tr("Compilation / Runtime"))
@@ -353,18 +346,6 @@ class GeneralPage(QtGui.QWidget):
         self.autoroutingCheckBox = QtGui.QCheckBox(self.tr("Auto-routing"))
         self.autogenCheckBox = QtGui.QCheckBox(self.tr("Auto-generate IP/MAC addresses"))
         self.autocompileCheckBox = QtGui.QCheckBox(self.tr("Compile before running"))
-
-    def createStylesCombo(self):
-        """
-        Create combo box with list of styles.
-        """
-        self.styleComboBox = QtGui.QComboBox()
-        self.styleComboBox.addItem(self.tr("WindowsXP"))
-        self.styleComboBox.addItem(self.tr("Windows"))
-        self.styleComboBox.addItem(self.tr("Motif"))
-        self.styleComboBox.addItem(self.tr("CDE"))
-        self.styleComboBox.addItem(self.tr("Cleanlooks"))
-        self.styleComboBox.addItem(self.tr("Plastique"))
 
     def createBrowsables(self):
         """
@@ -471,8 +452,6 @@ class GeneralPage(QtGui.QWidget):
         self.backgroundLine.setText(options["background"])
         self.windowThemeLine.setText(options["windowTheme"])
         self.baseThemeLine.setText(options["baseTheme"])
-        index = self.styleComboBox.findText(options["style"])
-        self.styleComboBox.setCurrentIndex(index)
 
         self.autoroutingCheckBox.setChecked(options["autorouting"])
         self.autogenCheckBox.setChecked(options["autogen"])
@@ -497,7 +476,6 @@ class GeneralPage(QtGui.QWidget):
         """
         Update options that change the main user interface.
         """
-        mainWidgets["app"].setStyle(options["style"])
 
         p = mainWidgets["app"].palette()
 
@@ -526,7 +504,6 @@ class GeneralPage(QtGui.QWidget):
         options["moveAlert"] = self.moveAlertCheckBox.isChecked()
 
         options["gridColor"] = self.gridLine.text()
-        options["style"] = self.styleComboBox.currentText()
         options["background"] = self.backgroundLine.text()
         options["windowTheme"] = self.windowThemeLine.text()
         options["baseTheme"] = self.baseThemeLine.text()
@@ -650,7 +627,7 @@ class ConfigDialog(QtGui.QDialog):
         generalButton.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
 
         configButton = QtGui.QListWidgetItem(self.contentsWidget)
-        configButton.setIcon(QtGui.QIcon(environ["images"] + "query.png"))
+        configButton.setIcon(QtGui.QIcon(environ["images"] + "Gserver.png"))
         configButton.setText(self.tr("Server"))
         configButton.setTextAlignment(QtCore.Qt.AlignHCenter)
         configButton.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
