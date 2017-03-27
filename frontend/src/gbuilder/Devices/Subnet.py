@@ -37,6 +37,7 @@ class Subnet(Device):
             
         Device.removeEdge(self, edge)
 
+    # Return the other node to which the subnet is connected, if any
     def getTarget(self, node):
         for con in self.edges():
             other = con.getOtherDevice(self)

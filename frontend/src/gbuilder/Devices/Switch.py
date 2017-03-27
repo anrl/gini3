@@ -35,7 +35,10 @@ class Switch(Device):
 
     def getGateway(self):
         return self.gateway[QtCore.QString("ipv4")]
-    
+    """
+    If the switch is connected to a subnet, return the opposite node
+    to which that subnet is connected, if any
+    """
     def getTarget(self, node):
         for con in self.edges():
             other = con.getOtherDevice(self)

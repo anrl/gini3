@@ -1258,7 +1258,7 @@ class MainWindow(Systray):
         self.aboutAct.setStatusTip(self.tr("Show the application's About box"))
         self.connect(self.aboutAct, QtCore.SIGNAL("triggered()"), self.about)
 
-        self.aboutQtAct = QtGui.QAction(self.tr("About &Qt"), self)
+        self.aboutQtAct = QtGui.QAction(QtGui.QIcon(environ["images"] + "Qt-logo.png"), self.tr("About &Qt"), self)
         self.aboutQtAct.setStatusTip(self.tr("Show the Qt library's About box"))
         self.connect(self.aboutQtAct, QtCore.SIGNAL("triggered()"),
                      QtGui.qApp, QtCore.SLOT("aboutQt()"))
