@@ -1,6 +1,6 @@
 # GINI Toolkit Version 3.0.0
 
-[![Build Status](https://travis-ci.org/michaelkourlas/gini-sdn.svg?branch=master)](https://travis-ci.org/michaelkourlas/gini-sdn)
+[![Build Status](https://travis-ci.org/anrl/gini3.svg?branch=master)](https://travis-ci.org/anrl/gini3)
 
 The GINI Toolkit is free software. Please see the file COPYING for copyright information.
 Please read REPORT in this repository to know the functionalities.
