@@ -271,7 +271,6 @@ def createVR(myGINI, options):
                 return False
             else:
                 configOut.write(getVRIFOutLine(nwIf, socketName))
-                configOut.write("ifconfig add tun0 -socket 99 -addr 192.168")
         configOut.write("echo -ne \"\\033]0;" + router.name + "\\007\"")
         configOut.close()
         ### ------- execute ---------- ###
@@ -616,7 +615,6 @@ def getVRIFOutLine(nwIf, socketName):
         if (route.nexthop):
             outLine += "-gw %s" % route.nexthop
         outLine += "\n"
-    outLine += "display update-delay 2\n"
     return outLine
 
 def getVMIFOutLine(nwIf, socketName, name):
