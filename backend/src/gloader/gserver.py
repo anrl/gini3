@@ -135,7 +135,8 @@ class Server(QtCore.QObject):
             statusList.append(status)
             deviceList.append((device, pid))
 
-        for status in statusList:
+	
+	for status in statusList:
             if status == "":
                 self.timer.stop()
                 return

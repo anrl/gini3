@@ -35,7 +35,7 @@ class TaskManager(QtCore.QThread):
             for device, (pid, status) in self.devices.iteritems():
                 devices[device] = (pid, "dead")
 
-            for i in range(1, len(lines)-2):
+            for i in range(1, len(lines)-1):
                 line = lines[i].split("\t")
                 parts = line[1].split(".")
                 status = line[-1].strip("()\n").split(", ")[-1]
