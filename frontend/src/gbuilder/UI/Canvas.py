@@ -228,11 +228,6 @@ class View(QtGui.QGraphicsView):
                                 for edge in dest.edges():
                                     if edge.getOtherDevice(dest).device_type == "OpenFlow_Controller":
                                         return "Router cannot have more than one OpenFlow Controller!"
-                            target= source.getTarget(dest)
-                            if target is not None and target.device_type == "yRouter":
-                                yid = target.getID()
-                                if not yRouters[yid]['IsPortal']:
-                                    return "Cannot connect yRouter_%d to the host (not a portal)!" %yid
                         return True
                     return False
 
