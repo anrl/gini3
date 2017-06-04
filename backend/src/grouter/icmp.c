@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <unistd.h>
+
 // state information on outstanding ping..
 pingstat_t pstat;
 

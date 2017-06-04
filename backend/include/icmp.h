@@ -96,5 +96,6 @@ void ICMPDoPing(uchar *ipaddr, int pkt_size, int retries);
 
 void ICMPProcessTTLExpired(gpacket_t *in_pkt);
 void ICMPProcessFragNeeded(gpacket_t *in_pkt, int interface_mtu);
+void ICMPProcessRedirect(gpacket_t *in_pkt, uchar *gw_addr);
 
 #endif

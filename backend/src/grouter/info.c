@@ -190,9 +190,9 @@ void infoList()
 	{
 		qptr = (queue_target_t *)lister_next(lster);
 		if (qptr->active)
-			printf("%s\tEnabled\t%x\n", qptr->targetname, (unsigned int)qptr->queue);
+			printf("%s\tEnabled\t%p\n", qptr->targetname, qptr->queue);
 		else
-			printf("%s\tDisabled\t%x\n", qptr->targetname, (unsigned int)qptr->queue);
+			printf("%s\tDisabled\t%p\n", qptr->targetname, qptr->queue);
 	}
 	printf("\n");
 	lister_release(lster);

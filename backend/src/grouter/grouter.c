@@ -12,11 +12,15 @@
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
+#include <pthread.h>
 
+#include "ip.h"
+#include "arp.h"
+#include "cli.h"
+#include "gnet.h"
 #include "packetcore.h"
 #include "classifier.h"
 #include "filter.h"
-#include <pthread.h>
 #include "openflow_ctrl_iface.h"
 #include "openflow_pkt_proc.h"
 
