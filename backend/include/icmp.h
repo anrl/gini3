@@ -94,4 +94,7 @@ void ICMPProcessPacket(gpacket_t *in_pkt);
 
 void ICMPDoPing(uchar *ipaddr, int pkt_size, int retries);
 
+void ICMPProcessTTLExpired(gpacket_t *in_pkt);
+void ICMPProcessFragNeeded(gpacket_t *in_pkt, int interface_mtu);
+
 #endif

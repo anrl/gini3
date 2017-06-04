@@ -37,4 +37,6 @@ void RouteTableInit(route_entry_t route_tbl[]);
 void addRouteEntry(route_entry_t route_tbl[], uchar* nwork, uchar* nmask, uchar* nhop, int interface);
 void deleteRouteEntryByIndex(route_entry_t route_tbl[], int i);
 
+int findRouteEntry(route_entry_t route_tbl[], uchar *ip_addr, uchar *nhop, int *ixface);
+
 #endif

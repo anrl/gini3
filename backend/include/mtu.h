@@ -35,4 +35,9 @@ void MTUTableInit(mtu_entry_t mtable[]);
 void addMTUEntry(mtu_entry_t mtable[], int index, int mtu, uchar *ip_addr);
 void deleteMTUEntry(mtu_entry_t mtable[], int index);
 
+int findInterfaceIP(mtu_entry_t mtable[], int index, uchar *ip_addr);
+int findMTU(mtu_entry_t mtable[], int index);
+
+int findAllInterfaceIPs(mtu_entry_t mtable[], uchar buf[][4]);
+
 #endif //_MTU_H_
