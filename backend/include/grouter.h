@@ -124,4 +124,8 @@ uint64_t htonll(uint64_t arg);
 // function prototypes for code in router.c
 void redefineSignalHandler(int sigid, void (*my_func)());
 void wait4thread(pthread_t threadid);
+
+// function prototypes for code in console.c
+void consoleInit(char *rpath, char *rname);
+
 #endif

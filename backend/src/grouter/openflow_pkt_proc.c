@@ -2,7 +2,6 @@
  * openflow_pkt_proc.c - OpenFlow packet processing
  */
 
-#include "openflow_pkt_proc.h"
 
 #include <inttypes.h>
 #include <arpa/inet.h>
@@ -12,6 +11,8 @@
 #include "openflow.h"
 #include "openflow_config.h"
 #include "openflow_flowtable.h"
+#include "openflow_ctrl_iface.h"
+#include "openflow_pkt_proc.h"
 #include "protocols.h"
 #include "tcp.h"
 #include "udp.h"
