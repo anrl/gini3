@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <slack/std.h>
+#include <slack/err.h>
 #include <slack/list.h>
 #include "classspec.h"
 #include "classifier.h"

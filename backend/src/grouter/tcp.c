@@ -9,6 +9,8 @@
 #include "ip.h"
 
 #include "tcp.h"
+#include <arpa/inet.h>
+
 
 /**
  * Calculates the TCP checksum for the specified TCP packet.

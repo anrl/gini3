@@ -1,4 +1,5 @@
 #include <slack/std.h>
+#include <slack/err.h>
 #include <slack/map.h>
 #include <slack/list.h>
 #include <pthread.h>

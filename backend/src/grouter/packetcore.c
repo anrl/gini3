@@ -16,11 +16,13 @@
 #define _XOPEN_SOURCE             500
 #include <unistd.h>
 #include <slack/std.h>
+#include <slack/err.h>
 #include <slack/map.h>
 #include <slack/list.h>
 #include <pthread.h>
 #include <math.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 #include "protocols.h"
 #include "packetcore.h"
 #include "message.h"

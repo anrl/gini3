@@ -18,6 +18,7 @@
 #include "tap.h"
 #include "tun.h"
 #include "tapio.h"
+#include "raw.h"
 #include "protocols.h"
 #include <slack/err.h>
 #include <sys/time.h>
@@ -518,6 +519,53 @@ interface_t *GNETMakeTunInterface(char *device, uchar *mac_addr, uchar *nw_addr,
     upThisInterface(iface);
     return iface;
 }
+
+
+interface_t *GNETMakeRawInterface(char *device, uchar *nw_addr)                
+{
+    vpl_data_t *vcon;
+    interface_t *iface;
+    int iface_id;
+    char tmpbuf[MAX_TMPBUF_LEN];
+    uchar mac_addr[6];
+    
+    verbose(2, "[GNETMakeRawInterface]:: making Interface for [%s] with IP %s",
+	device, IP2Dot((tmpbuf+20), nw_addr));
+
+    iface_id = gAtoi(device);
+    if (findInterface(iface_id) != NULL)
+    {
+	verbose(1, "[GNETMakeRawInterface]:: device %s already defined.. ", device);
+	return NULL;
+    }
+    
+    if(create_raw_interface(nw_addr) == -1) {
+        verbose(1, "[GNETMakeRawInterface]:: Failed to create raw interface.. ");
+	return NULL;
+    } 
+    
+    verbose(2, "[GNETMakeRawInterface]:: trying to connect to %s..", device);
+
+    vcon = raw_connect(mac_addr); 
+    
+    if(vcon == NULL)
+    {
+        verbose(1, "[GNETMakeRawInterface]:: unable to connect to %s", device);
+        return NULL;
+    }
+    
+    verbose(2, "[GNETMakeRawInterface]:: Interface MAC %s", MAC2Colon(tmpbuf, mac_addr));
+    
+    iface = newInterfaceStructure(device, device,
+                                  mac_addr, nw_addr, MAX_MTU);
+        
+    iface->iface_fd = vcon->data;
+    iface->vpl_data = vcon;
+    
+    upThisInterface(iface);
+    return iface;
+}
+
 
 void *delayedServerCall(void *arg)
 {

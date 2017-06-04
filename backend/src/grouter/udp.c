@@ -7,8 +7,10 @@
 
 #include "grouter.h"
 #include "ip.h"
-
 #include "udp.h"
+
+#include <arpa/inet.h>
+
 
 /**
  * Calculates the UDP checksum for the specified UDP packet.

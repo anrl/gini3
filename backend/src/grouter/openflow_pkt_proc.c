@@ -5,6 +5,7 @@
 #include "openflow_pkt_proc.h"
 
 #include <inttypes.h>
+#include <arpa/inet.h>
 
 #include "grouter.h"
 #include "ip.h"

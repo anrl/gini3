@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <time.h>
+#include <arpa/inet.h>
 
 #include "arp.h"
 #include "gnet.h"

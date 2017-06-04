@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <slack/std.h>
+#include <slack/err.h>
 #include <slack/fio.h>
 #include <sys/stat.h>
 
