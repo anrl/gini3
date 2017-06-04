@@ -459,7 +459,7 @@ void ifconfigCmd()
 		strcpy(dev_name, next_tok);
 		interface = gAtoi(next_tok);
 		destroyInterfaceByIndex(interface);
-		deleteMTUEntry(interface);
+		deleteMTUEntry(MTU_tbl, interface);
 	}
 	else if (!strcmp(next_tok, "up"))
 	{
