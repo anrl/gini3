@@ -16,7 +16,8 @@
 #include "classifier.h"
 #include "ip.h"
 
-
+#include <slack/std.h>
+#include <slack/err.h>
 
 
 // create a classifier with the given name

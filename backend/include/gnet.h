@@ -83,8 +83,13 @@ interface_t *findInterface(int indx);
 void *delayedServerCall(void *arg);
 void *GNETHandler(void *outq);
 
+int destroyInterfaceByIndex(int indx);
+
 void GNETInsertInterface(interface_t *iface);
 int changeInterfaceMTU(int index, int new_mtu);
 void printInterfaces(int mode);
+
+int upInterface(int index);
+int downInterface(int index);
 
 #endif //__GNET_H__
