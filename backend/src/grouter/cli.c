@@ -437,15 +437,21 @@ void ifconfigCmd()
 			iface = GNETMakeTapInterface(dev_name, mac_addr, ip_addr);
 		else if (strcmp(dev_type, "tun") == 0)
 			iface = GNETMakeTunInterface(dev_name, mac_addr, ip_addr, dst_ip, dst_port);
-		else if (strcmp(dev_type, "raw") == 0)
-			iface = GNETMakeRawInterface(dev_name, ip_addr);
+		else if (strcmp(dev_type, "raw") == 0) {
+		        iface = GNETMakeRawInterface(dev_name, ip_addr);
+			printf("Interface ID %d\n", iface->interface_id);
+		}
 		else {
 			printf("[ifconfigCmd]:: Unkown device type %s\n", dev_type);
 			return;
 		}
 
+		printf("HElllo\n");
+
 		if (iface != NULL)
 		{
+		  printf("World\n");
+		  printf("Interface id %d\n", iface->interface_id);
 			verbose(2, "[configureInterfaces]:: Inserting the definition in the interface table ");
 			GNETInsertInterface(iface);
 			addMTUEntry(MTU_tbl, iface->interface_id, iface->device_mtu, iface->ip_addr);

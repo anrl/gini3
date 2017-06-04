@@ -325,6 +325,8 @@ interface_t *newInterfaceStructure(char *vsock_name, char *device,
 	iface->devdriver = findDeviceDriver(iface->device_type);
 	iface->iarray = &netarray;
 
+	printf("IFace.. %d\n", iface->interface_id);
+	
 	return iface;
 }
 
@@ -563,6 +565,9 @@ interface_t *GNETMakeRawInterface(char *device, uchar *nw_addr)
     iface->vpl_data = vcon;
     
     upThisInterface(iface);
+
+    //    printf();
+    
     return iface;
 }
 
