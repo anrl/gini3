@@ -171,7 +171,8 @@ int IPProcessForwardingPacket(gpacket_t *in_pkt)
 	case FRAGS_ERROR:
 		verbose(2, "[IPProcessForwardingPacket]:: unreachable on packet from %s",
 			IP2Dot(tmpbuf, gNtohl((tmpbuf+20), ip_pkt->ip_src)));
-		ICMPProcessFragNeeded(in_pkt);
+		int int_mtu = findMTU(MTU_tbl, in_pkt->frame.dst_interface);
+		ICMPProcessFragNeeded(in_pkt, int_mtu);
 		break;
 
 	case MORE_FRAGS:
