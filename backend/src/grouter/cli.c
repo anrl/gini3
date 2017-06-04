@@ -15,6 +15,7 @@
 #include "helpdefs.h"
 #include "cli.h"
 #include "gnet.h"
+#include "icmp.h"
 #include "grouter.h"
 #include <stdio.h>
 #include <strings.h>

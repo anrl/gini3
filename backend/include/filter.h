@@ -50,4 +50,5 @@ int addFilterRule(filtertab_t *ft, int type, char *cname);
 
 int filteredPacket(filtertab_t *ft, gpacket_t *in_pkt);
 
+void flushFilter(filtertab_t *ft);
 #endif

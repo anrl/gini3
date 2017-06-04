@@ -78,8 +78,13 @@ interface_t *GNETMakeTunInterface(char *device, uchar *mac_addr, uchar *nw_addr,
                                   uchar* dst_ip, short int dst_port);
 interface_t *GNETMakeRawInterface(char *device, uchar *nw_addr);
 
+device_t *findDeviceDriver(char *dev_type);
 interface_t *findInterface(int indx);
 void *delayedServerCall(void *arg);
 void *GNETHandler(void *outq);
+
+void GNETInsertInterface(interface_t *iface);
+int changeInterfaceMTU(int index, int new_mtu);
+void printInterfaces(int mode);
 
 #endif //__GNET_H__

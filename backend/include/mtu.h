@@ -32,5 +32,7 @@ typedef struct _mtu_entry_t
 } mtu_entry_t;
 
 void MTUTableInit(mtu_entry_t mtable[]);
+void addMTUEntry(mtu_entry_t mtable[], int index, int mtu, uchar *ip_addr);
+void deleteMTUEntry(mtu_entry_t mtable[], int index);
 
 #endif //_MTU_H_

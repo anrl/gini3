@@ -92,4 +92,6 @@ void ICMPProcessEchoReply(gpacket_t *in_pkt);
 
 void ICMPProcessPacket(gpacket_t *in_pkt);
 
+void ICMPDoPing(uchar *ipaddr, int pkt_size, int retries);
+
 #endif
