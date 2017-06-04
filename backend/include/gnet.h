@@ -82,7 +82,7 @@ device_t *findDeviceDriver(char *dev_type);
 interface_t *findInterface(int indx);
 void *delayedServerCall(void *arg);
 void *GNETHandler(void *outq);
-
+void GNETHalt(int gnethandler);
 int destroyInterfaceByIndex(int indx);
 
 void GNETInsertInterface(interface_t *iface);

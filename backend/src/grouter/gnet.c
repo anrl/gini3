@@ -837,7 +837,7 @@ void GNETHalt(int gnethandler)
 {
 	verbose(2, "[gnetHalt]:: Shutting down GNET handler.. \n");
 	haltInterfaces();
-	// pthread_cancel(gnethandler);
+	pthread_cancel(gnethandler);
 }
 
 

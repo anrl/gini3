@@ -54,7 +54,7 @@ void *CLIProcessCmdsInteractive(void *arg);
 void registerCLI(char *key, void (*handler)(),
 		 char *shelp, char *usage, char *lhelp);
 void CLIDestroy();
-
+int CLIInit(router_config *rarg);
 
 void helpCmd();
 void versionCmd();
