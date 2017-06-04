@@ -850,7 +850,7 @@ void GNETHalt(int gnethandler)
  * and injected back into the Output Queue once the ARP reply from a remote machine comes back.
  * This means a packet can go through the Output Queue two times.
  */
-int GNETInit(int *ghandler, char *config_dir, char *rname, simplequeue_t *sq)
+int GNETInit(pthread_t *ghandler, char *config_dir, char *rname, simplequeue_t *sq)
 {
 	int thread_stat;
 
