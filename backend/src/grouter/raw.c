@@ -193,7 +193,7 @@ vpl_data_t *raw_connect(uchar* mac_addr)
     //Above is from Ahmeds implementation
     //For the cloud we want to use the eth0
     //interface on the amazon machine for the raw socket
-    strcpy(interface, "eth0");
+    strcpy(interface, "docker0");
     verbose(1, "[raw_connect]:: Binding to interface %s strlen = %d", interface, strlen(interface));
     ifr = calloc(1, sizeof(struct ifreq));
     strcpy((char*)ifr->ifr_name, interface);
