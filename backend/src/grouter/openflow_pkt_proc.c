@@ -6,6 +6,9 @@
 #include <inttypes.h>
 #include <arpa/inet.h>
 
+#include <slack/std.h>
+#include <slack/err.h>
+
 #include "grouter.h"
 #include "ip.h"
 #include "openflow.h"

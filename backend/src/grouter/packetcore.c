@@ -31,6 +31,8 @@
 #include "openflow_pkt_proc.h"
 #include "filter.h"
 
+#include "ip.h"
+
 extern classlist_t *classifier;
 extern filtertab_t *filter;
 extern router_config rconfig;

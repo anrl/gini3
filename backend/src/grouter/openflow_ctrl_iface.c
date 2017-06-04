@@ -53,6 +53,7 @@
 #include "openflow_config.h"
 #include "openflow_defs.h"
 #include "openflow_flowtable.h"
+#include "openflow_pkt_proc.h"
 #include "protocols.h"
 #include "tcp.h"
 

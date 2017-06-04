@@ -9,6 +9,9 @@
 #include <time.h>
 #include <arpa/inet.h>
 
+#include <slack/std.h>
+#include <slack/err.h>
+
 #include "arp.h"
 #include "gnet.h"
 #include "grouter.h"
