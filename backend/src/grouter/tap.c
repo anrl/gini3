@@ -16,6 +16,7 @@
 #include "arp.h"
 #include "ip.h"
 #include "ethernet.h"
+#include "tapio.h"
 #include <netinet/in.h>
 #include <stdlib.h>
 

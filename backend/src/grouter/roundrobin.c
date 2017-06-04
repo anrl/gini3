@@ -3,6 +3,8 @@
 #include <slack/map.h>
 #include <slack/list.h>
 #include <pthread.h>
+#include <unistd.h>
+
 #include "protocols.h"
 #include "packetcore.h"
 #include "message.h"

@@ -72,4 +72,6 @@ void *weightedFairScheduler(void *pc);
 int weightedFairQueuer(pktcore_t *pcore, gpacket_t *in_pkt, int pktsize, char *qkey);
 int roundRobinQueuer(pktcore_t *pcore, gpacket_t *in_pkt, int pktsize, char *qkey);
 void *roundRobinScheduler(void *pc);
+
+int redDiscard(simplequeue_t *thisq, gpacket_t *ipkt);
 #endif

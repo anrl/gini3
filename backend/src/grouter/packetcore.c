@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <slack/std.h>
 #include <slack/err.h>
+#include <slack/prog.h>
 #include <slack/map.h>
 #include <slack/list.h>
 #include <pthread.h>
@@ -30,7 +31,7 @@
 #include "grouter.h"
 #include "openflow_pkt_proc.h"
 #include "filter.h"
-
+#include "arp.h"
 #include "ip.h"
 
 extern classlist_t *classifier;

@@ -9,6 +9,9 @@
 #include "ip.h"
 #include "arp.h"
 
+#include <slack/std.h>
+#include <slack/err.h>
+
 
 gpacket_t *duplicatePacket(gpacket_t *inpkt)
 {

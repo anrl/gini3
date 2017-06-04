@@ -11,12 +11,16 @@
 #include "mtu.h"
 #include "protocols.h"
 #include "ip.h"
+#include "icmp.h"
 #include "fragment.h"
 #include "packetcore.h"
 #include <stdlib.h>
 #include <slack/err.h>
 #include <netinet/in.h>
 #include <string.h>
+
+#include <slack/std.h>
+#include <slack/prog.h>
 
 route_entry_t route_tbl[MAX_ROUTES];       	// routing table
 mtu_entry_t MTU_tbl[MAX_MTU];		        // MTU table

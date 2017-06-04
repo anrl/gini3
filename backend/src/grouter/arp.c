@@ -7,7 +7,10 @@
  *
  */
 
+#include <slack/std.h>
 #include <slack/err.h>
+#include <slack/prog.h>
+
 #include <netinet/in.h>
 #include "protocols.h"
 #include "arp.h"
