@@ -350,6 +350,7 @@ int getDevType(char *str)
 /*
  * Handler for the interface configuration command:
  * ifconfig add eth1 -socket socketfile -addr IP_addr  -hwaddr MAC [-gateway GW] [-mtu N]
+ * ifconfig add raw1 -bridge bridgeid -addr IP_addr
  * ifconfig add tap0 -device dev_location -addr IP_addr -hwaddr MAC
  * ifconfig add tun0 -dstip dst_ip -dstport portnum -addr IP_addr -hwaddr MAC
  * ifconfig del eth0|tap0
@@ -362,7 +363,7 @@ void ifconfigCmd()
 {
 	char *next_tok;
 	interface_t *iface;
-	char dev_name[MAX_DNAME_LEN], con_sock[MAX_NAME_LEN], dev_type[MAX_NAME_LEN];
+	char dev_name[MAX_DNAME_LEN], con_sock[MAX_NAME_LEN], dev_type[MAX_NAME_LEN], raw_bridge[MAX_NAME_LEN];
 	uchar mac_addr[6], ip_addr[4], gw_addr[4], dst_ip[4];
 	int mtu, interface, mode;
 	short int dst_port;
@@ -411,6 +412,11 @@ void ifconfigCmd()
 			Dot2IP(next_tok, dst_ip);  
 			GET_NEXT_PARAMETER("-dstport", "ifconfig:: missing -dstport spec ..");
 			dst_port = (short int)atoi(next_tok);
+		} else if (strcmp(dev_type, "raw") == 0)
+		{
+			printf("Checking bridge \n");
+			GET_NEXT_PARAMETER("-bridge", "ifconfig:: missing -bridge spec ..");
+			strcpy(raw_bridge, next_tok);			
 		}
 
 		GET_NEXT_PARAMETER("-addr", "ifconfig:: missing -addr spec ..");
@@ -439,7 +445,7 @@ void ifconfigCmd()
 		else if (strcmp(dev_type, "tun") == 0)
 			iface = GNETMakeTunInterface(dev_name, mac_addr, ip_addr, dst_ip, dst_port);
 		else if (strcmp(dev_type, "raw") == 0) 
-		        iface = GNETMakeRawInterface(dev_name, ip_addr);
+		        iface = GNETMakeRawInterface(dev_name, ip_addr, raw_bridge);
 		else {
 			printf("[ifconfigCmd]:: Unkown device type %s\n", dev_type);
 			return;

@@ -521,7 +521,7 @@ interface_t *GNETMakeTunInterface(char *device, uchar *mac_addr, uchar *nw_addr,
 }
 
 
-interface_t *GNETMakeRawInterface(char *device, uchar *nw_addr)                
+interface_t *GNETMakeRawInterface(char *device, uchar *nw_addr, char *bridge)                
 {
     vpl_data_t *vcon;
     interface_t *iface;
@@ -546,7 +546,7 @@ interface_t *GNETMakeRawInterface(char *device, uchar *nw_addr)
     
     verbose(2, "[GNETMakeRawInterface]:: trying to connect to %s..", device);
 
-    vcon = raw_connect(mac_addr); 
+    vcon = raw_connect(mac_addr, bridge); 
     
     if(vcon == NULL)
     {

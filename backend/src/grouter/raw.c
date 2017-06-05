@@ -171,12 +171,12 @@ void* fromRawDev(void *arg)
  * Connect to the raw interface.
  */
 
-vpl_data_t *raw_connect(uchar* mac_addr)
+vpl_data_t *raw_connect(uchar* mac_addr, char *bridge)
 {
     struct sockaddr_ll sll;
     struct ifreq* ifr;
     int sock_raw;
-    char interface[10];
+    char interface[32];
     vpl_data_t *pri;
     
     verbose(2, "[raw_connect]:: starting connection.. ");
@@ -193,7 +193,7 @@ vpl_data_t *raw_connect(uchar* mac_addr)
     //Above is from Ahmeds implementation
     //For the cloud we want to use the eth0
     //interface on the amazon machine for the raw socket
-    strcpy(interface, "docker0");
+    strcpy(interface, bridge);
     verbose(1, "[raw_connect]:: Binding to interface %s strlen = %d", interface, strlen(interface));
     ifr = calloc(1, sizeof(struct ifreq));
     strcpy((char*)ifr->ifr_name, interface);
