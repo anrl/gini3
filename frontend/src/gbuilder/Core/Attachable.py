@@ -56,9 +56,15 @@ class Attachable(Device):
                 command += base
             command += " -m \"" + startpath + "\""
         else:
-            if self.device_type == "yRouter":
-                command += "rxvt -T \"" + window_name + "\" -e " + screen_yrouter
-            else:
-                command += "rxvt -T \"" + window_name + "\" -e " + base + screen
+	    if options["gnome"] == True:
+            	if self.device_type == "yRouter":
+                	command += "gnome-terminal -e " + "\"" + screen_yrouter + "\""
+            	else:
+                	command += "gnome-terminal -e " +"\"" + base + screen +"\""
+	    else:
+	    	if self.device_type == "yRouter":
+                	command += "rxvt -T \"" + window_name + "\" -e " + screen_yrouter
+            	else:
+                	command += "rxvt -T \"" + window_name + "\" -e " + base + screen
 
         self.shell = subprocess.Popen(str(command), shell=True)

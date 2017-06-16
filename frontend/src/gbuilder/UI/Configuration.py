@@ -289,6 +289,7 @@ class GeneralPage(QtGui.QWidget):
         uiLayout.addWidget(self.systrayCheckBox)
         uiLayout.addWidget(self.restoreLayoutCheckBox)
         uiLayout.addWidget(self.moveAlertCheckBox)
+	uiLayout.addWidget(self.gnomeTerminalCheckBox)
         uiLayout.addWidget(QtGui.QLabel(self.tr("Grid Color: ")))
         uiLayout.addLayout(gridLayout)
         uiLayout.addWidget(QtGui.QLabel(self.tr("Background: ")))
@@ -326,6 +327,7 @@ class GeneralPage(QtGui.QWidget):
         self.gridCheckBox = QtGui.QCheckBox(self.tr("Show grid"))
         self.moveAlertCheckBox = QtGui.QCheckBox(self.tr("Alert on Move (when started)"))
         self.restoreLayoutCheckBox = QtGui.QCheckBox(self.tr("Remember and restore layout"))
+	self.gnomeTerminalCheckBox = QtGui.QCheckBox(self.tr("Use Gnome-Terminal"))
 
     def createBrowsables(self):
         """
@@ -427,6 +429,7 @@ class GeneralPage(QtGui.QWidget):
         self.smoothingCheckBox.setChecked(options["smoothing"])
         self.systrayCheckBox.setChecked(options["systray"])
         self.restoreLayoutCheckBox.setChecked(options["restore"])
+	self.gnomeTerminalCheckBox.setChecked(options["gnome"])
 
         self.gridLine.setText(options["gridColor"])
         self.backgroundLine.setText(options["background"])
@@ -477,6 +480,7 @@ class GeneralPage(QtGui.QWidget):
         options["systray"] = self.systrayCheckBox.isChecked()
         options["restore"] = self.restoreLayoutCheckBox.isChecked()
         options["moveAlert"] = self.moveAlertCheckBox.isChecked()
+	options["gnome"] = self.gnomeTerminalCheckBox.isChecked()
 
         options["gridColor"] = self.gridLine.text()
         options["background"] = self.backgroundLine.text()

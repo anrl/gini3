@@ -29,7 +29,7 @@ options = {"names":True,
            "server":"localhost", "session":"GINI", "autoconnect":True,
            "localPort":"10001", "remotePort":"10000",
            "restore":True,
-           "moveAlert":True, "wserver":"192.168.54.121", "wlocalPort":"60001","wremotePort":"60000"}
+           "moveAlert":True, "wserver":"192.168.54.121", "wlocalPort":"60001","wremotePort":"60000", "gnome":False}
 
 mainWidgets = {"app":None,
                "main":None,
